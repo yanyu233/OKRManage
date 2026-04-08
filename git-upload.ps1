@@ -15,11 +15,11 @@ function Assert-GitAvailable {
 }
 
 function Invoke-Git {
-    param([string[]]$Args)
+    param([string[]]$GitArgs)
 
-    & $git -C $repoRoot @Args
+    & $git -C $repoRoot @GitArgs
     if ($LASTEXITCODE -ne 0) {
-        throw "git $($Args -join ' ') failed."
+        throw "git $($GitArgs -join ' ') failed."
     }
 }
 
@@ -61,17 +61,17 @@ if ([string]::IsNullOrWhiteSpace($Message)) {
     $Message = "chore: sync $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
 }
 
-Invoke-Git @("add", "-A")
+Invoke-Git -GitArgs @("add", "-A")
 
 & $git -C $repoRoot diff --cached --quiet --ignore-submodules --
 $hasStagedChanges = ($LASTEXITCODE -ne 0)
 
 if ($hasStagedChanges) {
-    Invoke-Git @("commit", "-m", $Message)
+    Invoke-Git -GitArgs @("commit", "-m", $Message)
 }
 else {
     Write-Host "No local changes detected. Skipping commit."
 }
 
-Invoke-Git @("push", "-u", $Remote, $Branch)
+Invoke-Git -GitArgs @("push", "-u", $Remote, $Branch)
 Write-Host "Upload complete: $Remote/$Branch"

@@ -14,11 +14,11 @@ function Assert-GitAvailable {
 }
 
 function Invoke-Git {
-    param([string[]]$Args)
+    param([string[]]$GitArgs)
 
-    & $git -C $repoRoot @Args
+    & $git -C $repoRoot @GitArgs
     if ($LASTEXITCODE -ne 0) {
-        throw "git $($Args -join ' ') failed."
+        throw "git $($GitArgs -join ' ') failed."
     }
 }
 
@@ -47,14 +47,14 @@ if ($Stash) {
     $indexClean = ($LASTEXITCODE -eq 0)
 
     if (-not ($worktreeClean -and $indexClean)) {
-        Invoke-Git @("stash", "push", "-u", "-m", "auto-download-stash")
+        Invoke-Git -GitArgs @("stash", "push", "-u", "-m", "auto-download-stash")
         $hasStash = $true
     }
 }
 
 try {
-    Invoke-Git @("fetch", $Remote, "--prune")
-    Invoke-Git @("pull", "--ff-only", $Remote, $branch)
+    Invoke-Git -GitArgs @("fetch", $Remote, "--prune")
+    Invoke-Git -GitArgs @("pull", "--ff-only", $Remote, $branch)
     Write-Host "Download complete: $Remote/$branch"
 }
 finally {
