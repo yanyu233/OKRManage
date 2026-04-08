@@ -1,0 +1,400 @@
+{
+    "settings":  {
+                     "currentUserId":  "u-emp1",
+                     "approvalEnabled":  false,
+                     "strictWeight":  false,
+                     "maxGoalLevels":  3
+                 },
+    "cycles":  [
+                   {
+                       "id":  "2026-Q1",
+                       "label":  "2026年一季度",
+                       "status":  "active"
+                   },
+                   {
+                       "id":  "2025-Q4",
+                       "label":  "2025年四季度",
+                       "status":  "archived"
+                   }
+               ],
+    "departments":  [
+                        {
+                            "id":  "dept-iot",
+                            "name":  "工业互联网中心"
+                        }
+                    ],
+    "sections":  [
+                     {
+                         "id":  "sec-platform",
+                         "departmentId":  "dept-iot",
+                         "name":  "平台产品科"
+                     },
+                     {
+                         "id":  "sec-solution",
+                         "departmentId":  "dept-iot",
+                         "name":  "解决方案科"
+                     }
+                 ],
+    "users":  [
+                  {
+                      "id":  "u-emp1",
+                      "name":  "张晨",
+                      "departmentId":  "dept-iot",
+                      "sectionId":  "sec-platform",
+                      "role":  "employee"
+                  },
+                  {
+                      "id":  "u-emp2",
+                      "name":  "王敏",
+                      "departmentId":  "dept-iot",
+                      "sectionId":  "sec-platform",
+                      "role":  "employee"
+                  },
+                  {
+                      "id":  "u-emp3",
+                      "name":  "李涛",
+                      "departmentId":  "dept-iot",
+                      "sectionId":  "sec-solution",
+                      "role":  "employee"
+                  },
+                  {
+                      "id":  "u-sec1",
+                      "name":  "刘科长",
+                      "departmentId":  "dept-iot",
+                      "sectionId":  "sec-platform",
+                      "role":  "section-leader"
+                  },
+                  {
+                      "id":  "u-sec2",
+                      "name":  "陈科长",
+                      "departmentId":  "dept-iot",
+                      "sectionId":  "sec-solution",
+                      "role":  "section-leader"
+                  },
+                  {
+                      "id":  "u-dept1",
+                      "name":  "严主任",
+                      "departmentId":  "dept-iot",
+                      "sectionId":  "",
+                      "role":  "system-admin"
+                  }
+              ],
+    "goals":  [
+                  {
+                      "id":  "goal-emp1-q1",
+                      "code":  "O1",
+                      "name":  "张晨 2026 年一季度 OKR",
+                      "type":  "personal",
+                      "departmentId":  "dept-iot",
+                      "ownerId":  "u-emp1",
+                      "cycleId":  "2026-Q1",
+                      "parentId":  null,
+                      "points":  80,
+                      "status":  "submitted",
+                      "isDraft":  false,
+                      "description":  "围绕平台交付效率、知识沉淀和问题闭环推进季度工作。",
+                      "summary":  "当前整体推进稳定，交付节奏正常，知识库建设仍需继续补充。",
+                      "manualProgress":  0,
+                      "manualScore":  null,
+                      "reviewScore":  null,
+                      "reviewComment":  "",
+                      "reviewerId":  null,
+                      "reviewedAt":  null,
+                      "submittedAt":  "2026-01-05 09:30:00",
+                      "followerIds":  [
+
+                                      ],
+                      "createdAt":  "2026-01-03 10:00:00",
+                      "updatedAt":  "2026-03-25 18:00:00",
+                      "createdBy":  "u-emp1"
+                  },
+                  {
+                      "id":  "goal-emp2-q1",
+                      "code":  "O2",
+                      "name":  "王敏 2026 年一季度 OKR",
+                      "type":  "personal",
+                      "departmentId":  "dept-iot",
+                      "ownerId":  "u-emp2",
+                      "cycleId":  "2026-Q1",
+                      "parentId":  null,
+                      "points":  100,
+                      "status":  "reviewed",
+                      "isDraft":  false,
+                      "description":  "聚焦需求交付质量、缺陷收敛和用户支持效率。",
+                      "summary":  "一季度交付完成度较高，关键缺陷关闭率达到目标。",
+                      "manualProgress":  0,
+                      "manualScore":  null,
+                      "reviewScore":  91,
+                      "reviewComment":  "交付稳定，问题收敛及时，后续可以加强复盘输出。",
+                      "reviewerId":  "u-sec1",
+                      "reviewedAt":  "2026-03-29 17:20:00",
+                      "submittedAt":  "2026-01-06 10:00:00",
+                      "followerIds":  [
+
+                                      ],
+                      "createdAt":  "2026-01-04 10:00:00",
+                      "updatedAt":  "2026-03-29 17:20:00",
+                      "createdBy":  "u-emp2"
+                  },
+                  {
+                      "id":  "goal-emp3-q1",
+                      "code":  "O3",
+                      "name":  "李涛 2026 年一季度 OKR",
+                      "type":  "personal",
+                      "departmentId":  "dept-iot",
+                      "ownerId":  "u-emp3",
+                      "cycleId":  "2026-Q1",
+                      "parentId":  null,
+                      "points":  100,
+                      "status":  "submitted",
+                      "isDraft":  false,
+                      "description":  "负责解决方案上线推进、培训支撑与验收资料闭环。",
+                      "summary":  "上线推进正常，培训组织完成度较高。",
+                      "manualProgress":  0,
+                      "manualScore":  null,
+                      "reviewScore":  null,
+                      "reviewComment":  "",
+                      "reviewerId":  null,
+                      "reviewedAt":  null,
+                      "submittedAt":  "2026-01-08 11:00:00",
+                      "followerIds":  [
+
+                                      ],
+                      "createdAt":  "2026-01-05 11:00:00",
+                      "updatedAt":  "2026-03-28 16:30:00",
+                      "createdBy":  "u-emp3"
+                  },
+                  {
+                      "id":  "goal-emp1-draft",
+                      "code":  "O4",
+                      "name":  "张晨 知识库沉淀专项",
+                      "type":  "personal",
+                      "departmentId":  "dept-iot",
+                      "ownerId":  "u-emp1",
+                      "cycleId":  "2026-Q1",
+                      "parentId":  null,
+                      "points":  40,
+                      "status":  "draft",
+                      "isDraft":  true,
+                      "description":  "沉淀平台常见问题和交付案例，作为季度补充目标。",
+                      "summary":  "",
+                      "manualProgress":  10,
+                      "manualScore":  null,
+                      "reviewScore":  null,
+                      "reviewComment":  "",
+                      "reviewerId":  null,
+                      "reviewedAt":  null,
+                      "submittedAt":  null,
+                      "followerIds":  [
+
+                                      ],
+                      "createdAt":  "2026-03-22 09:00:00",
+                      "updatedAt":  "2026-03-30 09:05:00",
+                      "createdBy":  "u-emp1"
+                  }
+              ],
+    "krs":  [
+                {
+                    "id":  "kr-emp1-1",
+                    "code":  "KR1",
+                    "goalId":  "goal-emp1-q1",
+                    "name":  "完成 6 个版本交付",
+                    "metricType":  "numeric",
+                    "targetValue":  "6",
+                    "currentValue":  "5",
+                    "progress":  83,
+                    "points":  35,
+                    "ownerId":  "u-emp1",
+                    "description":  "确保季度需求按里程碑交付。",
+                    "status":  "active",
+                    "score":  88,
+                    "createdAt":  "2026-01-03 10:20:00",
+                    "updatedAt":  "2026-03-26 11:00:00"
+                },
+                {
+                    "id":  "kr-emp1-2",
+                    "code":  "KR2",
+                    "goalId":  "goal-emp1-q1",
+                    "name":  "知识库覆盖率达到 80%",
+                    "metricType":  "percentage",
+                    "targetValue":  "80",
+                    "currentValue":  "60",
+                    "progress":  75,
+                    "points":  25,
+                    "ownerId":  "u-emp1",
+                    "description":  "沉淀常见问题与处理方案。",
+                    "status":  "active",
+                    "score":  84,
+                    "createdAt":  "2026-01-03 10:30:00",
+                    "updatedAt":  "2026-03-26 11:20:00"
+                },
+                {
+                    "id":  "kr-emp1-3",
+                    "code":  "KR3",
+                    "goalId":  "goal-emp1-q1",
+                    "name":  "问题闭环时效不超过 2 天",
+                    "metricType":  "score",
+                    "targetValue":  "不超过 2 天",
+                    "currentValue":  "平均 1.8 天",
+                    "progress":  90,
+                    "points":  20,
+                    "ownerId":  "u-emp1",
+                    "description":  "提升问题响应与闭环效率。",
+                    "status":  "active",
+                    "score":  90,
+                    "createdAt":  "2026-01-03 10:40:00",
+                    "updatedAt":  "2026-03-26 11:40:00"
+                },
+                {
+                    "id":  "kr-emp2-1",
+                    "code":  "KR1",
+                    "goalId":  "goal-emp2-q1",
+                    "name":  "完成季度重点需求交付",
+                    "metricType":  "percentage",
+                    "targetValue":  "100",
+                    "currentValue":  "100",
+                    "progress":  100,
+                    "points":  50,
+                    "ownerId":  "u-emp2",
+                    "description":  "重点需求按时上线。",
+                    "status":  "completed",
+                    "score":  93,
+                    "createdAt":  "2026-01-04 10:20:00",
+                    "updatedAt":  "2026-03-27 15:00:00"
+                },
+                {
+                    "id":  "kr-emp2-2",
+                    "code":  "KR2",
+                    "goalId":  "goal-emp2-q1",
+                    "name":  "关键缺陷关闭率达到 95%",
+                    "metricType":  "percentage",
+                    "targetValue":  "95",
+                    "currentValue":  "96",
+                    "progress":  100,
+                    "points":  30,
+                    "ownerId":  "u-emp2",
+                    "description":  "季度关键缺陷收敛达标。",
+                    "status":  "completed",
+                    "score":  90,
+                    "createdAt":  "2026-01-04 10:30:00",
+                    "updatedAt":  "2026-03-27 16:00:00"
+                },
+                {
+                    "id":  "kr-emp2-3",
+                    "code":  "KR3",
+                    "goalId":  "goal-emp2-q1",
+                    "name":  "用户支持满意度不低于 90 分",
+                    "metricType":  "score",
+                    "targetValue":  "90",
+                    "currentValue":  "92",
+                    "progress":  100,
+                    "points":  20,
+                    "ownerId":  "u-emp2",
+                    "description":  "提高支持反馈效率和质量。",
+                    "status":  "completed",
+                    "score":  89,
+                    "createdAt":  "2026-01-04 10:40:00",
+                    "updatedAt":  "2026-03-27 16:20:00"
+                },
+                {
+                    "id":  "kr-emp3-1",
+                    "code":  "KR1",
+                    "goalId":  "goal-emp3-q1",
+                    "name":  "完成 2 个项目验收",
+                    "metricType":  "numeric",
+                    "targetValue":  "2",
+                    "currentValue":  "1",
+                    "progress":  50,
+                    "points":  45,
+                    "ownerId":  "u-emp3",
+                    "description":  "确保项目上线及验收材料齐全。",
+                    "status":  "active",
+                    "score":  82,
+                    "createdAt":  "2026-01-05 11:20:00",
+                    "updatedAt":  "2026-03-25 17:20:00"
+                },
+                {
+                    "id":  "kr-emp3-2",
+                    "code":  "KR2",
+                    "goalId":  "goal-emp3-q1",
+                    "name":  "完成 3 场用户培训",
+                    "metricType":  "numeric",
+                    "targetValue":  "3",
+                    "currentValue":  "2",
+                    "progress":  67,
+                    "points":  25,
+                    "ownerId":  "u-emp3",
+                    "description":  "推动解决方案落地使用。",
+                    "status":  "active",
+                    "score":  85,
+                    "createdAt":  "2026-01-05 11:30:00",
+                    "updatedAt":  "2026-03-25 17:40:00"
+                },
+                {
+                    "id":  "kr-emp3-3",
+                    "code":  "KR3",
+                    "goalId":  "goal-emp3-q1",
+                    "name":  "上线资料完整率达到 100%",
+                    "metricType":  "percentage",
+                    "targetValue":  "100",
+                    "currentValue":  "80",
+                    "progress":  80,
+                    "points":  30,
+                    "ownerId":  "u-emp3",
+                    "description":  "验收、上线、培训资料全部归档。",
+                    "status":  "active",
+                    "score":  86,
+                    "createdAt":  "2026-01-05 11:40:00",
+                    "updatedAt":  "2026-03-25 18:00:00"
+                },
+                {
+                    "id":  "kr-draft-1",
+                    "code":  "KR1",
+                    "goalId":  "goal-emp1-draft",
+                    "name":  "沉淀 20 篇知识库内容",
+                    "metricType":  "numeric",
+                    "targetValue":  "20",
+                    "currentValue":  "2",
+                    "progress":  10,
+                    "points":  20,
+                    "ownerId":  "u-emp1",
+                    "description":  "先作为草稿补充目标维护。",
+                    "status":  "draft",
+                    "score":  null,
+                    "createdAt":  "2026-03-22 09:20:00",
+                    "updatedAt":  "2026-03-30 09:05:00"
+                }
+            ],
+    "proofs":  [
+
+               ],
+    "activities":  [
+                       {
+                           "id":  "act-001",
+                           "entityType":  "goal",
+                           "entityId":  "goal-emp1-q1",
+                           "action":  "submit",
+                           "message":  "提交季度 OKR：张晨 2026 年一季度 OKR",
+                           "operatorId":  "u-emp1",
+                           "createdAt":  "2026-01-05 09:30:00"
+                       },
+                       {
+                           "id":  "act-002",
+                           "entityType":  "goal",
+                           "entityId":  "goal-emp2-q1",
+                           "action":  "review",
+                           "message":  "完成评价打分：王敏 2026 年一季度 OKR",
+                           "operatorId":  "u-sec1",
+                           "createdAt":  "2026-03-29 17:20:00"
+                       },
+                       {
+                           "id":  "act-003",
+                           "entityType":  "goal",
+                           "entityId":  "goal-emp3-q1",
+                           "action":  "submit",
+                           "message":  "提交季度 OKR：李涛 2026 年一季度 OKR",
+                           "operatorId":  "u-emp3",
+                           "createdAt":  "2026-01-08 11:00:00"
+                       }
+                   ]
+}

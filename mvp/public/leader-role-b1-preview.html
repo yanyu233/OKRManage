@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>负责人评分工作台预览</title>
+  <style>
+    :root {
+      --bg: #f4f8ff;
+      --panel: #ffffff;
+      --line: #dfe8fb;
+      --line-soft: #edf2fd;
+      --text: #112a50;
+      --muted: #6c84ad;
+      --blue: #3f76f6;
+      --blue-soft: #eef4ff;
+      --green: #238857;
+      --green-soft: #eaf9ef;
+      --red: #da4c40;
+      --red-soft: #ffedeb;
+      --gold: #b07916;
+      --gold-soft: #fff6e7;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+      background: linear-gradient(180deg, #f7faff 0%, #eef4ff 100%);
+      color: var(--text);
+    }
+    .page {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 28px 24px 40px;
+      display: grid;
+      gap: 18px;
+    }
+    .hero {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 20px;
+      padding: 18px 20px;
+      border: 1px solid #dce7ff;
+      border-radius: 24px;
+      background: linear-gradient(135deg, #f7faff 0%, #ffffff 75%);
+      box-shadow: 0 18px 42px rgba(48, 94, 185, 0.08);
+    }
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+      line-height: 1.2;
+    }
+    .hero p {
+      margin: 0;
+      color: #5e779f;
+      line-height: 1.7;
+      max-width: 860px;
+      font-size: 14px;
+    }
+    .role-toggle {
+      display: inline-flex;
+      gap: 6px;
+      padding: 6px;
+      border-radius: 999px;
+      background: var(--blue-soft);
+    }
+    .role-toggle span {
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      color: #6881aa;
+      font-weight: 700;
+    }
+    .role-toggle .active {
+      background: var(--blue);
+      color: #fff;
+      box-shadow: 0 8px 18px rgba(63, 118, 246, 0.28);
+    }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .summary-card {
+      padding: 14px 16px;
+      border-radius: 20px;
+      border: 1px solid #e6eefc;
+      background: #fbfdff;
+      box-shadow: 0 10px 24px rgba(39, 73, 138, 0.04);
+    }
+    .summary-card .label {
+      margin-bottom: 10px;
+      color: #7188ae;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .summary-card strong {
+      display: block;
+      color: #10294f;
+      font-size: 28px;
+      line-height: 1.1;
+    }
+    .summary-card small {
+      display: block;
+      margin-top: 8px;
+      color: #89a0c2;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .workspace {
+      display: grid;
+      grid-template-columns: 320px minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: var(--panel);
+      box-shadow: 0 14px 34px rgba(39, 73, 138, 0.06);
+      overflow: hidden;
+    }
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--line-soft);
+      background: linear-gradient(180deg, #fbfdff 0%, #f4f8ff 100%);
+    }
+    .panel-head strong {
+      font-size: 16px;
+      color: #142d59;
+    }
+    .panel-head span {
+      color: #7188ae;
+      font-size: 12px;
+    }
+    .people-list,
+    .goal-tabs,
+    .kr-list {
+      padding: 14px;
+    }
+    .person-card,
+    .kr-card {
+      border: 1px solid var(--line-soft);
+      border-radius: 18px;
+      background: #fbfdff;
+      padding: 14px;
+    }
+    .person-card + .person-card,
+    .kr-card + .kr-card {
+      margin-top: 10px;
+    }
+    .person-card.active {
+      background: linear-gradient(180deg, #eef4ff 0%, #f8fbff 100%);
+      border-color: #cadcff;
+      box-shadow: inset 0 0 0 1px #dbe8ff;
+    }
+    .person-top,
+    .kr-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .name {
+      color: var(--text);
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.4;
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    .pill {
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .pill.red { background: var(--red-soft); color: var(--red); }
+    .pill.green { background: var(--green-soft); color: var(--green); }
+    .pill.blue { background: var(--blue-soft); color: var(--blue); }
+    .pill.gold { background: var(--gold-soft); color: var(--gold); }
+    .person-stats {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .mini-chip {
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: #f2f6ff;
+      color: #5f79a7;
+      font-size: 12px;
+    }
+    .goal-tabs {
+      display: flex;
+      gap: 10px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+    .goal-tab {
+      min-width: 220px;
+      padding: 14px 16px;
+      border: 1px solid var(--line-soft);
+      border-radius: 18px;
+      background: #fbfdff;
+    }
+    .goal-tab.active {
+      background: linear-gradient(180deg, #eef4ff 0%, #ffffff 100%);
+      border-color: #cfe0ff;
+    }
+    .goal-tab strong {
+      display: block;
+      margin-bottom: 6px;
+      color: #17305b;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .goal-tab span {
+      color: #7289af;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .goal-meta {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 12px;
+      padding: 14px;
+      border-bottom: 1px solid var(--line-soft);
+      background: #fcfdff;
+    }
+    .goal-brief,
+    .quarter-score {
+      border: 1px solid var(--line-soft);
+      border-radius: 18px;
+      background: #fbfdff;
+      padding: 14px;
+    }
+    .goal-brief strong,
+    .quarter-score strong {
+      display: block;
+      color: #12305b;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+    .quarter-score .score-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .score-kpi {
+      padding: 10px;
+      border-radius: 14px;
+      background: #fff;
+      border: 1px solid var(--line-soft);
+    }
+    .score-kpi span {
+      display: block;
+      color: #7b90b3;
+      font-size: 11px;
+      margin-bottom: 6px;
+    }
+    .score-kpi strong {
+      margin: 0;
+      font-size: 18px;
+      color: var(--text);
+    }
+    .kr-card {
+      background: #fff;
+    }
+    .kr-main {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 250px;
+      gap: 14px;
+      align-items: start;
+    }
+    .kr-evidence {
+      margin-top: 10px;
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px dashed #d6e2fb;
+      background: #f9fbff;
+    }
+    .evidence-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      color: #5d759f;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .evidence-row + .evidence-row {
+      margin-top: 8px;
+    }
+    .score-editor {
+      border: 1px solid #e8eefb;
+      border-radius: 18px;
+      background: #fbfdff;
+      padding: 12px;
+    }
+    .score-editor strong {
+      display: block;
+      margin-bottom: 10px;
+      color: #14305b;
+      font-size: 14px;
+    }
+    .score-input-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .score-input-row .title {
+      width: 64px;
+      color: var(--muted);
+      font-size: 12px;
+      flex: 0 0 auto;
+    }
+    .score-input-row .box {
+      flex: 1;
+      height: 38px;
+      border-radius: 12px;
+      background: #fff;
+      border: 1px solid #d9e5fb;
+    }
+    .score-save-note {
+      padding: 9px 10px;
+      border-radius: 14px;
+      background: #eef5ff;
+      color: #4b6da2;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .footer-note {
+      padding: 14px 16px;
+      border-radius: 18px;
+      border: 1px solid #dfe8ff;
+      background: #f7faff;
+      color: #5f78a3;
+      font-size: 13px;
+      line-height: 1.8;
+    }
+    @media (max-width: 1180px) {
+      .summary,
+      .workspace,
+      .goal-meta,
+      .kr-main,
+      .quarter-score .score-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="hero">
+      <div>
+        <h1>B1 精细版：负责人评分工作台</h1>
+        <p>入口先按“人”组织，而不是按目标。每个员工在当前季度下可能有多个目标，进入员工后按目标切换，再在每条关键结果上查看材料、填写评分。评分每次修改都立即保存，不再额外做“提交本季度评分”按钮，后续可以继续调整。</p>
+      </div>
+      <div class="role-toggle">
+        <span>员工</span>
+        <span class="active">负责人</span>
+      </div>
+    </div>
+
+    <div class="summary">
+      <div class="summary-card">
+        <div class="label">待评分员工</div>
+        <strong>6</strong>
+        <small>按本季度未完成评分的员工数统计</small>
+      </div>
+      <div class="summary-card">
+        <div class="label">待补材料员工</div>
+        <strong>2</strong>
+        <small>至少有 1 条关键结果资料不齐</small>
+      </div>
+      <div class="summary-card">
+        <div class="label">本季度关键结果</div>
+        <strong>28</strong>
+        <small>其中已评分 17 条</small>
+      </div>
+      <div class="summary-card">
+        <div class="label">评分自动保存</div>
+        <strong>开启</strong>
+        <small>逐条评分即落库，支持后续修改</small>
+      </div>
+    </div>
+
+    <div class="workspace">
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <strong>人员队列</strong>
+            <span>按待评分优先级排序</span>
+          </div>
+          <span class="pill gold">2026年一季度</span>
+        </div>
+        <div class="people-list">
+          <div class="person-card active">
+            <div class="person-top">
+              <div>
+                <div class="name">张晨</div>
+                <div class="sub">平台产品科 · 信息化组</div>
+              </div>
+              <span class="pill red">待评分</span>
+            </div>
+            <div class="person-stats">
+              <span class="mini-chip">2 个目标</span>
+              <span class="mini-chip">6 条关键结果</span>
+              <span class="mini-chip">已评 3 / 6</span>
+              <span class="mini-chip">待补材料 1</span>
+            </div>
+          </div>
+
+          <div class="person-card">
+            <div class="person-top">
+              <div>
+                <div class="name">李涛</div>
+                <div class="sub">解决方案科 · 运营组</div>
+              </div>
+              <span class="pill blue">待补充</span>
+            </div>
+            <div class="person-stats">
+              <span class="mini-chip">1 个目标</span>
+              <span class="mini-chip">3 条关键结果</span>
+              <span class="mini-chip">材料缺 1 条</span>
+            </div>
+          </div>
+
+          <div class="person-card">
+            <div class="person-top">
+              <div>
+                <div class="name">王敏</div>
+                <div class="sub">平台产品科 · 信息化组</div>
+              </div>
+              <span class="pill green">已完成</span>
+            </div>
+            <div class="person-stats">
+              <span class="mini-chip">1 个目标</span>
+              <span class="mini-chip">3 条关键结果</span>
+              <span class="mini-chip">已评 3 / 3</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <strong>张晨 · 本季度评分工作台</strong>
+            <span>先切目标，再逐条处理关键结果</span>
+          </div>
+          <span class="pill red">仍有 3 条待评分</span>
+        </div>
+
+        <div class="goal-tabs">
+          <div class="goal-tab active">
+            <strong>O1 张晨 2026年一季度 OKR</strong>
+            <span>3 条关键结果 · 已评 2 条 · 材料 6 份</span>
+          </div>
+          <div class="goal-tab">
+            <strong>O4 知识库沉淀专项</strong>
+            <span>3 条关键结果 · 已评 1 条 · 材料 2 份</span>
+          </div>
+        </div>
+
+        <div class="goal-meta">
+          <div class="goal-brief">
+            <strong>当前目标说明</strong>
+            <div class="sub">围绕平台交付效率、知识沉淀和问题闭环推进季度工作。负责人只看这一名员工的本季度目标集合，不在这个层级打分。</div>
+          </div>
+          <div class="quarter-score">
+            <strong>张晨本季度汇总</strong>
+            <div class="score-grid">
+              <div class="score-kpi"><span>目标数</span><strong>2</strong></div>
+              <div class="score-kpi"><span>KR总数</span><strong>6</strong></div>
+              <div class="score-kpi"><span>已评分KR</span><strong>3</strong></div>
+            </div>
+            <div class="score-grid">
+              <div class="score-kpi"><span>材料份数</span><strong>8</strong></div>
+              <div class="score-kpi"><span>暂估季度总分</span><strong>84</strong></div>
+              <div class="score-kpi"><span>最近修改</span><strong>10:32</strong></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="kr-list">
+          <div class="kr-card">
+            <div class="kr-top">
+              <div>
+                <div class="name">KR1 完成 6 个版本交付</div>
+                <div class="sub">分值 35 · 完成确认：已完成 · 已上传材料 3 份</div>
+              </div>
+              <span class="pill green">已评分</span>
+            </div>
+            <div class="kr-main">
+              <div>
+                <div class="sub">关键结果说明：确保季度需求按里程碑交付，支持验收与过程佐证查看。</div>
+                <div class="kr-evidence">
+                  <div class="evidence-row"><span>版本交付清单.xlsx</span><span>打开材料</span></div>
+                  <div class="evidence-row"><span>阶段验收纪要.pdf</span><span>打开材料</span></div>
+                </div>
+              </div>
+              <div class="score-editor">
+                <strong>关键结果评分</strong>
+                <div class="score-input-row"><span class="title">当前分数</span><div class="box"></div></div>
+                <div class="score-input-row"><span class="title">负责人备注</span><div class="box"></div></div>
+                <div class="score-save-note">输入后自动保存。后续仍可回来修改，不需要额外点击“提交评分”。</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="kr-card">
+            <div class="kr-top">
+              <div>
+                <div class="name">KR2 知识库覆盖率达到 80%</div>
+                <div class="sub">分值 25 · 完成确认：待补充 · 已上传材料 1 份</div>
+              </div>
+              <span class="pill red">待评分</span>
+            </div>
+            <div class="kr-main">
+              <div>
+                <div class="sub">关键结果说明：沉淀常见问题与处理方案，当前材料还缺少最终覆盖率统计截图。</div>
+                <div class="kr-evidence">
+                  <div class="evidence-row"><span>知识库目录汇总.xlsx</span><span>打开材料</span></div>
+                  <div class="evidence-row"><span>缺少覆盖率截图</span><span class="pill red">待补材料</span></div>
+                </div>
+              </div>
+              <div class="score-editor">
+                <strong>关键结果评分</strong>
+                <div class="score-input-row"><span class="title">当前分数</span><div class="box"></div></div>
+                <div class="score-input-row"><span class="title">负责人备注</span><div class="box"></div></div>
+                <div class="score-save-note">如果先给临时分，也会自动保存；员工后续补材料后，负责人可以再次修改。</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="kr-card">
+            <div class="kr-top">
+              <div>
+                <div class="name">KR3 问题闭环时效不超过 2 天</div>
+                <div class="sub">分值 20 · 完成确认：已完成 · 已上传材料 2 份</div>
+              </div>
+              <span class="pill red">待评分</span>
+            </div>
+            <div class="kr-main">
+              <div>
+                <div class="sub">关键结果说明：重点看闭环台账和复盘记录，必要时支持展开历史材料。</div>
+                <div class="kr-evidence">
+                  <div class="evidence-row"><span>问题闭环台账.xlsx</span><span>打开材料</span></div>
+                  <div class="evidence-row"><span>问题复盘记录.pdf</span><span>打开材料</span></div>
+                </div>
+              </div>
+              <div class="score-editor">
+                <strong>关键结果评分</strong>
+                <div class="score-input-row"><span class="title">当前分数</span><div class="box"></div></div>
+                <div class="score-input-row"><span class="title">负责人备注</span><div class="box"></div></div>
+                <div class="score-save-note">这一条保存后，会同步刷新右上“张晨本季度汇总”的暂估总分。</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-note">
+      <strong>这个版本的核心规则：</strong><br>
+      1. 最外层按“人”组织，避免一个员工多个目标时入口分散。<br>
+      2. 人下面再切“目标”，目标下面才是“关键结果”。<br>
+      3. 评分动作只发生在关键结果层级。<br>
+      4. 每次改分立即保存，后续允许继续修改，不再单独设置“提交评分”。<br>
+      5. 负责人如果本身也是员工，顶部角色切换后回到员工端；切回负责人端则继续使用这个工作台。
+    </div>
+  </div>
+</body>
+</html>

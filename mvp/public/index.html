@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OKR 管理 MVP</title>
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./role-styles.css">
+  <link rel="stylesheet" href="./detail-workspace-overrides.css">
+  <link rel="stylesheet" href="./leader-role-overrides.css">
+  <link rel="stylesheet" href="./review-grade-overrides.css">
+  <link rel="stylesheet" href="./system-admin-overrides.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">O</div>
+        <div>
+          <div class="brand-title">OKR 管理</div>
+          <div class="brand-subtitle">季度提交、评分与过程留痕 MVP</div>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">体验账号</div>
+        <select id="userSwitcher"></select>
+        <div id="portalBadge" class="portal-badge"></div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">功能导航</div>
+        <div id="navList" class="nav-list"></div>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="footer-card">
+          <div class="footer-label">当前模式</div>
+          <div class="footer-value">单列表展示 / 弹窗详情 / 弹窗编辑</div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1 id="sectionTitle">我的 OKR</h1>
+          <div id="currentUserText" class="topbar-subtitle"></div>
+        </div>
+
+        <div class="toolbar">
+      <input id="searchInput" type="search" placeholder="搜索目标、KR、员工、科室">
+          <div class="toolbar-cycle-group">
+            <select id="yearFilter"></select>
+            <select id="quarterFilter"></select>
+          </div>
+          <select id="cycleFilter" class="hidden"></select>
+          <select id="statusFilter">
+            <option value="">全部状态</option>
+            <option value="draft">草稿</option>
+            <option value="confirmed">已确定</option>
+            <option value="pending_submission">待提交</option>
+            <option value="pending_review">待评分</option>
+            <option value="reviewed">已评分</option>
+          </select>
+          <button id="exportGoalsButton" class="ghost-button" type="button">导出目标明细</button>
+          <button id="exportSummaryButton" class="ghost-button" type="button">导出汇总报表</button>
+          <button id="newGoalButton" class="primary-button" type="button">+ 新建目标</button>
+        </div>
+      </header>
+
+      <section id="statsGrid" class="stats-grid"></section>
+
+      <section class="report-panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">季度概览</div>
+            <div id="reportScopeText" class="panel-subtitle"></div>
+          </div>
+        </div>
+
+        <div id="reportSummaryChips" class="report-summary-chips"></div>
+
+        <div class="table-wrapper">
+          <table class="goal-table report-table">
+            <thead>
+              <tr id="reportHead"></tr>
+            </thead>
+            <tbody id="reportRows"></tbody>
+          </table>
+          <div id="reportEmpty" class="empty-state hidden">
+            <div class="empty-title">当前没有可汇总的数据</div>
+            <div class="empty-text">可以切换季度、状态或搜索条件后继续查看。</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="list-panel full-width-panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">OKR 列表</div>
+            <div id="tableSubtitle" class="panel-subtitle">共 0 条目标</div>
+          </div>
+          <div class="panel-actions">
+            <button id="expandAllButton" class="ghost-button" type="button">展开全部</button>
+            <button id="collapseAllButton" class="ghost-button" type="button">收起全部</button>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="goal-table">
+            <thead>
+              <tr>
+              <th class="goal-col">目标 / KR</th>
+                <th>季度</th>
+                <th>员工</th>
+                <th>科室</th>
+                <th>进度</th>
+                <th>提交状态</th>
+                <th>分值</th>
+                <th>资料数</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="goalRows"></tbody>
+          </table>
+
+          <div id="emptyState" class="empty-state hidden">
+            <div class="empty-title">当前没有匹配的 OKR</div>
+            <div class="empty-text">可以调整季度、状态或搜索条件后继续查看。</div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="detailModal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="detailModalTitle">详情</h3>
+        <button class="icon-button" data-close-modal="detailModal" type="button">×</button>
+      </div>
+      <div id="detailModalBody" class="modal-body"></div>
+    </div>
+  </div>
+
+  <div id="goalModal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="goalModalTitle">新建目标</h3>
+        <button class="icon-button" data-close-modal="goalModal" type="button">×</button>
+      </div>
+
+      <form id="goalForm" class="goal-form">
+        <input id="goalFormMode" type="hidden" value="create">
+        <input id="goalFormGoalId" type="hidden" value="">
+
+        <div class="form-grid">
+          <label class="full-width">
+            <span>目标名称 *</span>
+            <input id="goalName" type="text" maxlength="100" placeholder="请输入目标名称">
+          </label>
+
+          <label class="goal-field-type hidden">
+            <span>目标类型 *</span>
+            <select id="goalType"></select>
+          </label>
+
+          <label class="goal-field-department">
+            <span>目标所属部门 *</span>
+            <select id="goalDepartment"></select>
+          </label>
+
+          <label class="goal-field-owner">
+            <span>负责人 *</span>
+            <select id="goalOwner"></select>
+          </label>
+
+          <label class="goal-field-review-group">
+            <span>个人所属评价组</span>
+            <select id="goalReviewGroup" disabled></select>
+          </label>
+
+          <label class="goal-field-cycle hidden">
+            <span>目标周期 *</span>
+            <select id="goalCycle"></select>
+          </label>
+
+          <label id="goalParentField" class="goal-field-parent full-width hidden">
+            <span>父目标</span>
+            <select id="goalParent"></select>
+          </label>
+
+          <label class="goal-field-points">
+            <span>目标分值</span>
+            <input id="goalPoints" type="number" min="0" step="0.1" placeholder="例如 100">
+          </label>
+
+          <label class="full-width">
+            <span>目标说明</span>
+            <textarea id="goalDescription" rows="3" placeholder="描述本季度目标的范围、重点和交付要求"></textarea>
+          </label>
+        </div>
+
+        <section id="goalEditSection" class="modal-section hidden">
+          <div class="modal-section-title">目标维护</div>
+          <div class="form-grid">
+            <label>
+              <span>提交状态</span>
+              <select id="goalEditStatus">
+                <option value="draft">草稿</option>
+                <option value="confirmed">已确定</option>
+                <option value="pending_submission" disabled>待提交</option>
+                <option value="pending_review" disabled>待评分</option>
+                <option value="reviewed" disabled>已评分</option>
+              </select>
+            </label>
+
+            <label>
+              <span>手动进度</span>
+              <input id="goalEditProgress" type="number" min="0" max="100" step="1" placeholder="0-100">
+            </label>
+
+            <label class="full-width">
+              <span>员工总结</span>
+              <textarea id="goalEditSummary" rows="4" placeholder="填写完成情况、问题与改进建议"></textarea>
+            </label>
+          </div>
+        </section>
+
+        <section id="goalKrSection" class="modal-section">
+          <div class="modal-section-header">
+            <div>
+              <div class="modal-section-title">关键结果</div>
+              <div id="goalKrHint" class="modal-section-subtitle">创建目标时可以预填 KR，提交后也可以继续维护。</div>
+            </div>
+            <button id="addKrRowButton" class="ghost-button" type="button">+ 新增KR</button>
+          </div>
+          <div id="krDraftList" class="kr-draft-list"></div>
+          <div id="goalKrList" class="embedded-list hidden"></div>
+          <div id="goalKrActions" class="section-actions hidden">
+            <button id="openAddKrButton" class="ghost-button" type="button">新增KR</button>
+          </div>
+        </section>
+
+        <section id="goalProofSection" class="modal-section hidden">
+          <div class="modal-section-title">证明材料</div>
+          <div id="goalProofList" class="proof-list"></div>
+
+          <div id="goalProofUploadForm" class="proof-form">
+            <label class="full-width">
+              <span>选择资料文件（支持多附件）</span>
+              <input id="goalProofFile" type="file" multiple>
+            </label>
+
+            <div id="goalProofUploadHint" class="detail-note compact hidden"></div>
+
+            <label class="full-width">
+              <span>资料说明</span>
+              <textarea id="goalProofNote" rows="3" placeholder="本次上传的材料说明会同时应用到选中的附件"></textarea>
+            </label>
+
+            <button id="goalProofUploadButton" class="primary-button" type="button">上传资料证明</button>
+          </div>
+        </section>
+
+        <div class="modal-footer">
+          <button class="ghost-button" data-close-modal="goalModal" type="button">取消</button>
+          <button id="saveDraftButton" class="secondary-button" type="button">保存草稿</button>
+          <button id="goalSubmitButton" class="primary-button" type="submit">确定</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="reviewModal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="reviewModalTitle">OKR 评分</h3>
+        <button class="icon-button" data-close-modal="reviewModal" type="button">×</button>
+      </div>
+
+      <div class="modal-body">
+        <div id="reviewGoalMeta" class="detail-meta"></div>
+
+        <section class="modal-section">
+          <div class="modal-section-title">目标概览</div>
+          <div id="reviewGoalKpis" class="detail-kpi-grid"></div>
+        </section>
+
+        <section class="modal-section">
+          <div class="modal-section-title">关键结果</div>
+          <div id="reviewKrList" class="embedded-list"></div>
+        </section>
+
+        <section class="modal-section">
+          <div class="modal-section-title">证明材料</div>
+          <div id="reviewProofList" class="proof-list"></div>
+        </section>
+
+        <section class="modal-section">
+          <div class="modal-section-title">评分结果</div>
+          <div id="reviewSummary" class="review-summary"></div>
+
+          <form id="reviewForm" class="detail-form">
+            <label>
+              <span>工作态度（0-20）</span>
+              <input id="reviewAttitude" type="number" min="0" max="20" step="0.1" placeholder="0-20">
+            </label>
+
+            <label>
+              <span>工作能力（0-20）</span>
+              <input id="reviewAbility" type="number" min="0" max="20" step="0.1" placeholder="0-20">
+            </label>
+
+            <label>
+              <span>工作业绩（0-60）</span>
+              <input id="reviewPerformance" type="number" min="0" max="60" step="0.1" placeholder="0-60">
+            </label>
+
+            <label>
+              <span>考核等级</span>
+              <select id="reviewLevel">
+                <option value="A">A / 优秀</option>
+                <option value="B">B / 良好</option>
+                <option value="C">C / 合格</option>
+                <option value="D">D / 待改进</option>
+                <option value="E">E / 不合格</option>
+              </select>
+            </label>
+
+            <label class="full-width">
+              <span>考核总分</span>
+              <input id="reviewTotal" type="text" readonly value="0.0">
+            </label>
+
+            <label class="full-width">
+              <span>评价意见</span>
+              <textarea id="reviewComment" rows="4" placeholder="填写本科室领导对本季度 OKR 的评价意见"></textarea>
+            </label>
+
+            <button class="primary-button" type="submit">提交评价打分</button>
+          </form>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div id="krModal" class="modal hidden">
+    <div class="modal-card narrow">
+      <div class="modal-header">
+        <h3 id="krModalTitle">新增 KR</h3>
+        <button class="icon-button" data-close-modal="krModal" type="button">×</button>
+      </div>
+
+      <form id="singleKrForm" class="goal-form">
+        <input id="singleKrFormMode" type="hidden" value="create">
+        <input id="singleKrGoalId" type="hidden" value="">
+        <input id="singleKrId" type="hidden" value="">
+
+        <div class="form-grid">
+          <label class="full-width">
+            <span>KR 名称 *</span>
+            <input id="singleKrName" type="text" maxlength="100" placeholder="请输入 KR 名称">
+          </label>
+
+          <label>
+            <span>衡量方式 *</span>
+            <select id="singleKrMetricType">
+              <option value="percentage">百分比型</option>
+              <option value="milestone">里程碑型</option>
+            </select>
+          </label>
+
+          <label>
+            <span>目标值</span>
+            <input id="singleKrTargetValue" type="text" placeholder="例如 100 / 完成验收">
+          </label>
+
+          <label>
+            <span>当前值</span>
+            <input id="singleKrCurrentValue" type="text" placeholder="例如 60 / 已完成一版">
+          </label>
+
+          <label>
+            <span>进度</span>
+            <input id="singleKrProgress" type="number" min="0" max="100" step="1" placeholder="0-100">
+          </label>
+
+          <label>
+            <span>状态</span>
+            <select id="singleKrStatus">
+              <option value="draft">草稿</option>
+              <option value="active">执行中</option>
+              <option value="completed">已完成</option>
+              <option value="closed">已关闭</option>
+            </select>
+          </label>
+
+          <label>
+            <span>分值</span>
+            <input id="singleKrPoints" type="number" min="0" step="0.1" placeholder="例如 20">
+          </label>
+
+          <label>
+            <span>负责人</span>
+            <select id="singleKrOwner"></select>
+          </label>
+
+          <label class="full-width">
+            <span>说明</span>
+            <textarea id="singleKrDescription" rows="3" placeholder="补充 KR 的口径、交付要求或里程碑说明"></textarea>
+          </label>
+        </div>
+
+        <div class="modal-footer">
+          <button class="ghost-button" data-close-modal="krModal" type="button">取消</button>
+          <button class="primary-button" type="submit">保存 KR</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="./period-utils.js"></script>
+  <script src="./goal-action-utils.js"></script>
+  <script src="./report-overview-utils.js"></script>
+  <script src="./role-app.js"></script>
+  <script src="./period-picker-overrides.js"></script>
+  <script src="./report-overview-overrides.js"></script>
+  <script src="./detail-workspace-overrides.js"></script>
+  <script src="./leader-role-overrides.js"></script>
+  <script src="./review-grade-utils.js"></script>
+  <script src="./role-view-utils.js"></script>
+  <script src="./review-grade-overrides.js"></script>
+  <script src="./system-admin-overrides.js"></script>
+</body>
+</html>

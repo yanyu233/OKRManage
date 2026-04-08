@@ -1,0 +1,1145 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OKR 详情页重设计预览</title>
+  <style>
+    :root {
+      --bg: #eef4fb;
+      --paper: #ffffff;
+      --paper-soft: #f7faff;
+      --ink: #142235;
+      --muted: #61748f;
+      --line: #d7e0ec;
+      --line-soft: #e8eef6;
+      --blue: #2d6cf6;
+      --blue-soft: #edf4ff;
+      --green: #1f9a57;
+      --green-soft: #ebf8f0;
+      --amber: #cb7b16;
+      --amber-soft: #fff5e8;
+      --gray: #8f9db0;
+      --gray-soft: #f2f5f9;
+      --shadow: 0 28px 80px rgba(20, 34, 53, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      font-family: "Avenir Next", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(103, 160, 255, 0.16), transparent 30%),
+        linear-gradient(180deg, #f6f9fd 0%, var(--bg) 100%);
+    }
+
+    body {
+      padding: 32px;
+    }
+
+    .preview-shell {
+      max-width: 1560px;
+      margin: 0 auto;
+      display: grid;
+      gap: 24px;
+    }
+
+    .hero {
+      display: grid;
+      gap: 14px;
+      padding: 28px 30px;
+      border: 1px solid rgba(255, 255, 255, 0.72);
+      border-radius: 28px;
+      background: rgba(255, 255, 255, 0.76);
+      backdrop-filter: blur(18px);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .eyebrow {
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--blue);
+      font-weight: 700;
+    }
+
+    .hero h1 {
+      margin: 6px 0 0;
+      font-size: 34px;
+      line-height: 1.15;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 840px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    .launch-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 18px;
+      border-radius: 999px;
+      background: var(--blue);
+      color: #fff;
+      text-decoration: none;
+      font-weight: 700;
+      box-shadow: 0 16px 34px rgba(45, 108, 246, 0.18);
+    }
+
+    .variant-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .variant-jump {
+      padding: 10px 16px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.82);
+      color: var(--ink);
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .variant-grid {
+      display: grid;
+      gap: 24px;
+    }
+
+    .variant-card {
+      display: grid;
+      gap: 18px;
+      padding: 28px;
+      border-radius: 30px;
+      background: rgba(255, 255, 255, 0.88);
+      border: 1px solid rgba(215, 224, 236, 0.86);
+      box-shadow: var(--shadow);
+    }
+
+    .variant-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 20px;
+    }
+
+    .variant-title {
+      display: grid;
+      gap: 8px;
+    }
+
+    .variant-title h2 {
+      margin: 0;
+      font-size: 28px;
+    }
+
+    .variant-title p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.6;
+      max-width: 920px;
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .tag {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: var(--paper-soft);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .mock {
+      padding: 24px;
+      border-radius: 26px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      display: grid;
+      gap: 18px;
+    }
+
+    .modal-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .modal-title {
+      display: grid;
+      gap: 10px;
+    }
+
+    .modal-title strong {
+      font-size: 20px;
+      line-height: 1.3;
+    }
+
+    .small-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .small-meta span {
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #f3f6fb;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .cta {
+      border: none;
+      border-radius: 16px;
+      padding: 12px 18px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, #2d6cf6, #5c90ff);
+      box-shadow: 0 14px 30px rgba(45, 108, 246, 0.16);
+    }
+
+    .summary-tiles {
+      display: grid;
+      gap: 12px;
+    }
+
+    .summary-tiles.triple {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .summary-tiles.quad {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .tile {
+      padding: 16px 18px;
+      border-radius: 18px;
+      border: 1px solid var(--line-soft);
+      background: #f9fbff;
+      display: grid;
+      gap: 8px;
+      min-height: 88px;
+    }
+
+    .tile-label {
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: 0.03em;
+    }
+
+    .tile-value {
+      font-size: 22px;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .tile-value.compact {
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.5;
+    }
+
+    .section {
+      display: grid;
+      gap: 10px;
+      padding-top: 4px;
+    }
+
+    .section-title {
+      font-size: 14px;
+      color: var(--muted);
+      letter-spacing: 0.03em;
+      font-weight: 700;
+    }
+
+    .soft-block {
+      padding: 16px 18px;
+      border-radius: 18px;
+      border: 1px solid var(--line-soft);
+      background: #fbfcfe;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .kr-stack {
+      display: grid;
+      gap: 12px;
+    }
+
+    .kr-card {
+      border: 1px solid var(--line-soft);
+      border-radius: 22px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .kr-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px 18px;
+    }
+
+    .kr-head-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .kr-code {
+      min-width: 58px;
+      padding: 8px 10px;
+      border-radius: 14px;
+      background: var(--green-soft);
+      color: var(--green);
+      font-size: 14px;
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .kr-copy {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .kr-copy strong {
+      font-size: 18px;
+      line-height: 1.3;
+    }
+
+    .kr-copy span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .kr-meta {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: end;
+      gap: 8px;
+    }
+
+    .meta-pill {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: #f5f8fc;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .meta-pill.warn {
+      background: #fff3e4;
+      color: var(--amber);
+    }
+
+    .action-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 800;
+      white-space: nowrap;
+      line-height: 1;
+      text-align: center;
+    }
+
+    .action-chip.green {
+      background: var(--green-soft);
+      color: var(--green);
+      border-color: #bee8ce;
+    }
+
+    .action-chip.orange {
+      background: var(--amber-soft);
+      color: var(--amber);
+      border-color: #ffd9a8;
+    }
+
+    .action-chip.gray {
+      background: var(--gray-soft);
+      color: var(--gray);
+      border-color: #dde5ef;
+    }
+
+    .action-chip.danger {
+      background: #fff0f0;
+      color: #d64545;
+      border-color: #ffc9c9;
+    }
+
+    .upload-strip {
+      display: grid;
+      gap: 10px;
+      padding: 0 18px 18px;
+    }
+
+    .upload-toolbar {
+      display: grid;
+      grid-template-columns: 160px minmax(0, 1fr) 120px;
+      gap: 10px;
+    }
+
+    .upload-field,
+    .upload-button {
+      min-height: 44px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: #f9fbff;
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .upload-button {
+      justify-content: center;
+      font-weight: 800;
+      background: var(--blue);
+      color: #fff;
+      border-color: transparent;
+    }
+
+    .file-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .file-pill {
+      padding: 7px 10px;
+      border-radius: 12px;
+      background: #f4f7fb;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 340px minmax(0, 1fr);
+      gap: 16px;
+      min-height: 560px;
+    }
+
+    .sidebar-list,
+    .pane {
+      border: 1px solid var(--line-soft);
+      border-radius: 22px;
+      background: #fff;
+    }
+
+    .sidebar-list {
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .sidebar-item {
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid var(--line-soft);
+      background: #fbfdff;
+      display: grid;
+      gap: 8px;
+    }
+
+    .sidebar-item.active {
+      background: linear-gradient(180deg, #eff5ff 0%, #f8fbff 100%);
+      border-color: #c8d9fb;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    }
+
+    .sidebar-item-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .sidebar-item strong {
+      font-size: 16px;
+    }
+
+    .completion-chooser {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px;
+      border-radius: 999px;
+      background: #f2f6fb;
+      border: 1px solid var(--line-soft);
+      width: fit-content;
+    }
+
+    .completion-chip {
+      appearance: none;
+      padding: 7px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--muted);
+      background: transparent;
+      border: 1px solid transparent;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .completion-chip.active {
+      background: #fff;
+      border-color: #d7e2f0;
+      color: var(--ink);
+      box-shadow: 0 4px 10px rgba(20, 34, 53, 0.06);
+    }
+
+    .completion-chip.pending.active {
+      background: #fff1f1;
+      border-color: #ffcaca;
+      color: #d64545;
+    }
+
+    .completion-chip.done.active {
+      color: var(--green);
+      border-color: #bee8ce;
+      background: #f9fefb;
+    }
+
+    .sidebar-item-state {
+      min-width: 72px;
+      justify-content: center;
+    }
+
+    .pane {
+      padding: 20px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .pane-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .pane-head h3 {
+      margin: 0;
+      font-size: 22px;
+    }
+
+    .pane-head p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .upload-panel {
+      display: grid;
+      gap: 14px;
+      padding: 16px;
+      border-radius: 18px;
+      background: linear-gradient(180deg, #fafcff 0%, #f4f8fd 100%);
+      border: 1px solid var(--line-soft);
+    }
+
+    .dropzone {
+      min-height: 116px;
+      border: 1.5px dashed #c8d6ea;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.86);
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 14px;
+      text-align: center;
+      padding: 20px;
+      line-height: 1.8;
+    }
+
+    .history-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .history-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: center;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: #fff;
+      border: 1px solid var(--line-soft);
+    }
+
+    .history-row strong {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .history-row span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .accordion-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .accordion-item {
+      border: 1px solid var(--line-soft);
+      border-radius: 20px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .accordion-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto auto;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 18px;
+    }
+
+    .accordion-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .accordion-body {
+      display: grid;
+      gap: 14px;
+      padding: 0 18px 18px;
+      border-top: 1px solid var(--line-soft);
+      background: linear-gradient(180deg, #fcfdff 0%, #f7fbff 100%);
+    }
+
+    .mini-upload {
+      display: grid;
+      grid-template-columns: 144px minmax(0, 1fr) 110px;
+      gap: 10px;
+    }
+
+    .section-hint {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .confirm-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      border: 1px solid var(--line-soft);
+      background: #fbfdff;
+    }
+
+    .confirm-copy {
+      display: grid;
+      gap: 4px;
+    }
+
+    .confirm-copy strong {
+      font-size: 14px;
+    }
+
+    .confirm-copy.compact {
+      gap: 0;
+    }
+
+    @media (max-width: 1180px) {
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+
+      .summary-tiles.quad {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 860px) {
+      body {
+        padding: 18px;
+      }
+
+      .hero,
+      .variant-card {
+        padding: 20px;
+      }
+
+      .hero-top,
+      .variant-head,
+      .modal-head,
+      .pane-head {
+        grid-template-columns: 1fr;
+        display: grid;
+      }
+
+      .summary-tiles.triple,
+      .summary-tiles.quad,
+      .upload-toolbar,
+      .mini-upload,
+      .accordion-head {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="preview-shell">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="eyebrow">Preview</div>
+          <h1>OKR 详情页与 KR 材料提交页 3 稿可视预览</h1>
+        </div>
+        <a class="launch-link" href="http://localhost:5057" target="_blank" rel="noreferrer">返回正式系统</a>
+      </div>
+      <p>这 3 稿都按你刚刚的要求收过一遍：状态信息更小、更轻，去掉员工总结，KR 维护和上传材料都改成更精简的结构。你直接看结构密度和交互风格，选一版我们就正式落代码。</p>
+      <nav class="variant-nav">
+        <a class="variant-jump" href="#variant-a">A · 极简摘要型</a>
+        <a class="variant-jump" href="#variant-b">B · 材料工作台型</a>
+        <a class="variant-jump" href="#variant-c">C · 抽屉折叠型</a>
+      </nav>
+    </section>
+
+    <section id="variant-a" class="variant-card">
+      <header class="variant-head">
+        <div class="variant-title">
+          <h2>A · 极简摘要型</h2>
+          <p>保留当前上下结构，但把信息压薄。顶部只做轻摘要，KR 列表成为页面主角，上传区改成一条轻量操作带，最接近正式业务系统。</p>
+        </div>
+        <div class="tag-row">
+          <span class="tag">最稳妥</span>
+          <span class="tag">改造风险低</span>
+          <span class="tag">信息最平衡</span>
+        </div>
+      </header>
+
+      <div class="mock">
+        <div class="modal-head">
+          <div class="modal-title">
+            <strong>O1 张晨 2026 年一季度 OKR</strong>
+            <div class="small-meta">
+              <span>状态：待提交</span>
+              <span>季度：2026 年一季度</span>
+              <span>员工：张晨</span>
+              <span>科室：平台产品科</span>
+              <span>分值：80</span>
+            </div>
+          </div>
+          <button class="cta">确认</button>
+        </div>
+
+        <div class="summary-tiles triple">
+          <div class="tile">
+            <div class="tile-label">当前进度</div>
+            <div class="tile-value">未完成</div>
+          </div>
+          <div class="tile">
+            <div class="tile-label">关键结果材料数</div>
+            <div class="tile-value">0 份</div>
+          </div>
+          <div class="tile">
+            <div class="tile-label">最近更新</div>
+            <div class="tile-value compact">2026-03-25 18:00</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">目标说明</div>
+          <div class="soft-block">围绕平台交付效率、知识沉淀和问题闭环推进季度工作。</div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">关键结果维护</div>
+          <div class="section-hint">目标与 KR 内容保持锁定，当前只突出材料补充与提交动作。</div>
+          <div class="kr-stack">
+            <article class="kr-card">
+              <div class="kr-head">
+                <div class="kr-head-left">
+                  <span class="kr-code">KR1</span>
+                  <div class="kr-copy">
+                    <strong>完成 6 个版本交付</strong>
+                    <span>当前状态：未完成</span>
+                  </div>
+                </div>
+                <div class="kr-meta">
+                  <span class="meta-pill">分值 35</span>
+                  <span class="meta-pill">材料 0 份</span>
+                  <span class="action-chip orange">提交材料</span>
+                </div>
+              </div>
+              <div class="upload-strip">
+                <div class="upload-toolbar">
+                  <div class="upload-field">选择文件</div>
+                  <div class="upload-field">可选备注：补充交付记录 / 验收说明</div>
+                  <div class="upload-button">上传</div>
+                </div>
+                <div class="file-pills">
+                  <span class="file-pill">版本计划表.xlsx</span>
+                  <span class="file-pill">验收记录.pdf</span>
+                </div>
+              </div>
+            </article>
+
+            <article class="kr-card">
+              <div class="kr-head">
+                <div class="kr-head-left">
+                  <span class="kr-code">KR2</span>
+                  <div class="kr-copy">
+                    <strong>知识库覆盖率达到 80%</strong>
+                    <span>默认收起，只在需要时展开上传区</span>
+                  </div>
+                </div>
+                <div class="kr-meta">
+                  <span class="meta-pill">分值 25</span>
+                  <span class="meta-pill">材料 0 份</span>
+                  <span class="action-chip orange">提交材料</span>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="variant-b" class="variant-card">
+      <header class="variant-head">
+        <div class="variant-title">
+          <h2>B · 材料工作台型</h2>
+          <p>把“给哪个 KR 传材料”变成主任务。左边看 KR 清单和每条 KR 的完成确认，右边专门做材料提交与历史材料查看，适合频繁上传材料的使用场景。</p>
+        </div>
+        <div class="tag-row">
+          <span class="tag">上传效率高</span>
+          <span class="tag">滚动最少</span>
+          <span class="tag">工作台感更强</span>
+        </div>
+      </header>
+
+      <div class="mock">
+        <div class="modal-head">
+          <div class="modal-title">
+            <strong>O1 张晨 2026 年一季度 OKR</strong>
+            <div class="small-meta">
+              <span>待提交</span>
+              <span>平台产品科</span>
+              <span>分值 80</span>
+            </div>
+          </div>
+          <button class="cta">确认</button>
+        </div>
+
+        <div class="summary-tiles quad">
+          <div class="tile">
+            <div class="tile-label">当前进度</div>
+            <div class="tile-value">未完成</div>
+          </div>
+          <div class="tile">
+            <div class="tile-label">关键结果数</div>
+            <div class="tile-value">3 条</div>
+          </div>
+          <div class="tile">
+            <div class="tile-label">材料总数</div>
+            <div class="tile-value">0 份</div>
+          </div>
+          <div class="tile">
+            <div class="tile-label">最近更新</div>
+            <div class="tile-value compact">2026-03-25 18:00</div>
+          </div>
+        </div>
+
+        <div class="workspace" id="variant-b-workspace">
+          <aside class="sidebar-list">
+            <article class="sidebar-item active" data-preview-kr="kr1" data-completed="false">
+              <div class="sidebar-item-top">
+                <strong>KR1 完成 6 个版本交付</strong>
+                <span class="action-chip danger sidebar-item-state" data-preview-status>待补充</span>
+              </div>
+              <div class="small-meta">
+                <span>分值 35</span>
+                <span>材料 0 份</span>
+              </div>
+            </article>
+
+            <article class="sidebar-item" data-preview-kr="kr2" data-completed="true">
+              <div class="sidebar-item-top">
+                <strong>KR2 知识库覆盖率达到 80%</strong>
+                <span class="action-chip green sidebar-item-state" data-preview-status>完成</span>
+              </div>
+              <div class="small-meta">
+                <span>分值 25</span>
+                <span>材料 0 份</span>
+              </div>
+            </article>
+
+            <article class="sidebar-item" data-preview-kr="kr3" data-completed="false">
+              <div class="sidebar-item-top">
+                <strong>KR3 问题闭环时效不超过 2 天</strong>
+                <span class="action-chip danger sidebar-item-state" data-preview-status>待补充</span>
+              </div>
+              <div class="small-meta">
+                <span>分值 20</span>
+                <span>材料 0 份</span>
+              </div>
+            </article>
+          </aside>
+
+          <section class="pane">
+            <div class="pane-head">
+              <div>
+                <h3 id="variant-b-title">KR1 · 完成 6 个版本交付</h3>
+                <p id="variant-b-copy">当前页面不再展示 KR 编辑表单，只保留材料补充与历史材料查看，页面重点更明确。</p>
+              </div>
+              <span class="action-chip orange">提交材料</span>
+            </div>
+
+            <div class="confirm-strip">
+              <div class="confirm-copy compact">
+                <strong>完成确认</strong>
+              </div>
+              <div class="completion-chooser" aria-label="当前 KR 完成确认">
+                <button class="completion-chip pending active" type="button" data-preview-completion="false">未完成</button>
+                <button class="completion-chip done" type="button" data-preview-completion="true">已完成</button>
+              </div>
+            </div>
+
+            <div class="upload-panel">
+              <div class="dropzone">拖拽文件到这里，或点击选择文件<br>支持文档、图片、压缩包与视频</div>
+              <div class="upload-toolbar">
+                <div class="upload-field">已选 2 个文件</div>
+                <div class="upload-field">备注：补充版本交付验收记录</div>
+                <div class="upload-button">开始上传</div>
+              </div>
+            </div>
+
+            <div class="section">
+              <div class="section-title">最近材料</div>
+              <div class="history-list">
+                <div class="history-row">
+                  <div>
+                    <strong>版本交付清单.xlsx</strong>
+                    <span>2026-03-25 17:40 · 132 KB</span>
+                  </div>
+                  <span class="action-chip gray">打开</span>
+                </div>
+                <div class="history-row">
+                  <div>
+                    <strong>验收会议纪要.pdf</strong>
+                    <span>2026-03-25 17:51 · 684 KB</span>
+                  </div>
+                  <span class="action-chip gray">打开</span>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section id="variant-c" class="variant-card">
+      <header class="variant-head">
+        <div class="variant-title">
+          <h2>C · 抽屉折叠型</h2>
+          <p>默认页面最短，只把 KR 做成一行一条的折叠抽屉。平时看起来非常清爽，只有在某个 KR 需要补材料时才展开上传区域。</p>
+        </div>
+        <div class="tag-row">
+          <span class="tag">默认最简洁</span>
+          <span class="tag">层次最清楚</span>
+          <span class="tag">交互变化最大</span>
+        </div>
+      </header>
+
+      <div class="mock">
+        <div class="modal-head">
+          <div class="modal-title">
+            <strong>O1 张晨 2026 年一季度 OKR</strong>
+            <div class="small-meta">
+              <span>待提交</span>
+              <span>张晨 · 平台产品科</span>
+              <span>分值 80</span>
+            </div>
+          </div>
+          <button class="cta">确认</button>
+        </div>
+
+        <div class="summary-tiles triple">
+          <div class="tile">
+            <div class="tile-label">目标说明</div>
+            <div class="tile-value compact">围绕平台交付效率、知识沉淀和问题闭环推进季度工作。</div>
+          </div>
+          <div class="tile">
+            <div class="tile-label">当前进度</div>
+            <div class="tile-value">未完成</div>
+          </div>
+          <div class="tile">
+            <div class="tile-label">材料总数</div>
+            <div class="tile-value">0 份</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">关键结果抽屉</div>
+          <div class="accordion-list">
+            <article class="accordion-item">
+              <div class="accordion-head">
+                <div class="accordion-title">
+                  <span class="kr-code">KR1</span>
+                  <strong>完成 6 个版本交付</strong>
+                </div>
+                <span class="meta-pill">分值 35</span>
+                <span class="meta-pill">材料 0 份</span>
+                <span class="action-chip orange">提交材料</span>
+              </div>
+              <div class="accordion-body">
+                <div class="section-hint">展开后只做材料相关操作，不再出现大块 KR 编辑表单。</div>
+                <div class="mini-upload">
+                  <div class="upload-field">选择文件</div>
+                  <div class="upload-field">可选备注：交付记录 / 验收说明</div>
+                  <div class="upload-button">上传</div>
+                </div>
+                <div class="file-pills">
+                  <span class="file-pill">最近材料 1 · 需求验收表.pdf</span>
+                  <span class="file-pill">最近材料 2 · 交付截图.png</span>
+                </div>
+              </div>
+            </article>
+
+            <article class="accordion-item">
+              <div class="accordion-head">
+                <div class="accordion-title">
+                  <span class="kr-code">KR2</span>
+                  <strong>知识库覆盖率达到 80%</strong>
+                </div>
+                <span class="meta-pill">分值 25</span>
+                <span class="meta-pill">材料 0 份</span>
+                <span class="action-chip gray">收起中</span>
+              </div>
+            </article>
+
+            <article class="accordion-item">
+              <div class="accordion-head">
+                <div class="accordion-title">
+                  <span class="kr-code">KR3</span>
+                  <strong>问题闭环时效不超过 2 天</strong>
+                </div>
+                <span class="meta-pill">分值 20</span>
+                <span class="meta-pill">材料 0 份</span>
+                <span class="action-chip gray">收起中</span>
+              </div>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script>
+    (() => {
+      const workspace = document.getElementById("variant-b-workspace");
+      if (!workspace) return;
+
+      const items = Array.from(workspace.querySelectorAll("[data-preview-kr]"));
+      const buttons = Array.from(workspace.querySelectorAll("[data-preview-completion]"));
+      const title = document.getElementById("variant-b-title");
+
+      let activeId = items.find((item) => item.classList.contains("active"))?.dataset.previewKr || items[0]?.dataset.previewKr;
+
+      function isCompleted(item) {
+        return item?.dataset.completed === "true";
+      }
+
+      function updateStatusChip(item) {
+        const chip = item.querySelector("[data-preview-status]");
+        if (!chip) return;
+        const completed = isCompleted(item);
+        chip.textContent = completed ? "完成" : "待补充";
+        chip.className = `action-chip ${completed ? "green" : "danger"} sidebar-item-state`;
+      }
+
+      function render() {
+        const activeItem = items.find((item) => item.dataset.previewKr === activeId) || items[0];
+        items.forEach((item) => {
+          item.classList.toggle("active", item === activeItem);
+          updateStatusChip(item);
+        });
+
+        if (activeItem && title) {
+          const label = activeItem.querySelector("strong")?.textContent || "";
+          title.textContent = label;
+        }
+
+        const completed = isCompleted(activeItem);
+        buttons.forEach((button) => {
+          const matches = String(completed) === button.dataset.previewCompletion;
+          button.classList.toggle("active", matches);
+          button.classList.toggle("done", button.dataset.previewCompletion === "true");
+          button.classList.toggle("pending", button.dataset.previewCompletion === "false");
+        });
+      }
+
+      items.forEach((item) => {
+        item.addEventListener("click", () => {
+          activeId = item.dataset.previewKr;
+          render();
+        });
+      });
+
+      buttons.forEach((button) => {
+        button.addEventListener("click", (event) => {
+          event.stopPropagation();
+          const activeItem = items.find((item) => item.dataset.previewKr === activeId);
+          if (!activeItem) return;
+          activeItem.dataset.completed = button.dataset.previewCompletion;
+          render();
+        });
+      });
+
+      render();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+.superpowers/
+
+# Local temp files
+tmp-*.log
+tmp-*.js
+tmp-*.txt
+
+# MVP runtime outputs
+mvp/server.out.log
+mvp/server.err.log
+mvp/data/store.json
+mvp/uploads/
+
+# Local browser automation / screenshots
+mvp/.edge-cdp/
+mvp/.edge-cdp-2/
+mvp/.edge-cdp-save/
+mvp/.edge-cdp-shot/
+mvp/.edge-cdp-shot2/
+mvp/.edge-cdp-verify/
+mvp/.edge-headless/
+
+# OS/editor noise
+Thumbs.db
+Desktop.ini
+.DS_Store

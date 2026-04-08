@@ -1,0 +1,436 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OKR 管理 MVP</title>
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./role-styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">O</div>
+        <div>
+          <div class="brand-title">OKR 管理</div>
+          <div class="brand-subtitle">季度提交、评分与过程留痕 MVP</div>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">体验账号</div>
+        <select id="userSwitcher"><option value="u-emp1">张晨 · 普通员工端</option><option value="u-emp2">王敏 · 普通员工端</option><option value="u-emp3">李涛 · 普通员工端</option><option value="u-sec1">刘科长 · 科室领导端</option><option value="u-sec2">陈科长 · 科室领导端</option><option value="u-dept1">严主任 · 部门领导端</option></select>
+        <div id="portalBadge" class="portal-badge">普通员工端</div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">功能导航</div>
+        <div id="navList" class="nav-list"><button class="nav-item active" type="button">我的 OKR</button></div>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="footer-card">
+          <div class="footer-label">当前模式</div>
+          <div class="footer-value">单列表展示 / 弹窗详情 / 弹窗编辑</div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1 id="sectionTitle">我的 OKR</h1>
+          <div id="currentUserText" class="topbar-subtitle">普通员工端 · 张晨 · 平台产品科 · 当前查看本人季度 OKR。草稿可编辑，锁定后按 KR 补充证明材料。</div>
+        </div>
+
+        <div class="toolbar">
+          <input id="searchInput" type="search" placeholder="搜索目标、KR、员工、科室">
+          <select id="cycleFilter"><option value="2026-Q1">2026年一季度（当前）</option><option value="2025-Q4">2025年四季度</option></select>
+          <select id="statusFilter">
+            <option value="">全部状态</option>
+            <option value="draft">草稿</option>
+            <option value="confirmed">已确定</option>
+            <option value="pending_submission">待提交</option>
+            <option value="pending_review">待评分</option>
+            <option value="reviewed">已评分</option>
+          </select>
+          <button id="exportGoalsButton" class="ghost-button" type="button">导出目标明细</button>
+          <button id="exportSummaryButton" class="ghost-button" type="button">导出汇总报表</button>
+          <button id="newGoalButton" class="primary-button" type="button">+ 新建季度 OKR</button>
+        </div>
+      </header>
+
+      <section id="statsGrid" class="stats-grid"><div class="stat-card"><div class="stat-label">目标数</div><div class="stat-value">3</div><div class="stat-hint">当前筛选范围内的 OKR</div></div><div class="stat-card"><div class="stat-label">KR 数</div><div class="stat-value">4</div><div class="stat-hint">关键结果数量</div></div><div class="stat-card"><div class="stat-label">平均进度</div><div class="stat-value">0%</div><div class="stat-hint">按目标进度计算</div></div><div class="stat-card"><div class="stat-label">已评分目标</div><div class="stat-value">0</div><div class="stat-hint">当前暂无评分数据</div></div></section>
+
+      <section class="report-panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">季度概览</div>
+            <div id="reportScopeText" class="panel-subtitle">2026年一季度 · 查看本人季度 OKR。草稿可编辑，锁定后按 KR 补充证明材料。</div>
+          </div>
+        </div>
+
+        <div id="reportSummaryChips" class="report-summary-chips"><div class="report-chip"><div class="report-chip-label">当前季度</div><div class="report-chip-value">2026年一季度</div></div><div class="report-chip"><div class="report-chip-label">目标 / KR</div><div class="report-chip-value">3 / 4</div></div><div class="report-chip"><div class="report-chip-label">证明材料</div><div class="report-chip-value">0 份</div></div><div class="report-chip"><div class="report-chip-label">已评分目标</div><div class="report-chip-value">0 条</div></div></div>
+
+        <div class="table-wrapper">
+          <table class="goal-table report-table">
+            <thead>
+              <tr id="reportHead"><th>员工</th><th>科室</th><th>目标数</th><th>KR 数</th><th>平均进度</th><th>已评分</th><th>平均得分</th></tr>
+            </thead>
+            <tbody id="reportRows"><tr><td>张晨</td><td>平台产品科</td><td>3</td><td>4</td><td>0%</td><td>0</td><td>-</td></tr></tbody>
+          </table>
+          <div id="reportEmpty" class="empty-state hidden">
+            <div class="empty-title">当前没有可汇总的数据</div>
+            <div class="empty-text">可以切换季度、状态或搜索条件后继续查看。</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="list-panel full-width-panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">OKR 列表</div>
+            <div id="tableSubtitle" class="panel-subtitle">共 3 条目标，4 条 KR</div>
+          </div>
+          <div class="panel-actions">
+            <button id="expandAllButton" class="ghost-button" type="button">展开全部</button>
+            <button id="collapseAllButton" class="ghost-button" type="button">收起全部</button>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="goal-table">
+            <thead>
+              <tr>
+                <th class="goal-col">目标 / KR</th>
+                <th>季度</th>
+                <th>员工</th>
+                <th>科室</th>
+                <th>进度</th>
+                <th>提交状态</th>
+                <th>总分 / 等级</th>
+                <th>资料数</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="goalRows"><tr class="goal-row">
+    <td class="goal-col"><div class="goal-cell"><button class="tree-toggle" type="button" data-act="toggle" data-goal-id="goal-emp1-q1">−</button><span class="goal-chip">O1</span><div class="goal-main"><button class="goal-name-button" type="button" data-act="detail-goal" data-goal-id="goal-emp1-q1">张晨 2026 年一季度 OKR</button><div class="goal-subtext">围绕平台交付效率、知识沉淀和问题闭环推进季度工作。</div></div></div></td>
+    <td>2026年一季度</td><td>张晨</td><td>平台产品科</td><td><div class="progress-wrap"><div class="progress-track"><div class="progress-fill" style="width:0%"></div></div><span>0%</span></div></td><td><span class="status-pill pending_submission">待提交</span></td><td>-</td><td>0</td>
+    <td><div class="row-actions"><button class="mini-button" type="button" data-act="detail-goal" data-goal-id="goal-emp1-q1">详情</button></div></td>
+  </tr><tr class="goal-row kr-row">
+    <td class="goal-col"><div class="goal-cell goal-cell-kr"><span class="tree-toggle placeholder">•</span><span class="goal-chip kr">KR1</span><div class="goal-main"><button class="goal-name-button" type="button" data-act="detail-kr" data-kr-id="kr-emp1-1">完成 6 个版本交付</button><div class="goal-subtext">归属目标：张晨 2026 年一季度 OKR</div></div></div></td>
+    <td>2026年一季度</td><td>张晨</td><td>平台产品科</td><td><div class="kr-progress-cell"><span class="milestone-tag pending">未完成</span></div></td><td><span class="status-pill active">未完成</span></td><td>88</td><td>0</td>
+    <td><div class="row-actions"><button class="mini-button" type="button" data-act="detail-kr" data-kr-id="kr-emp1-1">维护</button></div></td>
+  </tr><tr class="goal-row kr-row">
+    <td class="goal-col"><div class="goal-cell goal-cell-kr"><span class="tree-toggle placeholder">•</span><span class="goal-chip kr">KR2</span><div class="goal-main"><button class="goal-name-button" type="button" data-act="detail-kr" data-kr-id="kr-emp1-2">知识库覆盖率达到 80%</button><div class="goal-subtext">归属目标：张晨 2026 年一季度 OKR</div></div></div></td>
+    <td>2026年一季度</td><td>张晨</td><td>平台产品科</td><td><div class="kr-progress-cell"><span class="milestone-tag pending">未完成</span></div></td><td><span class="status-pill active">未完成</span></td><td>84</td><td>0</td>
+    <td><div class="row-actions"><button class="mini-button" type="button" data-act="detail-kr" data-kr-id="kr-emp1-2">维护</button></div></td>
+  </tr><tr class="goal-row kr-row">
+    <td class="goal-col"><div class="goal-cell goal-cell-kr"><span class="tree-toggle placeholder">•</span><span class="goal-chip kr">KR3</span><div class="goal-main"><button class="goal-name-button" type="button" data-act="detail-kr" data-kr-id="kr-emp1-3">问题闭环时效不超过 2 天</button><div class="goal-subtext">归属目标：张晨 2026 年一季度 OKR</div></div></div></td>
+    <td>2026年一季度</td><td>张晨</td><td>平台产品科</td><td><div class="kr-progress-cell"><span class="milestone-tag pending">未完成</span></div></td><td><span class="status-pill active">未完成</span></td><td>90</td><td>0</td>
+    <td><div class="row-actions"><button class="mini-button" type="button" data-act="detail-kr" data-kr-id="kr-emp1-3">维护</button></div></td>
+  </tr><tr class="goal-row">
+    <td class="goal-col"><div class="goal-cell"><button class="tree-toggle" type="button" data-act="toggle" data-goal-id="goal-emp1-draft">−</button><span class="goal-chip">O4</span><div class="goal-main"><button class="goal-name-button" type="button" data-act="detail-goal" data-goal-id="goal-emp1-draft">张晨 知识库沉淀专项</button><div class="goal-subtext">沉淀平台常见问题和交付案例，作为季度补充目标。</div></div></div></td>
+    <td>2026年一季度</td><td>张晨</td><td>平台产品科</td><td><div class="progress-wrap"><div class="progress-track"><div class="progress-fill" style="width:0%"></div></div><span>0%</span></div></td><td><span class="status-pill draft">草稿</span></td><td>-</td><td>0</td>
+    <td><div class="row-actions"><button class="mini-button" type="button" data-act="detail-goal" data-goal-id="goal-emp1-draft">详情</button><button class="mini-button" type="button" data-act="edit-goal" data-goal-id="goal-emp1-draft">编辑</button></div></td>
+  </tr><tr class="goal-row kr-row">
+    <td class="goal-col"><div class="goal-cell goal-cell-kr"><span class="tree-toggle placeholder">•</span><span class="goal-chip kr">KR1</span><div class="goal-main"><button class="goal-name-button" type="button" data-act="detail-kr" data-kr-id="kr-draft-1">沉淀 20 篇知识库内容</button><div class="goal-subtext">归属目标：张晨 知识库沉淀专项</div></div></div></td>
+    <td>2026年一季度</td><td>张晨</td><td>平台产品科</td><td><div class="kr-progress-cell"><span class="milestone-tag pending">未完成</span></div></td><td><span class="status-pill draft">草稿</span></td><td>-</td><td>0</td>
+    <td><div class="row-actions"><button class="mini-button" type="button" data-act="detail-kr" data-kr-id="kr-draft-1">维护</button></div></td>
+  </tr><tr class="goal-row">
+    <td class="goal-col"><div class="goal-cell"><span class="tree-toggle placeholder">•</span><span class="goal-chip">O5</span><div class="goal-main"><button class="goal-name-button" type="button" data-act="detail-goal" data-goal-id="goal-c809cd2d">???? O</button><div class="goal-subtext">??? O,??? KR</div></div></div></td>
+    <td>2026年一季度</td><td>张晨</td><td>平台产品科</td><td><div class="progress-wrap"><div class="progress-track"><div class="progress-fill" style="width:0%"></div></div><span>0%</span></div></td><td><span class="status-pill draft">草稿</span></td><td>-</td><td>0</td>
+    <td><div class="row-actions"><button class="mini-button" type="button" data-act="detail-goal" data-goal-id="goal-c809cd2d">详情</button><button class="mini-button" type="button" data-act="edit-goal" data-goal-id="goal-c809cd2d">编辑</button></div></td>
+  </tr></tbody>
+          </table>
+
+          <div id="emptyState" class="empty-state hidden">
+            <div class="empty-title">当前没有匹配的 OKR</div>
+            <div class="empty-text">可以调整季度、状态或搜索条件后继续查看。</div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="detailModal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="detailModalTitle">详情</h3>
+        <button class="icon-button" data-close-modal="detailModal" type="button">×</button>
+      </div>
+      <div id="detailModalBody" class="modal-body"></div>
+    </div>
+  </div>
+
+  <div id="goalModal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="goalModalTitle">新建季度 OKR</h3>
+        <button class="icon-button" data-close-modal="goalModal" type="button">×</button>
+      </div>
+
+      <form id="goalForm" class="goal-form">
+        <input id="goalFormMode" type="hidden" value="create">
+        <input id="goalFormGoalId" type="hidden" value="">
+
+        <div class="form-grid">
+          <label class="full-width">
+            <span>目标名称 *</span>
+            <input id="goalName" type="text" maxlength="100" placeholder="请输入季度 OKR 名称">
+          </label>
+
+          <label>
+            <span>目标类型 *</span>
+            <select id="goalType"></select>
+          </label>
+
+          <label>
+            <span>所属部门 *</span>
+            <select id="goalDepartment"></select>
+          </label>
+
+          <label>
+            <span>所属员工 *</span>
+            <select id="goalOwner"></select>
+          </label>
+
+          <label>
+            <span>目标周期 *</span>
+            <select id="goalCycle"></select>
+          </label>
+
+          <label>
+            <span>目标分值</span>
+            <input id="goalPoints" type="number" min="0" step="0.1" placeholder="例如 100">
+          </label>
+
+          <label class="full-width">
+            <span>目标说明</span>
+            <textarea id="goalDescription" rows="3" placeholder="描述本季度目标的范围、重点和交付要求"></textarea>
+          </label>
+        </div>
+
+        <section id="goalEditSection" class="modal-section hidden">
+          <div class="modal-section-title">目标维护</div>
+          <div class="form-grid">
+            <label>
+              <span>提交状态</span>
+              <select id="goalEditStatus">
+                <option value="draft">草稿</option>
+                <option value="confirmed">已确定</option>
+                <option value="pending_submission" disabled="">待提交</option>
+                <option value="pending_review" disabled="">待评分</option>
+                <option value="reviewed" disabled="">已评分</option>
+              </select>
+            </label>
+
+            <label>
+              <span>手动进度</span>
+              <input id="goalEditProgress" type="number" min="0" max="100" step="1" placeholder="0-100">
+            </label>
+
+            <label class="full-width">
+              <span>员工总结</span>
+              <textarea id="goalEditSummary" rows="4" placeholder="填写完成情况、问题与改进建议"></textarea>
+            </label>
+          </div>
+        </section>
+
+        <section id="goalKrSection" class="modal-section">
+          <div class="modal-section-header">
+            <div>
+              <div class="modal-section-title">关键结果 KR</div>
+              <div id="goalKrHint" class="modal-section-subtitle">创建目标时可以预填 KR，提交后也可以继续维护。</div>
+            </div>
+            <button id="addKrRowButton" class="ghost-button" type="button">+ 添加 KR</button>
+          </div>
+          <div id="krDraftList" class="kr-draft-list"></div>
+          <div id="goalKrList" class="embedded-list hidden"></div>
+          <div id="goalKrActions" class="section-actions hidden">
+            <button id="openAddKrButton" class="ghost-button" type="button">新增 KR</button>
+          </div>
+        </section>
+
+        <section id="goalProofSection" class="modal-section hidden">
+          <div class="modal-section-title">证明材料</div>
+          <div id="goalProofList" class="proof-list"></div>
+
+          <div id="goalProofUploadForm" class="proof-form">
+            <label class="full-width">
+              <span>选择资料文件（支持多附件）</span>
+              <input id="goalProofFile" type="file" multiple="">
+            </label>
+
+            <div id="goalProofUploadHint" class="detail-note compact hidden"></div>
+
+            <label class="full-width">
+              <span>资料说明</span>
+              <textarea id="goalProofNote" rows="3" placeholder="本次上传的材料说明会同时应用到选中的附件"></textarea>
+            </label>
+
+            <button id="goalProofUploadButton" class="primary-button" type="button">上传资料证明</button>
+          </div>
+        </section>
+
+        <div class="modal-footer">
+          <button class="ghost-button" data-close-modal="goalModal" type="button">取消</button>
+          <button id="saveDraftButton" class="secondary-button" type="button">保存草稿</button>
+          <button id="goalSubmitButton" class="primary-button" type="submit">提交季度 OKR</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="reviewModal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="reviewModalTitle">OKR 评分</h3>
+        <button class="icon-button" data-close-modal="reviewModal" type="button">×</button>
+      </div>
+
+      <div class="modal-body">
+        <div id="reviewGoalMeta" class="detail-meta"></div>
+
+        <section class="modal-section">
+          <div class="modal-section-title">目标概览</div>
+          <div id="reviewGoalKpis" class="detail-kpi-grid"></div>
+        </section>
+
+        <section class="modal-section">
+          <div class="modal-section-title">关键结果</div>
+          <div id="reviewKrList" class="embedded-list"></div>
+        </section>
+
+        <section class="modal-section">
+          <div class="modal-section-title">证明材料</div>
+          <div id="reviewProofList" class="proof-list"></div>
+        </section>
+
+        <section class="modal-section">
+          <div class="modal-section-title">评分结果</div>
+          <div id="reviewSummary" class="review-summary"></div>
+
+          <form id="reviewForm" class="detail-form">
+            <label>
+              <span>工作态度（0-20）</span>
+              <input id="reviewAttitude" type="number" min="0" max="20" step="0.1" placeholder="0-20">
+            </label>
+
+            <label>
+              <span>工作能力（0-20）</span>
+              <input id="reviewAbility" type="number" min="0" max="20" step="0.1" placeholder="0-20">
+            </label>
+
+            <label>
+              <span>工作业绩（0-60）</span>
+              <input id="reviewPerformance" type="number" min="0" max="60" step="0.1" placeholder="0-60">
+            </label>
+
+            <label>
+              <span>考核等级</span>
+              <select id="reviewLevel">
+                <option value="A">A / 优秀</option>
+                <option value="B">B / 良好</option>
+                <option value="C">C / 合格</option>
+                <option value="D">D / 待改进</option>
+                <option value="E">E / 不合格</option>
+              </select>
+            </label>
+
+            <label class="full-width">
+              <span>考核总分</span>
+              <input id="reviewTotal" type="text" readonly="" value="0.0">
+            </label>
+
+            <label class="full-width">
+              <span>评价意见</span>
+              <textarea id="reviewComment" rows="4" placeholder="填写本科室领导对本季度 OKR 的评价意见"></textarea>
+            </label>
+
+            <button class="primary-button" type="submit">提交评价打分</button>
+          </form>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div id="krModal" class="modal hidden"><div class="modal-card kr-modal-card">
+    <div class="modal-header">
+      <h3 id="krModalTitle">KR 维护</h3>
+      <button class="icon-button" data-close-modal="krModal" type="button">×</button>
+    </div>
+    <div class="modal-body kr-workspace">
+      <div id="krModalMeta" class="detail-meta"></div>
+      <div id="krModalStateNotice" class="detail-note kr-workspace-note"></div>
+      <div id="krModalSummary" class="kr-modal-summary"></div>
+
+      <form id="singleKrForm" class="goal-form kr-form-shell">
+        <input id="singleKrFormMode" type="hidden" value="create">
+        <input id="singleKrGoalId" type="hidden" value="">
+        <input id="singleKrId" type="hidden" value="">
+
+        <div class="form-grid">
+          <label class="full-width">
+            <span>KR 名称 *</span>
+            <input id="singleKrName" type="text" maxlength="100" placeholder="请输入 KR 名称">
+          </label>
+
+          <label>
+            <span>完成状态</span>
+            <select id="singleKrCompletion">
+              <option value="pending">未完成</option>
+              <option value="done">已完成</option>
+            </select>
+          </label>
+
+          <label>
+            <span>分值</span>
+            <input id="singleKrPoints" type="number" min="0" step="0.1" placeholder="例如 20">
+          </label>
+
+          <label class="full-width">
+            <span>说明</span>
+            <textarea id="singleKrDescription" rows="4" placeholder="补充 KR 的交付口径、里程碑说明或验收标准"></textarea>
+          </label>
+        </div>
+
+        <div class="modal-footer">
+          <button class="ghost-button" data-close-modal="krModal" type="button">取消</button>
+          <button id="singleKrSaveButton" class="primary-button" type="submit">保存 KR</button>
+        </div>
+      </form>
+
+      <section class="modal-section">
+        <div class="modal-section-header">
+          <div>
+            <div class="modal-section-title">KR 证明材料</div>
+            <div class="modal-section-subtitle">证明材料请直接挂在 KR 下，目标详情中仅汇总展示。</div>
+          </div>
+        </div>
+
+        <div id="krModalProofList" class="proof-list"></div>
+
+        <div id="krModalProofForm" class="proof-form">
+          <label class="full-width">
+            <span>选择资料文件（支持多附件）</span>
+            <input id="krProofFile" type="file" multiple="">
+          </label>
+
+          <div id="krProofUploadHint" class="detail-note compact hidden"></div>
+
+          <label class="full-width">
+            <span>资料说明</span>
+            <textarea id="krProofNote" rows="3" placeholder="填写本次上传材料说明"></textarea>
+          </label>
+
+          <button id="krProofUploadButton" class="primary-button" type="button">上传 KR 证明材料</button>
+        </div>
+      </section>
+    </div>
+  </div></div>
+
+  <script src="./role-app.js"></script>
+
+
+</body></html>
