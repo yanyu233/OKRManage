@@ -30,6 +30,16 @@ export async function readSessionRows(): Promise<Array<{ id: string; userId: str
   });
 }
 
+export async function readAuditRows(action: string): Promise<Array<{ action: string; actorUserId: string | null }>> {
+  return prisma.auditLog.findMany({
+    where: { action },
+    select: {
+      action: true,
+      actorUserId: true
+    }
+  });
+}
+
 export async function closeTestDatabase(): Promise<void> {
   await prisma.$disconnect();
 }

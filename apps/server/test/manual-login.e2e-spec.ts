@@ -2,7 +2,7 @@ import * as request from 'supertest';
 import { Test } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { AppModule } from '../src/app.module';
-import { closeTestDatabase, readSessionRows, resetTestDatabase } from './support/test-db';
+import { closeTestDatabase, readAuditRows, readSessionRows, resetTestDatabase } from './support/test-db';
 
 describe('Manual debug login', () => {
   let app: INestApplication;
@@ -43,5 +43,8 @@ describe('Manual debug login', () => {
 
     const sessionRows = await readSessionRows();
     expect(sessionRows.length).toBeGreaterThan(0);
+
+    const auditRows = await readAuditRows('auth.manual-login.success');
+    expect(auditRows.length).toBeGreaterThan(0);
   });
 });
