@@ -1,0 +1,163 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String                 @id @default(cuid())
+  employeeNo        String?                @unique
+  name              String
+  email             String?                @unique
+  mobile            String?                @unique
+  wecomUserId       String?                @unique
+  departmentId      String?
+  sectionId         String?
+  reviewGroupId     String?
+  isActive          Boolean                @default(true)
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  department        Department?            @relation("UserDepartment", fields: [departmentId], references: [id], onDelete: SetNull)
+  section           Section?               @relation("UserSection", fields: [departmentId, sectionId], references: [departmentId, id], onDelete: SetNull)
+  reviewGroup       ReviewGroup?           @relation(fields: [reviewGroupId], references: [id], onDelete: SetNull)
+  localAccount      LocalAccount?
+  sessions          Session[]
+  roleAssignments   UserRoleAssignment[]
+  sectionLeadership SectionLeaderBinding[] @relation("SectionLeaderLeader")
+  groupLeadership   GroupLeaderBinding[]   @relation("GroupLeaderLeader")
+  auditLogs         AuditLog[]             @relation("AuditLogActor")
+}
+
+model LocalAccount {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  loginName         String    @unique
+  passwordHash      String
+  localLoginEnabled Boolean   @default(false)
+  lastLoginAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Session {
+  id                     String             @id @default(cuid())
+  userId                 String
+  activeRoleAssignmentId String
+  authMethod             String
+  ip                     String?
+  userAgent              String?
+  expiresAt              DateTime
+  lastSeenAt             DateTime?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  user                   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeRoleAssignment   UserRoleAssignment @relation("SessionActiveRole", fields: [activeRoleAssignmentId, userId], references: [id, userId], onDelete: Restrict)
+}
+
+model Department {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  users     User[]    @relation("UserDepartment")
+  sections  Section[]
+}
+
+model Section {
+  id             String                 @id @default(cuid())
+  departmentId   String
+  name           String
+  isActive       Boolean                @default(true)
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  department     Department             @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  users          User[]                 @relation("UserSection")
+  leaderBindings SectionLeaderBinding[]
+
+  @@unique([departmentId, name])
+  @@unique([departmentId, id])
+}
+
+model ReviewGroup {
+  id             String               @id @default(cuid())
+  name           String               @unique
+  isActive       Boolean              @default(true)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  users          User[]
+  quotas         ReviewGradeQuota[]
+  leaderBindings GroupLeaderBinding[]
+}
+
+model ReviewGradeQuota {
+  id            String      @id @default(cuid())
+  reviewGroupId String
+  gradeCode     String
+  seatCount     Int
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  reviewGroup   ReviewGroup @relation(fields: [reviewGroupId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewGroupId, gradeCode])
+}
+
+model UserRoleAssignment {
+  id        String    @id @default(cuid())
+  userId    String
+  roleCode  String
+  scopeType String
+  scopeId   String
+  isPrimary Boolean   @default(false)
+  isEnabled Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions  Session[] @relation("SessionActiveRole")
+
+  @@unique([userId, roleCode, scopeType, scopeId])
+  @@unique([id, userId])
+}
+
+model SectionLeaderBinding {
+  id           String   @id @default(cuid())
+  leaderUserId String
+  sectionId    String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  leader       User     @relation("SectionLeaderLeader", fields: [leaderUserId], references: [id], onDelete: Cascade)
+  section      Section  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@unique([leaderUserId, sectionId])
+}
+
+model GroupLeaderBinding {
+  id            String      @id @default(cuid())
+  leaderUserId  String
+  reviewGroupId String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  leader        User        @relation("GroupLeaderLeader", fields: [leaderUserId], references: [id], onDelete: Cascade)
+  reviewGroup   ReviewGroup @relation(fields: [reviewGroupId], references: [id], onDelete: Cascade)
+
+  @@unique([leaderUserId, reviewGroupId])
+}
+
+model AuditLog {
+  id            String   @id @default(cuid())
+  actorUserId   String?
+  actorRoleCode String?
+  action        String
+  entityType    String
+  entityId      String?
+  beforeJson    Json?
+  afterJson     Json?
+  ip            String?
+  userAgent     String?
+  createdAt     DateTime @default(now())
+  actor         User?    @relation("AuditLogActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+}
