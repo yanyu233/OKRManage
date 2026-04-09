@@ -24,5 +24,10 @@ describe('Health endpoint', () => {
     const response = await request(app.getHttpServer()).get('/api/health').expect(200);
     expect(response.body.ok).toBe(true);
     expect(response.body.service).toBe('okr-node-foundation');
+    expect(response.body.database).toEqual(
+      expect.objectContaining({
+        ok: expect.any(Boolean)
+      })
+    );
   });
 });
