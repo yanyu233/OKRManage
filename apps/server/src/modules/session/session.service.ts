@@ -1,41 +1,36 @@
 import { Injectable } from '@nestjs/common';
-import { randomUUID } from 'crypto';
 import { AuthUser } from '../../shared/types/auth-user';
 import { RuntimeConfigService } from '../config/runtime-config.service';
-
-interface SessionRecord {
-  id: string;
-  user: AuthUser;
-  expiresAt: number;
-}
+import { Inject } from '@nestjs/common';
+import { SESSIONS_REPOSITORY, SessionsRepository } from '../../infrastructure/repositories/sessions/sessions.repository';
 
 @Injectable()
 export class SessionService {
-  private readonly sessions = new Map<string, SessionRecord>();
-
-  constructor(private readonly runtimeConfig: RuntimeConfigService) {}
+  constructor(
+    private readonly runtimeConfig: RuntimeConfigService,
+    @Inject(SESSIONS_REPOSITORY) private readonly sessionsRepository: SessionsRepository
+  ) {}
 
   create(user: AuthUser) {
-    const id = randomUUID();
-    const expiresAt = Date.now() + this.runtimeConfig.sessionTtlMinutes * 60 * 1000;
-    this.sessions.set(id, { id, user, expiresAt });
-    return { id, user, expiresAt };
+    return this.sessionsRepository.create(user, 'manual-login', this.runtimeConfig.sessionTtlMinutes);
   }
 
-  get(sessionId: string | undefined | null) {
-    if (!sessionId) return null;
-    const session = this.sessions.get(sessionId);
-    if (!session) return null;
-    if (session.expiresAt <= Date.now()) {
-      this.sessions.delete(sessionId);
+  async get(sessionId: string | undefined | null) {
+    const session = await this.sessionsRepository.get(sessionId ?? null);
+    if (!session) {
       return null;
     }
+
+    if (session.expiresAt.getTime() <= Date.now()) {
+      await this.sessionsRepository.delete(sessionId ?? null);
+      return null;
+    }
+
     return session;
   }
 
   delete(sessionId: string | undefined | null) {
-    if (!sessionId) return;
-    this.sessions.delete(sessionId);
+    return this.sessionsRepository.delete(sessionId ?? null);
   }
 
   getCookieName() {

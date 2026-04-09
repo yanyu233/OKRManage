@@ -10,13 +10,13 @@ export class AuthService {
     private readonly sessionService: SessionService
   ) {}
 
-  login(loginName: string, password: string, response: Response) {
-    const user = this.usersService.validateLocalDebugUser(loginName, password);
+  async login(loginName: string, password: string, response: Response) {
+    const user = await this.usersService.validateLocalDebugUser(loginName, password);
     if (!user) {
       throw new UnauthorizedException('invalid login credentials');
     }
 
-    const session = this.sessionService.create(user);
+    const session = await this.sessionService.create(user);
     response.cookie(this.sessionService.getCookieName(), session.id, {
       httpOnly: true,
       sameSite: 'lax',
@@ -30,9 +30,9 @@ export class AuthService {
     };
   }
 
-  getCurrentUser(request: Request) {
+  async getCurrentUser(request: Request) {
     const sessionId = this.readSessionId(request);
-    const session = this.sessionService.get(sessionId);
+    const session = await this.sessionService.get(sessionId);
     if (!session) {
       return {
         authenticated: false,
@@ -46,9 +46,9 @@ export class AuthService {
     };
   }
 
-  logout(request: Request, response: Response) {
+  async logout(request: Request, response: Response) {
     const sessionId = this.readSessionId(request);
-    this.sessionService.delete(sessionId);
+    await this.sessionService.delete(sessionId);
     response.clearCookie(this.sessionService.getCookieName(), {
       path: '/'
     });

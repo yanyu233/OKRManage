@@ -1,29 +1,15 @@
-import { Injectable } from '@nestjs/common';
 import { AuthUser } from '../../shared/types/auth-user';
 
-interface LocalDebugAccount extends AuthUser {
-  password: string;
-}
+export const USERS_REPOSITORY = Symbol('USERS_REPOSITORY');
 
-@Injectable()
-export class UsersRepository {
-  private readonly accounts: LocalDebugAccount[] = [
-    {
-      id: 'u-sysadmin-debug',
-      name: '严主任',
-      role: 'system-admin',
-      loginName: 'sysadmin.local',
-      password: 'Admin123!'
-    }
-  ];
+export type LocalLoginAccount = AuthUser & {
+  passwordHash: string;
+  localLoginEnabled: boolean;
+  isActive: boolean;
+};
 
-  findByLoginName(loginName: string): LocalDebugAccount | undefined {
-    const normalized = loginName.trim().toLowerCase();
-    return this.accounts.find((account) => account.loginName.toLowerCase() === normalized);
-  }
-
-  toAuthUser(account: LocalDebugAccount): AuthUser {
-    const { password: _password, ...user } = account;
-    return user;
-  }
+export interface UsersRepository {
+  findByLocalLogin(loginName: string): Promise<LocalLoginAccount | null>;
+  findById(id: string): Promise<AuthUser | null>;
+  touchLocalLoginSuccess(userId: string): Promise<void>;
 }

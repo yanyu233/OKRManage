@@ -1,17 +1,35 @@
 import { Injectable } from '@nestjs/common';
+import { compare } from 'bcryptjs';
 import { AuthUser } from '../../shared/types/auth-user';
-import { UsersRepository } from './users.repository';
+import { USERS_REPOSITORY, UsersRepository } from './users.repository';
+import { Inject } from '@nestjs/common';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly usersRepository: UsersRepository) {}
+  constructor(@Inject(USERS_REPOSITORY) private readonly usersRepository: UsersRepository) {}
 
-  validateLocalDebugUser(loginName: string, password: string): AuthUser | null {
-    const account = this.usersRepository.findByLoginName(loginName);
-    if (!account || account.password !== password) {
+  async validateLocalDebugUser(loginName: string, password: string): Promise<AuthUser | null> {
+    const account = await this.usersRepository.findByLocalLogin(loginName);
+    if (!account || !account.localLoginEnabled || !account.isActive) {
       return null;
     }
 
-    return this.usersRepository.toAuthUser(account);
+    const matches = await compare(password, account.passwordHash);
+    if (!matches) {
+      return null;
+    }
+
+    await this.usersRepository.touchLocalLoginSuccess(account.id);
+
+    return {
+      id: account.id,
+      name: account.name,
+      role: account.role,
+      loginName: account.loginName
+    };
+  }
+
+  findById(id: string): Promise<AuthUser | null> {
+    return this.usersRepository.findById(id);
   }
 }

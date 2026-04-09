@@ -14,6 +14,19 @@ $runId = [guid]::NewGuid().ToString('N')
 $stdoutPath = Join-Path $env:TEMP "okr-node-foundation-smoke-$runId.out.log"
 $stderrPath = Join-Path $env:TEMP "okr-node-foundation-smoke-$runId.err.log"
 
+function Invoke-NativeChecked {
+  param(
+    [string]$FilePath,
+    [string[]]$Arguments
+  )
+
+  & $FilePath @Arguments
+
+  if ($LASTEXITCODE -ne 0) {
+    throw "Command failed with exit code ${LASTEXITCODE}: $FilePath $($Arguments -join ' ')"
+  }
+}
+
 function Wait-ForHealth {
   param(
     [string]$Url,
@@ -37,8 +50,9 @@ function Wait-ForHealth {
 try {
   $previousPath = $env:Path
   $env:Path = "$nodeDir;$previousPath"
+  Push-Location $appRoot
   Write-Host '[smoke] building server'
-  & $npmCmd run build | Out-Host
+  Invoke-NativeChecked -FilePath $npmCmd -Arguments @('run', 'build')
 
   Write-Host "[smoke] starting server on port $port"
   $previousPort = $env:PORT
@@ -83,6 +97,7 @@ try {
   Write-Host "[smoke] manual login ok: $($me.user.name) / $($me.user.role)"
   Write-Host '[smoke] PASS'
 } finally {
+  Pop-Location
   $env:Path = $previousPath
   if ($process -and -not $process.HasExited) {
     Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue

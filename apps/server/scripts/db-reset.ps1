@@ -39,8 +39,10 @@ try {
 
   Push-Location $appRoot
 
-  Invoke-NativeChecked -FilePath $npmCmd -Arguments @('run', 'prisma:generate')
-  Invoke-NativeChecked -FilePath $npmCmd -Arguments @('run', 'prisma:migrate:dev', '--', '--name', 'init_foundation')
+  if ($env:OKR_SKIP_PRISMA_GENERATE -ne '1') {
+    Invoke-NativeChecked -FilePath $npmCmd -Arguments @('run', 'prisma:generate')
+  }
+  Invoke-NativeChecked -FilePath $npmCmd -Arguments @('run', 'prisma:migrate:dev', '--', '--name', 'init_foundation', '--skip-generate')
   Invoke-NativeChecked -FilePath $npmCmd -Arguments @('run', 'prisma:seed')
 
   Write-Host '[db-reset] PASS'

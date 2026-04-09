@@ -2,11 +2,14 @@ import * as request from 'supertest';
 import { Test } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { AppModule } from '../src/app.module';
+import { closeTestDatabase, readSessionRows, resetTestDatabase } from './support/test-db';
 
 describe('Manual debug login', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
+    await resetTestDatabase();
+
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule]
     }).compile();
@@ -18,6 +21,7 @@ describe('Manual debug login', () => {
 
   afterAll(async () => {
     await app.close();
+    await closeTestDatabase();
   });
 
   it('creates a session for allowed local-debug users', async () => {
@@ -34,5 +38,10 @@ describe('Manual debug login', () => {
     const me = await agent.get('/api/me').expect(200);
     expect(me.body.authenticated).toBe(true);
     expect(me.body.user.loginName).toBe('sysadmin.local');
+    expect(me.body.user.role).toBe('system-admin');
+    expect(me.body.user.id).not.toBe('u-sysadmin-debug');
+
+    const sessionRows = await readSessionRows();
+    expect(sessionRows.length).toBeGreaterThan(0);
   });
 });
