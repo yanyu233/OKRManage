@@ -4,8 +4,8 @@ import { LoginPage } from '../modules/auth/LoginPage';
 import { UnauthorizedPage } from '../modules/auth/UnauthorizedPage';
 import { EmployeeGoalPlaceholder } from '../modules/employee/EmployeeGoalPlaceholder';
 import { EmployeeOkrPlaceholder } from '../modules/employee/EmployeeOkrPlaceholder';
-import { LeaderRankingPlaceholder } from '../modules/leader/LeaderRankingPlaceholder';
-import { LeaderWorkbenchPlaceholder } from '../modules/leader/LeaderWorkbenchPlaceholder';
+import { LeaderRankingPage } from '../modules/leader/LeaderRankingPage';
+import { LeaderWorkbenchPage } from '../modules/leader/LeaderWorkbenchPage';
 import { AppShell } from '../modules/layout/AppShell';
 import { RoleRoute } from '../modules/layout/RoleRoute';
 import { defaultPathForRole } from '../modules/layout/routing';
@@ -39,7 +39,7 @@ export const router = createBrowserRouter([
         path: 'leader/workbench',
         element: (
           <RoleRoute allow={['section-leader', 'group-leader']}>
-            <LeaderWorkbenchPlaceholder />
+            <LeaderWorkbenchPage />
           </RoleRoute>
         )
       },
@@ -47,7 +47,7 @@ export const router = createBrowserRouter([
         path: 'leader/ranking',
         element: (
           <RoleRoute allow={['section-leader', 'group-leader']}>
-            <LeaderRankingPlaceholder />
+            <LeaderRankingPage />
           </RoleRoute>
         )
       },

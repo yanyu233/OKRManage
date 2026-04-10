@@ -7,6 +7,7 @@ $nodeExe = 'C:\Program Files\nodejs\node.exe'
 $nodeDir = Split-Path -Parent $nodeExe
 $npmCmd = 'C:\Program Files\nodejs\npm.cmd'
 $distEntry = Join-Path $appRoot 'dist\src\main.js'
+$dbResetScript = Join-Path $appRoot 'scripts\db-reset.ps1'
 $port = 3101
 $baseUrl = "http://127.0.0.1:$port/api"
 $process = $null
@@ -51,6 +52,12 @@ try {
   $previousPath = $env:Path
   $env:Path = "$nodeDir;$previousPath"
   Push-Location $appRoot
+  Write-Host '[smoke] resetting database'
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $dbResetScript
+  if ($LASTEXITCODE -ne 0) {
+    throw 'db-reset failed'
+  }
+
   Write-Host '[smoke] building server'
   Invoke-NativeChecked -FilePath $npmCmd -Arguments @('run', 'build')
 
@@ -103,6 +110,36 @@ try {
   }
 
   Write-Host "[smoke] manual login ok: $($me.user.name) / $($me.user.role)"
+
+  $leaderSession = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+  $leaderLoginBody = @{
+    loginName = 'section.leader'
+    password = 'Leader123!'
+  } | ConvertTo-Json
+
+  $leaderLogin = Invoke-RestMethod `
+    -Method Post `
+    -Uri "$baseUrl/auth/manual-login" `
+    -ContentType 'application/json' `
+    -Body $leaderLoginBody `
+    -WebSession $leaderSession
+
+  if ($leaderLogin.ok -ne $true) {
+    throw 'section leader login did not return ok=true'
+  }
+
+  $workbench = Invoke-RestMethod -Method Get -Uri "$baseUrl/leader/workbench?year=2026&quarter=1" -WebSession $leaderSession
+  if (-not $workbench.selectedGoal) {
+    throw 'leader workbench did not return selectedGoal'
+  }
+
+  $ranking = Invoke-RestMethod -Method Get -Uri "$baseUrl/leader/ranking?year=2026&quarter=1" -WebSession $leaderSession
+  if (-not $ranking.ranking) {
+    throw 'leader ranking did not return ranking entries'
+  }
+
+  Write-Host "[smoke] leader workbench ok: $($workbench.selectedEmployee.name) / $($workbench.selectedGoal.code)"
+  Write-Host "[smoke] leader ranking ok: $($ranking.ranking.Count) entries"
   Write-Host '[smoke] PASS'
 } finally {
   Pop-Location

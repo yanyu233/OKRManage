@@ -8,27 +8,29 @@ datasource db {
 }
 
 model User {
-  id                String                 @id @default(cuid())
-  employeeNo        String?                @unique
-  name              String
-  email             String?                @unique
-  mobile            String?                @unique
-  wecomUserId       String?                @unique
-  departmentId      String?
-  sectionId         String?
-  reviewGroupId     String?
-  isActive          Boolean                @default(true)
-  createdAt         DateTime               @default(now())
-  updatedAt         DateTime               @updatedAt
-  department        Department?            @relation("UserDepartment", fields: [departmentId], references: [id], onDelete: SetNull)
-  section           Section?               @relation("UserSection", fields: [departmentId, sectionId], references: [departmentId, id], onDelete: SetNull)
-  reviewGroup       ReviewGroup?           @relation(fields: [reviewGroupId], references: [id], onDelete: SetNull)
-  localAccount      LocalAccount?
-  sessions          Session[]
-  roleAssignments   UserRoleAssignment[]
-  sectionLeadership SectionLeaderBinding[] @relation("SectionLeaderLeader")
-  groupLeadership   GroupLeaderBinding[]   @relation("GroupLeaderLeader")
-  auditLogs         AuditLog[]             @relation("AuditLogActor")
+  id                 String                 @id @default(cuid())
+  employeeNo         String?                @unique
+  name               String
+  email              String?                @unique
+  mobile             String?                @unique
+  wecomUserId        String?                @unique
+  departmentId       String?
+  sectionId          String?
+  reviewGroupId      String?
+  isActive           Boolean                @default(true)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  department         Department?            @relation("UserDepartment", fields: [departmentId], references: [id], onDelete: SetNull)
+  section            Section?               @relation("UserSection", fields: [departmentId, sectionId], references: [departmentId, id], onDelete: SetNull)
+  reviewGroup        ReviewGroup?           @relation(fields: [reviewGroupId], references: [id], onDelete: SetNull)
+  localAccount       LocalAccount?
+  sessions           Session[]
+  roleAssignments    UserRoleAssignment[]
+  sectionLeadership  SectionLeaderBinding[] @relation("SectionLeaderLeader")
+  groupLeadership    GroupLeaderBinding[]   @relation("GroupLeaderLeader")
+  auditLogs          AuditLog[]             @relation("AuditLogActor")
+  ownedGoals         Goal[]                 @relation("GoalOwner")
+  reviewedKeyResults KeyResult[]            @relation("KeyResultReviewer")
 }
 
 model LocalAccount {
@@ -160,4 +162,56 @@ model AuditLog {
   userAgent     String?
   createdAt     DateTime @default(now())
   actor         User?    @relation("AuditLogActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+}
+
+model Goal {
+  id          String      @id @default(cuid())
+  ownerUserId String
+  year        Int
+  quarter     Int
+  code        String
+  name        String
+  description String?
+  status      String
+  totalPoints Int
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  owner       User        @relation("GoalOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  keyResults  KeyResult[]
+
+  @@unique([ownerUserId, year, quarter, code])
+}
+
+model KeyResult {
+  id               String    @id @default(cuid())
+  goalId           String
+  code             String
+  name             String
+  description      String?
+  points           Int
+  completionState  String
+  reviewScore      Float?
+  reviewComment    String?
+  reviewedAt       DateTime?
+  reviewedByUserId String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  goal             Goal      @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  reviewedBy       User?     @relation("KeyResultReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  proofs           Proof[]
+
+  @@unique([goalId, code])
+}
+
+model Proof {
+  id          String    @id @default(cuid())
+  keyResultId String
+  fileName    String
+  fileUrl     String
+  fileSize    Int
+  note        String?
+  uploadedAt  DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  keyResult   KeyResult @relation(fields: [keyResultId], references: [id], onDelete: Cascade)
 }

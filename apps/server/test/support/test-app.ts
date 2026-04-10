@@ -24,3 +24,14 @@ export async function loginAsSysadmin(app: INestApplication) {
 
   return agent;
 }
+
+export async function loginAsSectionLeader(app: INestApplication) {
+  const agent = request.agent(app.getHttpServer());
+
+  await agent.post('/api/auth/manual-login').send({
+    loginName: 'section.leader',
+    password: 'Leader123!'
+  }).expect(200);
+
+  return agent;
+}
