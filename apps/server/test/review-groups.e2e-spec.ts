@@ -1,0 +1,66 @@
+import { INestApplication } from '@nestjs/common';
+import { closeTestDatabase, resetTestDatabase } from './support/test-db';
+import { createTestApp, loginAsSysadmin } from './support/test-app';
+
+const GRADE_CODES = ['A+', 'A', 'B+', 'B', 'C'] as const;
+
+describe('Review group admin config', () => {
+  let app: INestApplication;
+
+  beforeAll(async () => {
+    await resetTestDatabase();
+    app = await createTestApp();
+  });
+
+  afterAll(async () => {
+    await app.close();
+    await closeTestDatabase();
+  });
+
+  it('creates, renames, quotas, rejects overflow, and deletes review groups', async () => {
+    const agent = await loginAsSysadmin(app);
+
+    const createResponse = await agent.post('/api/admin/review-groups').send({
+      name: '测试组'
+    }).expect(201);
+
+    expect(createResponse.body.name).toBe('测试组');
+
+    const reviewGroupId = createResponse.body.id as string;
+
+    const renameResponse = await agent.patch(`/api/admin/review-groups/${reviewGroupId}`).send({
+      name: '测试组-已改'
+    }).expect(200);
+
+    expect(renameResponse.body.name).toBe('测试组-已改');
+
+    const quotasResponse = await agent.put(`/api/admin/review-groups/${reviewGroupId}/quotas`).send({
+      quotas: GRADE_CODES.map((gradeCode) => ({
+        gradeCode,
+        seatCount: 0
+      }))
+    }).expect(200);
+
+    expect(quotasResponse.body.ok).toBe(true);
+
+    const bootstrap = await agent.get('/api/admin/org/bootstrap').expect(200);
+    const seededReviewGroup = bootstrap.body.reviewGroups.find(
+      (reviewGroup: { name: string; id: string }) => reviewGroup.name === '信息化组'
+    );
+
+    expect(seededReviewGroup?.id).toBeDefined();
+
+    await agent.put(`/api/admin/review-groups/${seededReviewGroup.id}/quotas`).send({
+      quotas: [
+        { gradeCode: 'A+', seatCount: 2 },
+        { gradeCode: 'A', seatCount: 0 },
+        { gradeCode: 'B+', seatCount: 0 },
+        { gradeCode: 'B', seatCount: 0 },
+        { gradeCode: 'C', seatCount: 0 }
+      ]
+    }).expect(400);
+
+    const deleteResponse = await agent.delete(`/api/admin/review-groups/${reviewGroupId}`).expect(200);
+    expect(deleteResponse.body.ok).toBe(true);
+  });
+});

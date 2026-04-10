@@ -5,8 +5,9 @@ import { SessionModule } from './modules/session/session.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { PrismaModule } from './infrastructure/database/prisma.module';
+import { AdminConfigModule } from './modules/admin-config/admin-config.module';
 
 @Module({
-  imports: [RuntimeConfigModule, PrismaModule, SessionModule, UsersModule, AuthModule, HealthModule]
+  imports: [RuntimeConfigModule, PrismaModule, SessionModule, UsersModule, AuthModule, HealthModule, AdminConfigModule]
 })
 export class AppModule {}
