@@ -19,6 +19,7 @@ import { AuthUser } from '../../shared/types/auth-user';
 import { DomainValidationError } from '../../shared/errors/domain-validation.error';
 import { AdminConfigService } from './admin-config.service';
 import { CreateReviewGroupDto } from './dto/create-review-group.dto';
+import { SaveOrgBootstrapDto } from './dto/save-org-bootstrap.dto';
 import { UpdateReviewGroupDto } from './dto/update-review-group.dto';
 import { UpdateReviewGroupQuotasDto } from './dto/update-review-group-quotas.dto';
 
@@ -33,6 +34,17 @@ export class AdminConfigController {
   async getBootstrap(@Req() request: Request) {
     await this.requireSystemAdmin(request);
     return this.adminConfigService.getBootstrap();
+  }
+
+  @Put('org/bootstrap')
+  async saveBootstrap(@Req() request: Request, @Body() payload: SaveOrgBootstrapDto) {
+    const actor = await this.requireSystemAdmin(request);
+
+    try {
+      return await this.adminConfigService.saveBootstrap(payload as never, actor);
+    } catch (error) {
+      this.rethrowDomainError(error);
+    }
   }
 
   @Post('review-groups')

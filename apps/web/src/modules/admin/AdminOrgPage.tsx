@@ -1,0 +1,149 @@
+import { ReloadOutlined, SaveOutlined } from '@ant-design/icons';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Alert, App, Button, Card, Col, Row, Space, Statistic, Tabs, Typography } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
+import { getAdminBootstrap, saveAdminBootstrap } from '../../shared/api/admin';
+import { ApiError } from '../../shared/api/http';
+import type { AdminOrgBootstrapInput, ReviewGroupRecord } from '../../shared/types/admin-config';
+import { createEmptyBootstrap, summarizeBootstrap, toAdminBootstrapInput } from './admin-org-form';
+import { AccessSections, LeaderSections, ReviewGroupSection, StructureSections } from './AdminOrgSections';
+
+export function AdminOrgPage() {
+  const { message } = App.useApp();
+  const queryClient = useQueryClient();
+  const bootstrapQuery = useQuery({
+    queryKey: ['admin-org-bootstrap'],
+    queryFn: getAdminBootstrap
+  });
+  const [draft, setDraft] = useState<AdminOrgBootstrapInput>(createEmptyBootstrap());
+  const [isDirty, setIsDirty] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!bootstrapQuery.data || isDirty) return;
+    setDraft(toAdminBootstrapInput(bootstrapQuery.data));
+  }, [bootstrapQuery.data, isDirty]);
+
+  const saveMutation = useMutation({
+    mutationFn: saveAdminBootstrap,
+    onSuccess: async (payload) => {
+      setDraft(toAdminBootstrapInput(payload));
+      setIsDirty(false);
+      setSaveError(null);
+      await queryClient.invalidateQueries({ queryKey: ['admin-org-bootstrap'] });
+      message.success('Admin configuration saved.');
+    },
+    onError: (error) => {
+      const nextError = error instanceof ApiError ? error.message : 'Save failed. Please retry.';
+      setSaveError(nextError);
+      message.error(nextError);
+    }
+  });
+
+  const summary = useMemo(() => summarizeBootstrap(draft), [draft]);
+  const memberCountByReviewGroup = useMemo(() => {
+    const result = new Map<string, number>();
+    for (const user of draft.users) {
+      if (!user.isActive || !user.reviewGroupId) continue;
+      result.set(user.reviewGroupId, (result.get(user.reviewGroupId) ?? 0) + 1);
+    }
+    return result;
+  }, [draft.users]);
+
+  if (bootstrapQuery.isLoading) {
+    return <Card className="admin-page" variant="borderless">Loading admin configuration...</Card>;
+  }
+
+  if (bootstrapQuery.isError) {
+    return (
+      <Card className="admin-page" variant="borderless">
+        <Alert type="error" showIcon message="Failed to load admin configuration." />
+      </Card>
+    );
+  }
+
+  return (
+    <Space direction="vertical" size={24} style={{ width: '100%' }}>
+      <div className="page-hero">
+        <div>
+          <Typography.Title level={1} style={{ marginBottom: 8 }}>
+            System Admin Console
+          </Typography.Title>
+          <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
+            Manage departments, sections, users, roles, fallback local accounts, owner bindings, and fixed review quotas.
+          </Typography.Paragraph>
+        </div>
+        <Space>
+          <Button icon={<ReloadOutlined />} size="large" onClick={() => bootstrapQuery.data && resetDraft()}>
+            Reset Draft
+          </Button>
+          <Button type="primary" icon={<SaveOutlined />} size="large" loading={saveMutation.isPending} onClick={() => saveMutation.mutate(draft)}>
+            Save Changes
+          </Button>
+        </Space>
+      </div>
+
+      {saveError ? <Alert type="error" showIcon message="Save failed" description={saveError} /> : null}
+
+      <Row gutter={[20, 20]}>
+        {[
+          ['Departments', summary.departmentCount],
+          ['Sections', summary.sectionCount],
+          ['Users', summary.userCount],
+          ['Review Groups', summary.reviewGroupCount],
+          ['Local Accounts', summary.localAccountCount],
+          ['Role Bindings', summary.roleAssignmentCount]
+        ].map(([title, value]) => (
+          <Col xs={24} md={12} xl={4} key={title}>
+            <Card className="metric-card" variant="borderless">
+              <Statistic title={title as string} value={value as number} />
+            </Card>
+          </Col>
+        ))}
+      </Row>
+
+      <Card className="admin-page" variant="borderless">
+        <Tabs
+          size="large"
+          items={[
+            { key: 'structure', label: 'Organization', children: <StructureSections draft={draft} updateCollection={updateCollection} /> },
+            { key: 'access', label: 'People & Roles', children: <AccessSections draft={draft} updateCollection={updateCollection} /> },
+            { key: 'leaders', label: 'Owner Bindings', children: <LeaderSections draft={draft} updateCollection={updateCollection} /> },
+            {
+              key: 'review-groups',
+              label: 'Review Groups',
+              children: (
+                <ReviewGroupSection
+                  draft={draft}
+                  updateCollection={updateCollection}
+                  memberCountByReviewGroup={memberCountByReviewGroup}
+                  updateReviewGroup={updateReviewGroup}
+                />
+              )
+            }
+          ]}
+        />
+      </Card>
+    </Space>
+  );
+
+  function resetDraft() {
+    setDraft(toAdminBootstrapInput(bootstrapQuery.data!));
+    setIsDirty(false);
+    setSaveError(null);
+  }
+
+  function updateCollection<Key extends keyof AdminOrgBootstrapInput>(
+    key: Key,
+    updater: (items: AdminOrgBootstrapInput[Key]) => AdminOrgBootstrapInput[Key]
+  ) {
+    setDraft((current) => ({ ...current, [key]: updater(current[key]) }));
+    setIsDirty(true);
+  }
+
+  function updateReviewGroup(reviewGroupId: string, patch: Partial<Omit<ReviewGroupRecord, 'memberCount'>>) {
+    updateCollection('reviewGroups', (items) =>
+      items.map((item) => (item.id === reviewGroupId ? { ...item, ...patch } : item))
+    );
+  }
+}

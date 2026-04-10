@@ -1,0 +1,150 @@
+:root {
+  color: #0f172a;
+  background: linear-gradient(180deg, #eef4ff 0%, #f8fbff 45%, #f6f9ff 100%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  color: #0f172a;
+  background: linear-gradient(180deg, #eef4ff 0%, #f8fbff 45%, #f6f9ff 100%);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.auth-page,
+.status-page,
+.shell-loading {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.auth-card,
+.status-card {
+  width: min(100%, 520px);
+  border-radius: 28px;
+  box-shadow: 0 22px 60px rgba(37, 99, 235, 0.12);
+}
+
+.auth-hint-card {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(59, 130, 246, 0.02));
+}
+
+.auth-hint-icon {
+  font-size: 20px;
+  color: #2563eb;
+  margin-top: 2px;
+}
+
+.app-shell {
+  min-height: 100vh;
+  background: transparent;
+}
+
+.app-shell__sider.ant-layout-sider {
+  background: linear-gradient(180deg, #0f172a, #1d4ed8 160%);
+  box-shadow: 10px 0 32px rgba(15, 23, 42, 0.16);
+}
+
+.app-shell__brand {
+  padding: 24px 20px 18px;
+}
+
+.app-shell__brand-subtitle {
+  display: block;
+  margin-top: 8px;
+  color: rgba(239, 246, 255, 0.72);
+}
+
+.app-shell__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgba(191, 219, 254, 0.56);
+}
+
+.app-shell__content {
+  padding: 28px;
+}
+
+.page-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.feature-card,
+.metric-card,
+.admin-page,
+.admin-section-card,
+.review-group-card {
+  border-radius: 24px;
+  box-shadow: 0 18px 50px rgba(37, 99, 235, 0.08);
+}
+
+.metric-card .ant-statistic {
+  min-height: 116px;
+}
+
+.admin-section-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.review-group-card__topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.quota-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 12px;
+}
+
+.quota-card {
+  height: 100%;
+  border-radius: 20px;
+}
+
+.quota-summary {
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(37, 99, 235, 0.06);
+}
+
+.quota-summary--error {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+@media (max-width: 992px) {
+  .app-shell__content {
+    padding: 20px;
+  }
+
+  .page-hero,
+  .admin-section-card__header,
+  .review-group-card__topline {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

@@ -37,6 +37,18 @@ export class RuntimeConfigService {
     return this.getRequiredString('DEBUG_SYSADMIN_NAME');
   }
 
+  get frontendOrigins(): string[] {
+    const rawValue = this.configService.get<string>('FRONTEND_ORIGINS');
+    if (!rawValue) {
+      return ['http://127.0.0.1:5173', 'http://localhost:5173'];
+    }
+
+    return rawValue
+      .split(',')
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0);
+  }
+
   get serviceName(): string {
     return 'okr-node-foundation';
   }
