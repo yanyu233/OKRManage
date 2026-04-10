@@ -42,8 +42,7 @@ try {
   if ($env:OKR_SKIP_PRISMA_GENERATE -ne '1') {
     Invoke-NativeChecked -FilePath $npmCmd -Arguments @('run', 'prisma:generate')
   }
-  Invoke-NativeChecked -FilePath $npmCmd -Arguments @('run', 'prisma:migrate:dev', '--', '--name', 'init_foundation', '--skip-generate')
-  Invoke-NativeChecked -FilePath $npmCmd -Arguments @('run', 'prisma:seed')
+  Invoke-NativeChecked -FilePath $npmCmd -Arguments @('run', 'prisma:migrate:reset', '--', '--force', '--skip-generate')
 
   Write-Host '[db-reset] PASS'
 } finally {
