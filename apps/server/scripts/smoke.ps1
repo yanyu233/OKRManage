@@ -70,6 +70,9 @@ try {
   $env:AUTH_MODE = $previousAuthMode
 
   $health = Wait-ForHealth -Url "$baseUrl/health"
+  if (-not $health.database.ok) {
+    throw 'database health is not ok'
+  }
   Write-Host "[smoke] health ok: $($health.service) ($($health.authMode))"
 
   $webSession = New-Object Microsoft.PowerShell.Commands.WebRequestSession
@@ -92,6 +95,11 @@ try {
   $me = Invoke-RestMethod -Method Get -Uri "$baseUrl/me" -WebSession $webSession
   if ($me.authenticated -ne $true) {
     throw 'manual login did not create an authenticated session'
+  }
+
+  $bootstrap = Invoke-RestMethod -Method Get -Uri "$baseUrl/admin/org/bootstrap" -WebSession $webSession
+  if (-not $bootstrap.reviewGroups) {
+    throw 'admin bootstrap did not return reviewGroups'
   }
 
   Write-Host "[smoke] manual login ok: $($me.user.name) / $($me.user.role)"
