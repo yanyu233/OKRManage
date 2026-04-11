@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { AuthRoleAssignment, AuthUser } from '../../../shared/types/auth-user';
-import { LocalLoginAccount, UsersRepository } from '../../../modules/users/users.repository';
+import { LocalLoginAccount, UsersRepository, WecomMappedUser } from '../../../modules/users/users.repository';
 
 const ROLE_PRIORITY = ['system-admin', 'section-leader', 'group-leader', 'employee'];
 
@@ -32,7 +32,7 @@ export class PrismaUsersRepository implements UsersRepository {
       return null;
     }
 
-    const authUser = this.toAuthUser(account.user.id, account.user.name, account.loginName, account.user.roleAssignments);
+    const authUser = this.toAuthUser(account.user, account.loginName);
     if (!authUser) {
       return null;
     }
@@ -58,11 +58,45 @@ export class PrismaUsersRepository implements UsersRepository {
       }
     });
 
-    if (!user || !user.localAccount) {
+    if (!user) {
       return null;
     }
 
-    return this.toAuthUser(user.id, user.name, user.localAccount.loginName, user.roleAssignments);
+    return this.toAuthUser(user, user.localAccount?.loginName ?? user.wecomUserId ?? user.employeeNo ?? user.id);
+  }
+
+  async findByWecomUserId(wecomUserId: string): Promise<WecomMappedUser | null> {
+    const normalized = wecomUserId.trim();
+    if (normalized.length === 0) {
+      return null;
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { wecomUserId: normalized },
+      include: {
+        localAccount: true,
+        roleAssignments: {
+          where: {
+            isEnabled: true
+          }
+        }
+      }
+    });
+
+    if (!user || !user.wecomUserId) {
+      return null;
+    }
+
+    const authUser = this.toAuthUser(user, user.localAccount?.loginName ?? user.wecomUserId ?? user.employeeNo ?? user.id);
+    if (!authUser) {
+      return null;
+    }
+
+    return {
+      ...authUser,
+      wecomUserId: user.wecomUserId,
+      isActive: user.isActive
+    };
   }
 
   async touchLocalLoginSuccess(userId: string): Promise<void> {
@@ -75,12 +109,14 @@ export class PrismaUsersRepository implements UsersRepository {
   }
 
   private toAuthUser(
-    id: string,
-    name: string,
-    loginName: string,
-    assignments: Array<{ roleCode: string; isPrimary: boolean }>
+    user: {
+      id: string;
+      name: string;
+      roleAssignments: Array<{ roleCode: string; isPrimary: boolean }>;
+    },
+    loginName: string
   ): AuthUser | null {
-    const roles = normalizeRoles(assignments);
+    const roles = normalizeRoles(user.roleAssignments);
     const activeRole = resolveActiveRole(roles);
 
     if (!activeRole) {
@@ -88,8 +124,8 @@ export class PrismaUsersRepository implements UsersRepository {
     }
 
     return {
-      id,
-      name,
+      id: user.id,
+      name: user.name,
       role: activeRole,
       activeRole,
       roles,

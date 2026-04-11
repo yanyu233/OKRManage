@@ -22,6 +22,7 @@ export function LoginPage() {
   const search = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const returnTo = search.get('returnTo');
   const reason = search.get('reason');
+  const isUnmappedFallback = reason === 'unmapped';
 
   const sessionQuery = useQuery({
     queryKey: ['session'],
@@ -53,19 +54,19 @@ export function LoginPage() {
         <Space direction="vertical" size={18} style={{ width: '100%' }}>
           <div>
             <Typography.Title level={2} style={{ marginBottom: 8 }}>
-              OKR 登录
+              {isUnmappedFallback ? '本地兜底登录' : '本地调试登录'}
             </Typography.Title>
             <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-              企业微信仍然是正式入口，这个页面仅用于企业微信未映射到账户时的兜底登录，以及本地开发调试。
+              企业微信仍然是正式入口，这个页面仅用于企业微信账号未映射时的兜底登录，以及当前本地调试。
             </Typography.Paragraph>
           </div>
 
-          {reason === 'unmapped' ? (
+          {isUnmappedFallback ? (
             <Alert
               type="warning"
               showIcon
-              message="当前企业微信账号尚未映射"
-              description="请使用系统管理员分配的本地兜底账号登录，或联系系统管理员完成企业微信账号映射。"
+              message="企业微信账号未识别"
+              description="请使用系统管理员分配的本地兜底账号登录，或联系系统管理员补齐企业微信账号映射。"
             />
           ) : null}
 
@@ -73,12 +74,16 @@ export function LoginPage() {
             <Space align="start">
               <WechatOutlined className="auth-hint-icon" />
               <Typography.Text type="secondary">
-                正式用户请从企业微信工作台进入。本地账号登录只对少量兜底场景和开发调试开放。
+                正式用户请从企业微信工作台进入。这里保留本地账号登录，是为了少量兜底场景和当前开发调试。
               </Typography.Text>
             </Space>
           </Card>
 
-          <Form<LoginFormValues> layout="vertical" onFinish={(values) => loginMutation.mutate(values)} disabled={loginMutation.isPending}>
+          <Form<LoginFormValues>
+            layout="vertical"
+            onFinish={(values) => loginMutation.mutate(values)}
+            disabled={loginMutation.isPending}
+          >
             <Form.Item label="登录名" name="loginName" rules={[{ required: true, message: '请输入登录名。' }]}>
               <Input size="large" prefix={<UserOutlined />} placeholder="请输入登录名" />
             </Form.Item>

@@ -33,7 +33,7 @@ export function AppShell() {
     onSuccess: async () => {
       setUser(null);
       await queryClient.invalidateQueries({ queryKey: ['session'] });
-      navigate('/login', { replace: true });
+      navigate('/auth/entry', { replace: true });
     },
     onError: () => {
       message.error('退出登录失败，请重试。');
@@ -81,7 +81,8 @@ export function AppShell() {
   }
 
   if (!currentUser) {
-    return <Navigate to={`/login?returnTo=${encodeURIComponent(location.pathname)}`} replace />;
+    const returnTo = `${location.pathname}${location.search}${location.hash}`;
+    return <Navigate to={`/auth/entry?returnTo=${encodeURIComponent(returnTo)}`} replace />;
   }
 
   const authedUser = currentUser;
@@ -148,19 +149,19 @@ export function AppShell() {
             />
             <div>
               <Typography.Title level={4} style={{ margin: 0 }}>
-                {authedUser.name}
+                {currentUser.name}
               </Typography.Title>
-              <Typography.Text type="secondary">当前角色：{getRoleLabel(authedUser.activeRole)}</Typography.Text>
+              <Typography.Text type="secondary">当前角色：{getRoleLabel(currentUser.activeRole)}</Typography.Text>
             </div>
           </Space>
 
           <Space align="center" size={16}>
-            <Tag color="blue">{getRoleLabel(authedUser.activeRole)}</Tag>
+            <Tag color="blue">{getRoleLabel(currentUser.activeRole)}</Tag>
             <Dropdown menu={menu} trigger={['click']}>
               <Button type="text" size="large">
                 <Space>
                   <Avatar icon={<UserOutlined />} />
-                  <Typography.Text>{authedUser.loginName}</Typography.Text>
+                  <Typography.Text>{currentUser.loginName}</Typography.Text>
                 </Space>
               </Button>
             </Dropdown>

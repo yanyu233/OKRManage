@@ -46,6 +46,7 @@ async function main(): Promise<void> {
   const sysadmin = await upsertUser({
     employeeNo: 'DEBUG-SYSADMIN',
     name: sysadminName,
+    wecomUserId: 'sysadmin.routec',
     departmentId: department.id,
     sectionId: sectionPlatform.id,
     reviewGroupId: digitalGroup.id
@@ -56,6 +57,7 @@ async function main(): Promise<void> {
   const sectionLeader = await upsertUser({
     employeeNo: 'LEADER-SECTION-01',
     name: 'Liu Section',
+    wecomUserId: 'liu.section',
     departmentId: department.id,
     sectionId: sectionPlatform.id,
     reviewGroupId: digitalGroup.id
@@ -67,6 +69,7 @@ async function main(): Promise<void> {
   const groupLeader = await upsertUser({
     employeeNo: 'LEADER-GROUP-01',
     name: 'Ma Group',
+    wecomUserId: 'ma.group',
     departmentId: department.id,
     sectionId: sectionPlatform.id,
     reviewGroupId: digitalGroup.id
@@ -79,6 +82,7 @@ async function main(): Promise<void> {
   const zhangChen = await upsertUser({
     employeeNo: 'EMP-0001',
     name: 'Zhang Chen',
+    wecomUserId: 'zhangchen',
     departmentId: department.id,
     sectionId: sectionPlatform.id,
     reviewGroupId: digitalGroup.id
@@ -89,6 +93,7 @@ async function main(): Promise<void> {
   const wangMin = await upsertUser({
     employeeNo: 'EMP-0002',
     name: 'Wang Min',
+    wecomUserId: 'wangmin',
     departmentId: department.id,
     sectionId: sectionPlatform.id,
     reviewGroupId: digitalGroup.id
@@ -99,6 +104,7 @@ async function main(): Promise<void> {
   const liLei = await upsertUser({
     employeeNo: 'EMP-0003',
     name: 'Li Lei',
+    wecomUserId: 'lilei',
     departmentId: department.id,
     sectionId: sectionSolutions.id,
     reviewGroupId: operationsGroup.id
@@ -179,6 +185,7 @@ async function upsertReviewGroup(name: string, seatCounts: Record<(typeof GRADE_
 async function upsertUser(input: {
   employeeNo: string;
   name: string;
+  wecomUserId: string;
   departmentId: string;
   sectionId: string;
   reviewGroupId: string;
@@ -187,6 +194,7 @@ async function upsertUser(input: {
     where: { employeeNo: input.employeeNo },
     update: {
       name: input.name,
+      wecomUserId: input.wecomUserId,
       departmentId: input.departmentId,
       sectionId: input.sectionId,
       reviewGroupId: input.reviewGroupId,
@@ -195,6 +203,7 @@ async function upsertUser(input: {
     create: {
       employeeNo: input.employeeNo,
       name: input.name,
+      wecomUserId: input.wecomUserId,
       departmentId: input.departmentId,
       sectionId: input.sectionId,
       reviewGroupId: input.reviewGroupId,

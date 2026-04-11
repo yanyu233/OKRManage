@@ -133,11 +133,13 @@ export class PrismaSessionsRepository implements SessionsRepository {
   }
 
   private toSessionRecord(session: Awaited<ReturnType<PrismaSessionsRepository['loadSession']>>): SessionRecord {
-    if (!session || !session.user.localAccount) {
+    if (!session) {
       throw new UnauthorizedException('authentication required');
     }
 
     const roles = normalizeRoles(session.user.roleAssignments);
+    const loginName =
+      session.user.localAccount?.loginName ?? session.user.wecomUserId ?? session.user.employeeNo ?? session.user.id;
 
     return {
       id: session.id,
@@ -145,7 +147,7 @@ export class PrismaSessionsRepository implements SessionsRepository {
       user: {
         id: session.user.id,
         name: session.user.name,
-        loginName: session.user.localAccount.loginName,
+        loginName,
         role: session.activeRoleAssignment.roleCode,
         activeRole: session.activeRoleAssignment.roleCode,
         roles

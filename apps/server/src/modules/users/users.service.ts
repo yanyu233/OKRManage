@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { compare } from 'bcryptjs';
 import { AuthUser } from '../../shared/types/auth-user';
-import { USERS_REPOSITORY, UsersRepository } from './users.repository';
+import { USERS_REPOSITORY, UsersRepository, WecomMappedUser } from './users.repository';
 import { Inject } from '@nestjs/common';
 
 @Injectable()
@@ -33,5 +33,9 @@ export class UsersService {
 
   findById(id: string): Promise<AuthUser | null> {
     return this.usersRepository.findById(id);
+  }
+
+  findByWecomUserId(wecomUserId: string): Promise<WecomMappedUser | null> {
+    return this.usersRepository.findByWecomUserId(wecomUserId);
   }
 }

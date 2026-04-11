@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
+export type AuthMode = 'local-debug' | 'wecom-preferred';
+
 @Injectable()
 export class RuntimeConfigService {
   constructor(private readonly configService: ConfigService) {}
@@ -9,8 +11,8 @@ export class RuntimeConfigService {
     return this.getRequiredPositiveInteger('PORT');
   }
 
-  get authMode(): string {
-    return this.getRequiredAllowedString('AUTH_MODE', ['local-debug']);
+  get authMode(): AuthMode {
+    return this.getRequiredAllowedString('AUTH_MODE', ['local-debug', 'wecom-preferred']) as AuthMode;
   }
 
   get sessionCookieName(): string {
@@ -25,6 +27,14 @@ export class RuntimeConfigService {
     return this.getRequiredString('DATABASE_URL');
   }
 
+  get appBaseUrl(): string {
+    return this.getRequiredString('APP_BASE_URL');
+  }
+
+  get webBaseUrl(): string {
+    return this.getRequiredString('WEB_BASE_URL');
+  }
+
   get debugSysadminLogin(): string {
     return this.getRequiredString('DEBUG_SYSADMIN_LOGIN');
   }
@@ -35,6 +45,26 @@ export class RuntimeConfigService {
 
   get debugSysadminName(): string {
     return this.getRequiredString('DEBUG_SYSADMIN_NAME');
+  }
+
+  get wecomCorpId(): string | null {
+    return this.getOptionalString('WECOM_CORP_ID');
+  }
+
+  get wecomAgentId(): string | null {
+    return this.getOptionalString('WECOM_AGENT_ID');
+  }
+
+  get wecomSecret(): string | null {
+    return this.getOptionalString('WECOM_SECRET');
+  }
+
+  get wecomRedirectUri(): string | null {
+    return this.getOptionalString('WECOM_REDIRECT_URI');
+  }
+
+  get isWecomConfigured(): boolean {
+    return Boolean(this.wecomCorpId && this.wecomAgentId && this.wecomSecret && this.wecomRedirectUri);
   }
 
   get frontendOrigins(): string[] {
@@ -60,6 +90,15 @@ export class RuntimeConfigService {
 
   get serviceName(): string {
     return 'okr-node-foundation';
+  }
+
+  private getOptionalString(key: string): string | null {
+    const value = this.configService.get<string>(key);
+    if (!value || value.trim().length === 0) {
+      return null;
+    }
+
+    return value.trim();
   }
 
   private getRequiredString(key: string): string {

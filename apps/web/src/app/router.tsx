@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { AdminOrgPage } from '../modules/admin/AdminOrgPage';
+import { AuthEntryPage } from '../modules/auth/AuthEntryPage';
 import { LoginPage } from '../modules/auth/LoginPage';
 import { UnauthorizedPage } from '../modules/auth/UnauthorizedPage';
 import { EmployeeGoalPage } from '../modules/employee/EmployeeGoalPage';
@@ -14,13 +15,14 @@ import { useSessionStore } from '../shared/store/session-store';
 function HomeRedirect() {
   const user = useSessionStore((state) => state.user);
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/auth/entry" replace />;
   }
 
   return <Navigate to={defaultPathForRole(user.activeRole ?? user.role)} replace />;
 }
 
 export const router = createBrowserRouter([
+  { path: '/auth/entry', element: <AuthEntryPage /> },
   { path: '/login', element: <LoginPage /> },
   { path: '/unauthorized', element: <UnauthorizedPage /> },
   {

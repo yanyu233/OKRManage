@@ -11,8 +11,8 @@ export class SessionService {
     @Inject(SESSIONS_REPOSITORY) private readonly sessionsRepository: SessionsRepository
   ) {}
 
-  create(user: AuthUser) {
-    return this.sessionsRepository.create(user, 'manual-login', this.runtimeConfig.sessionTtlMinutes);
+  create(user: AuthUser, authMethod = 'manual-login') {
+    return this.sessionsRepository.create(user, authMethod, this.runtimeConfig.sessionTtlMinutes);
   }
 
   async get(sessionId: string | undefined | null) {
