@@ -77,6 +77,18 @@ body {
   border-bottom: 1px solid rgba(191, 219, 254, 0.56);
 }
 
+.app-shell__identity {
+  min-height: 56px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+}
+
+.app-shell__identity .ant-typography {
+  line-height: 1.2;
+}
+
 .app-shell__content {
   padding: 28px;
 }

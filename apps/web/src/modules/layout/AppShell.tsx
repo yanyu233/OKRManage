@@ -36,7 +36,7 @@ export function AppShell() {
       navigate('/auth/entry', { replace: true });
     },
     onError: () => {
-      message.error('退出登录失败，请重试。');
+      message.error('\u9000\u51fa\u767b\u5f55\u5931\u8d25\uff0c\u8bf7\u91cd\u8bd5');
     }
   });
 
@@ -50,7 +50,7 @@ export function AppShell() {
       });
     },
     onError: () => {
-      message.error('切换角色失败，请重试。');
+      message.error('\u5207\u6362\u89d2\u8272\u5931\u8d25\uff0c\u8bf7\u91cd\u8bd5');
     }
   });
 
@@ -92,7 +92,7 @@ export function AppShell() {
       {
         key: 'logout',
         icon: <LogoutOutlined />,
-        label: '退出登录',
+        label: '\u9000\u51fa\u767b\u5f55',
         onClick: () => logoutMutation.mutate()
       }
     ]
@@ -124,9 +124,11 @@ export function AppShell() {
       >
         <div className="app-shell__brand">
           <Typography.Title level={4} style={{ color: '#eff6ff', margin: 0 }}>
-            {siderCollapsed ? 'OKR' : 'OKR 系统'}
+            {siderCollapsed ? 'OKR' : 'OKR \u7cfb\u7edf'}
           </Typography.Title>
-          {!siderCollapsed ? <Typography.Text className="app-shell__brand-subtitle">Route C / React 前台</Typography.Text> : null}
+          {!siderCollapsed ? (
+            <Typography.Text className="app-shell__brand-subtitle">Route C / React \u524d\u53f0</Typography.Text>
+          ) : null}
         </div>
 
         <Menu
@@ -147,11 +149,14 @@ export function AppShell() {
               icon={siderCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
               onClick={toggleSider}
             />
-            <div>
+            <div className="app-shell__identity">
               <Typography.Title level={4} style={{ margin: 0 }}>
                 {currentUser.name}
               </Typography.Title>
-              <Typography.Text type="secondary">当前角色：{getRoleLabel(currentUser.activeRole)}</Typography.Text>
+              <Typography.Text type="secondary">
+                {'\u5f53\u524d\u89d2\u8272\uff1a'}
+                {getRoleLabel(currentUser.activeRole)}
+              </Typography.Text>
             </div>
           </Space>
 
