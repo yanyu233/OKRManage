@@ -6,7 +6,38 @@ import { getAdminBootstrap, saveAdminBootstrap } from '../../shared/api/admin';
 import { ApiError } from '../../shared/api/http';
 import type { AdminOrgBootstrapInput, ReviewGroupRecord } from '../../shared/types/admin-config';
 import { createEmptyBootstrap, summarizeBootstrap, toAdminBootstrapInput } from './admin-org-form';
-import { AccessSections, LeaderSections, ReviewGroupSection, StructureSections } from './AdminOrgSections';
+import {
+  AccessSections,
+  AdminGoalTemplateSection,
+  LeaderSections,
+  ReviewGroupSection,
+  StructureSections
+} from './AdminOrgSections';
+
+const TEXT = {
+  loading: '\u6b63\u5728\u52a0\u8f7d\u7cfb\u7edf\u914d\u7f6e...',
+  loadFailed: '\u7cfb\u7edf\u914d\u7f6e\u52a0\u8f7d\u5931\u8d25\u3002',
+  title: '\u7cfb\u7edf\u7ba1\u7406\u5458\u914d\u7f6e\u53f0',
+  description:
+    '\u7edf\u4e00\u7ef4\u62a4\u90e8\u95e8\u3001\u79d1\u5ba4\u3001\u5458\u5de5\u89d2\u8272\u3001\u672c\u5730\u767b\u5f55\u8d26\u53f7\u3001\u8d1f\u8d23\u4eba\u7ed1\u5b9a\u3001\u8bc4\u4ef7\u7ec4\u4ee5\u53ca\u6a21\u677f\u76ee\u6807\u3002',
+  reset: '\u91cd\u7f6e\u8349\u7a3f',
+  save: '\u4fdd\u5b58\u53d8\u66f4',
+  saveSuccess: '\u7cfb\u7edf\u914d\u7f6e\u5df2\u4fdd\u5b58\u3002',
+  saveFailedTitle: '\u4fdd\u5b58\u5931\u8d25',
+  saveFailedDescription: '\u4fdd\u5b58\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002',
+  departmentCount: '\u90e8\u95e8\u6570',
+  sectionCount: '\u79d1\u5ba4\u6570',
+  userCount: '\u5458\u5de5\u6570',
+  reviewGroupCount: '\u8bc4\u4ef7\u7ec4\u6570',
+  localAccountCount: '\u672c\u5730\u8d26\u53f7\u6570',
+  roleAssignmentCount: '\u89d2\u8272\u7ed1\u5b9a\u6570',
+  goalTemplateCount: '\u6a21\u677f\u76ee\u6807\u6570',
+  structureTab: '\u7ec4\u7ec7\u7ed3\u6784',
+  accessTab: '\u5458\u5de5\u4e0e\u89d2\u8272',
+  leaderTab: '\u8d1f\u8d23\u4eba\u7ed1\u5b9a',
+  reviewGroupTab: '\u8bc4\u4ef7\u7ec4\u4e0e\u6863\u4f4d\u540d\u989d',
+  goalTemplateTab: '\u6a21\u677f\u76ee\u6807'
+} as const;
 
 export function AdminOrgPage() {
   const { message } = App.useApp();
@@ -34,10 +65,10 @@ export function AdminOrgPage() {
       setIsDirty(false);
       setSaveError(null);
       await queryClient.invalidateQueries({ queryKey: ['admin-org-bootstrap'] });
-      message.success('系统配置已保存。');
+      message.success(TEXT.saveSuccess);
     },
     onError: (error) => {
-      const nextError = error instanceof ApiError ? error.message : '保存失败，请稍后重试。';
+      const nextError = error instanceof ApiError ? error.message : TEXT.saveFailedDescription;
       setSaveError(nextError);
       message.error(nextError);
     }
@@ -57,13 +88,17 @@ export function AdminOrgPage() {
   }, [draft.users]);
 
   if (bootstrapQuery.isLoading) {
-    return <Card className="admin-page" variant="borderless">正在加载系统配置...</Card>;
+    return (
+      <Card className="admin-page" variant="borderless">
+        {TEXT.loading}
+      </Card>
+    );
   }
 
   if (bootstrapQuery.isError) {
     return (
       <Card className="admin-page" variant="borderless">
-        <Alert type="error" showIcon message="系统配置加载失败。" />
+        <Alert type="error" showIcon message={TEXT.loadFailed} />
       </Card>
     );
   }
@@ -73,34 +108,41 @@ export function AdminOrgPage() {
       <div className="page-hero">
         <div>
           <Typography.Title level={1} style={{ marginBottom: 8 }}>
-            系统管理员配置台
+            {TEXT.title}
           </Typography.Title>
           <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-            统一维护部门、科室、员工角色、本地登录账号、负责人绑定以及评价组固定名额。
+            {TEXT.description}
           </Typography.Paragraph>
         </div>
         <Space>
           <Button icon={<ReloadOutlined />} size="large" onClick={() => bootstrapQuery.data && resetDraft()}>
-            重置草稿
+            {TEXT.reset}
           </Button>
-          <Button type="primary" icon={<SaveOutlined />} size="large" loading={saveMutation.isPending} onClick={() => saveMutation.mutate(draft)}>
-            保存变更
+          <Button
+            type="primary"
+            icon={<SaveOutlined />}
+            size="large"
+            loading={saveMutation.isPending}
+            onClick={() => saveMutation.mutate(draft)}
+          >
+            {TEXT.save}
           </Button>
         </Space>
       </div>
 
-      {saveError ? <Alert type="error" showIcon message="保存失败" description={saveError} /> : null}
+      {saveError ? <Alert type="error" showIcon message={TEXT.saveFailedTitle} description={saveError} /> : null}
 
       <Row gutter={[20, 20]}>
         {[
-          ['部门数', summary.departmentCount],
-          ['科室数', summary.sectionCount],
-          ['员工数', summary.userCount],
-          ['评价组数', summary.reviewGroupCount],
-          ['本地账号数', summary.localAccountCount],
-          ['角色绑定数', summary.roleAssignmentCount]
+          [TEXT.departmentCount, summary.departmentCount],
+          [TEXT.sectionCount, summary.sectionCount],
+          [TEXT.userCount, summary.userCount],
+          [TEXT.reviewGroupCount, summary.reviewGroupCount],
+          [TEXT.localAccountCount, summary.localAccountCount],
+          [TEXT.roleAssignmentCount, summary.roleAssignmentCount],
+          [TEXT.goalTemplateCount, draft.goalTemplates.length]
         ].map(([title, value]) => (
-          <Col xs={24} md={12} xl={4} key={title}>
+          <Col xs={24} md={12} xl={6} xxl={4} key={title}>
             <Card className="metric-card" variant="borderless">
               <Statistic title={title as string} value={value as number} />
             </Card>
@@ -112,12 +154,12 @@ export function AdminOrgPage() {
         <Tabs
           size="large"
           items={[
-            { key: 'structure', label: '组织结构', children: <StructureSections draft={draft} updateCollection={updateCollection} /> },
-            { key: 'access', label: '员工与角色', children: <AccessSections draft={draft} updateCollection={updateCollection} /> },
-            { key: 'leaders', label: '负责人绑定', children: <LeaderSections draft={draft} updateCollection={updateCollection} /> },
+            { key: 'structure', label: TEXT.structureTab, children: <StructureSections draft={draft} updateCollection={updateCollection} /> },
+            { key: 'access', label: TEXT.accessTab, children: <AccessSections draft={draft} updateCollection={updateCollection} /> },
+            { key: 'leaders', label: TEXT.leaderTab, children: <LeaderSections draft={draft} updateCollection={updateCollection} /> },
             {
               key: 'review-groups',
-              label: '评价组与档位名额',
+              label: TEXT.reviewGroupTab,
               children: (
                 <ReviewGroupSection
                   draft={draft}
@@ -126,6 +168,11 @@ export function AdminOrgPage() {
                   updateReviewGroup={updateReviewGroup}
                 />
               )
+            },
+            {
+              key: 'goal-templates',
+              label: TEXT.goalTemplateTab,
+              children: <AdminGoalTemplateSection draft={draft} updateCollection={updateCollection} />
             }
           ]}
         />

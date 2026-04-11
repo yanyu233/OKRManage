@@ -1,13 +1,14 @@
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
-import { useQuery } from '@tanstack/react-query';
-import { Alert, Button, Card, Col, Empty, Input, Row, Select, Space, Statistic, Tag, Typography } from 'antd';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Alert, App, Button, Card, Col, Empty, Input, Row, Select, Space, Statistic, Tag, Typography } from 'antd';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getEmployeeOkr } from '../../shared/api/employee';
+import { getEmployeeGoalTemplates, getEmployeeOkr, importEmployeeGoalTemplates } from '../../shared/api/employee';
 import { ApiError } from '../../shared/api/http';
 import { formatQuarterLabel, formatNullableScore, getGoalStatusLabel } from '../../shared/i18n/labels';
 import { buildQuarterOptions, buildToolbarYearOptions } from '../../shared/ui/toolbar-options';
 import { buildYearOptions, filterEmployeeGoals } from './employee.helpers';
+import { EmployeeTemplateImportDialog } from './EmployeeTemplateImportDialog';
 import './employee.css';
 
 const START_YEAR = 2026;
@@ -27,6 +28,8 @@ const TEXT = {
   completedKeyResultCount: '\u5df2\u5b8c\u6210\u5173\u952e\u7ed3\u679c',
   proofCount: '\u8bc1\u660e\u6750\u6599',
   quarterScore: '\u5f53\u524d\u5b63\u5ea6\u5f97\u5206',
+  importTemplates: '\u5bfc\u5165\u6a21\u677f\u76ee\u6807',
+  importSuccess: '\u6a21\u677f\u76ee\u6807\u5bfc\u5165\u6210\u529f\u3002',
   goalsTitle: '\u672c\u5b63\u5ea6\u76ee\u6807',
   goalsDescription:
     '\u5728\u8fd9\u91cc\u67e5\u770b\u672c\u5b63\u5ea6\u7684\u76ee\u6807\u4e0e\u5173\u952e\u7ed3\u679c\u8fdb\u5c55\uff0c\u70b9\u51fb\u76ee\u6807\u540e\u53ef\u8fdb\u5165\u8be6\u60c5\u9875\u9762\u3002',
@@ -40,10 +43,13 @@ const TEXT = {
 } as const;
 
 export function EmployeeOkrPage() {
+  const { message } = App.useApp();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [year, setYear] = useState(DEFAULT_YEAR);
   const [quarter, setQuarter] = useState(DEFAULT_QUARTER);
   const [keyword, setKeyword] = useState('');
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   const okrQuery = useQuery({
     queryKey: ['employee-okr', year, quarter],
@@ -78,6 +84,35 @@ export function EmployeeOkrPage() {
     () => filterEmployeeGoals(okrQuery.data?.goals ?? [], keyword),
     [keyword, okrQuery.data?.goals]
   );
+
+  const templatesQuery = useQuery({
+    queryKey: ['employee-goal-templates', year, quarter],
+    queryFn: () =>
+      getEmployeeGoalTemplates({
+        year,
+        quarter
+      }),
+    enabled: importDialogOpen
+  });
+
+  const importMutation = useMutation({
+    mutationFn: (templateIds: string[]) =>
+      importEmployeeGoalTemplates({
+        year,
+        quarter,
+        templateIds
+      }),
+    onSuccess: async () => {
+      message.success(TEXT.importSuccess);
+      setImportDialogOpen(false);
+      await queryClient.invalidateQueries({ queryKey: ['employee-okr'] });
+      await queryClient.invalidateQueries({ queryKey: ['employee-goal-templates'] });
+    },
+    onError: (error) => {
+      const description = error instanceof ApiError ? error.message : TEXT.loadFailedDescription;
+      message.error(description);
+    }
+  });
 
   if (okrQuery.isLoading) {
     return <Card className="employee-toolbar-card">{TEXT.loading}</Card>;
@@ -130,6 +165,9 @@ export function EmployeeOkrPage() {
               onChange={(value) => setQuarter(value)}
               style={{ minWidth: 140 }}
             />
+            <Button type="primary" onClick={() => setImportDialogOpen(true)}>
+              {TEXT.importTemplates}
+            </Button>
             <Button icon={<ReloadOutlined />} onClick={() => okrQuery.refetch()}>
               {TEXT.refresh}
             </Button>
@@ -200,6 +238,16 @@ export function EmployeeOkrPage() {
           )}
         </Space>
       </Card>
+
+      <EmployeeTemplateImportDialog
+        open={importDialogOpen}
+        loading={templatesQuery.isLoading}
+        confirmLoading={importMutation.isPending}
+        departmentName={templatesQuery.data?.departmentName ?? payload.employee.sectionName ?? null}
+        templates={templatesQuery.data?.templates ?? []}
+        onCancel={() => setImportDialogOpen(false)}
+        onConfirm={(templateIds) => importMutation.mutate(templateIds)}
+      />
     </Space>
   );
 }

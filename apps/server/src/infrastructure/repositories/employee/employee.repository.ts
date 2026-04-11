@@ -37,6 +37,27 @@ export type EmployeeGoalSummaryRecord = {
   currentScore: number | null;
 };
 
+export type EmployeeGoalTemplateKeyResultRecord = {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  points: number;
+};
+
+export type EmployeeGoalTemplateSummaryRecord = {
+  id: string;
+  departmentId: string;
+  departmentName: string | null;
+  name: string;
+  description: string | null;
+  isActive: boolean;
+  totalPoints: number;
+  keyResultCount: number;
+  alreadyImported: boolean;
+  keyResults: EmployeeGoalTemplateKeyResultRecord[];
+};
+
 export type EmployeeGoalDetailRecord = EmployeeGoalSummaryRecord & {
   year: number;
   quarter: number;
@@ -62,6 +83,14 @@ export type EmployeeQuarterRecord = {
   goals: EmployeeGoalSummaryRecord[];
 };
 
+export type EmployeeGoalTemplateRecord = {
+  year: number;
+  quarter: number;
+  departmentId: string | null;
+  departmentName: string | null;
+  templates: EmployeeGoalTemplateSummaryRecord[];
+};
+
 export type EmployeeCompletionUpdateResult = {
   before: {
     id: string;
@@ -75,6 +104,12 @@ export type EmployeeProofUploadResult = {
   keyResultId: string;
 };
 
+export type EmployeeGoalTemplateImportResult = {
+  year: number;
+  quarter: number;
+  importedGoals: EmployeeGoalSummaryRecord[];
+};
+
 export type ProofDownloadRecord = {
   proofId: string;
   fileName: string;
@@ -83,6 +118,13 @@ export type ProofDownloadRecord = {
 
 export interface EmployeeRepository {
   getQuarterOverview(actor: AuthUser, year: number, quarter: number): Promise<EmployeeQuarterRecord>;
+  getGoalTemplates(actor: AuthUser, year: number, quarter: number): Promise<EmployeeGoalTemplateRecord>;
+  importGoalTemplates(
+    actor: AuthUser,
+    year: number,
+    quarter: number,
+    templateIds: string[]
+  ): Promise<EmployeeGoalTemplateImportResult>;
   getGoalDetail(actor: AuthUser, goalId: string): Promise<EmployeeGoalDetailRecord>;
   updateKeyResultCompletion(actor: AuthUser, krId: string, completionState: string): Promise<EmployeeCompletionUpdateResult>;
   createProof(

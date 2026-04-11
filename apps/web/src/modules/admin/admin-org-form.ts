@@ -1,6 +1,7 @@
 import type {
   AdminOrgBootstrap,
   AdminOrgBootstrapInput,
+  GoalTemplateRecord,
   GroupLeaderBindingRecord,
   LocalAccountRecord,
   ReviewGradeCode,
@@ -32,7 +33,8 @@ export function createEmptyBootstrap(): AdminOrgBootstrapInput {
     roleAssignments: [],
     sectionLeaderBindings: [],
     groupLeaderBindings: [],
-    reviewGroups: []
+    reviewGroups: [],
+    goalTemplates: []
   };
 }
 
@@ -117,6 +119,27 @@ export function createReviewGroupRecord(): Omit<ReviewGroupRecord, 'memberCount'
   };
 }
 
+export function createGoalTemplateRecord(defaultDepartmentId: string | null = null): GoalTemplateRecord {
+  return {
+    id: createId('goal-template'),
+    departmentId: defaultDepartmentId ?? '',
+    name: '',
+    description: null,
+    isActive: true,
+    keyResults: [createGoalTemplateKeyResultRecord('KR1')]
+  };
+}
+
+export function createGoalTemplateKeyResultRecord(code = 'KR1') {
+  return {
+    id: createId('goal-template-kr'),
+    code,
+    name: '',
+    description: null,
+    points: 0
+  };
+}
+
 export function totalQuotaSeats(reviewGroup: Pick<ReviewGroupRecord, 'quotas'>) {
   return reviewGroup.quotas.reduce((sum, quota) => sum + quota.seatCount, 0);
 }
@@ -135,6 +158,14 @@ export function toAdminBootstrapInput(bootstrap: AdminOrgBootstrap): AdminOrgBoo
       name: reviewGroup.name,
       isActive: reviewGroup.isActive,
       quotas: reviewGroup.quotas.map((quota) => ({ ...quota }))
+    })),
+    goalTemplates: bootstrap.goalTemplates.map((template) => ({
+      id: template.id,
+      departmentId: template.departmentId,
+      name: template.name,
+      description: template.description,
+      isActive: template.isActive,
+      keyResults: template.keyResults.map((keyResult) => ({ ...keyResult }))
     }))
   };
 }

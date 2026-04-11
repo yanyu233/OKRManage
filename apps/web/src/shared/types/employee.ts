@@ -33,6 +33,27 @@ export type EmployeeGoalSummary = {
   currentScore: number | null;
 };
 
+export type EmployeeGoalTemplateKeyResult = {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  points: number;
+};
+
+export type EmployeeGoalTemplate = {
+  id: string;
+  departmentId: string;
+  departmentName: string | null;
+  name: string;
+  description: string | null;
+  isActive: boolean;
+  totalPoints: number;
+  keyResultCount: number;
+  alreadyImported: boolean;
+  keyResults: EmployeeGoalTemplateKeyResult[];
+};
+
 export type EmployeeQuarterSummary = {
   id: string;
   name: string;
@@ -52,6 +73,14 @@ export type EmployeeOkrResponse = {
   goals: EmployeeGoalSummary[];
 };
 
+export type EmployeeGoalTemplateResponse = {
+  year: number;
+  quarter: number;
+  departmentId: string | null;
+  departmentName: string | null;
+  templates: EmployeeGoalTemplate[];
+};
+
 export type EmployeeGoalDetail = EmployeeGoalSummary & {
   year: number;
   quarter: number;
@@ -60,4 +89,16 @@ export type EmployeeGoalDetail = EmployeeGoalSummary & {
 
 export type UpdateKrCompletionInput = {
   completionState: 'incomplete' | 'completed';
+};
+
+export type ImportEmployeeGoalTemplatesInput = {
+  year: number;
+  quarter: number;
+  templateIds: string[];
+};
+
+export type ImportEmployeeGoalTemplatesResponse = {
+  year: number;
+  quarter: number;
+  importedGoals: EmployeeGoalSummary[];
 };

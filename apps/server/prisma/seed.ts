@@ -43,6 +43,36 @@ async function main(): Promise<void> {
     C: 0
   });
 
+  await upsertGoalTemplate(sectionPlatform.departmentId, '\u5e73\u53f0\u79d1\u65b0\u5458\u5de5\u6a21\u677f', '\u7528\u4e8e\u5feb\u901f\u5bfc\u5165\u9996\u4e2a\u5b63\u5ea6\u901a\u7528\u76ee\u6807', [
+    {
+      code: 'KR1',
+      name: '\u5b8c\u6210\u5b63\u5ea6\u9996\u4e2a\u7248\u672c\u4ea4\u4ed8',
+      description: '\u8ddf\u8e2a\u76ee\u6807\u7248\u672c\u8ba1\u5212\u548c\u4ea4\u4ed8\u7ed3\u8bba',
+      points: 30
+    },
+    {
+      code: 'KR2',
+      name: '\u8f93\u51fa\u4e0a\u624b\u6587\u6863\u4e0e FAQ',
+      description: '\u6c89\u6dc0\u4ea4\u4ed8\u8def\u5f84\u548c\u73af\u5883\u4f7f\u7528\u8bf4\u660e',
+      points: 20
+    }
+  ]);
+
+  await upsertGoalTemplate(sectionSolutions.departmentId, '\u8fd0\u8425\u652f\u6491\u6a21\u677f', '\u9002\u7528\u4e8e\u8fd0\u8425\u7ec4\u7684\u901a\u7528\u76ee\u6807\u6a21\u677f', [
+    {
+      code: 'KR1',
+      name: '\u5b8c\u6210\u670d\u52a1\u4ea4\u63a5\u8ddf\u8e2a',
+      description: '\u53ef\u89c6\u5316\u8bb0\u5f55\u6bcf\u5468\u4ea4\u63a5\u548c\u95ed\u73af',
+      points: 25
+    },
+    {
+      code: 'KR2',
+      name: '\u6c89\u6dc0\u8fd0\u8425\u652f\u6491\u6848\u4f8b',
+      description: '\u8f93\u51fa\u53ef\u590d\u7528\u7684\u573a\u666f\u89e3\u51b3\u65b9\u6848',
+      points: 25
+    }
+  ]);
+
   const sysadmin = await upsertUser({
     employeeNo: 'DEBUG-SYSADMIN',
     name: sysadminName,
@@ -290,6 +320,52 @@ async function upsertGroupLeaderBinding(leaderUserId: string, reviewGroupId: str
       reviewGroupId
     }
   });
+}
+
+async function upsertGoalTemplate(
+  departmentId: string,
+  name: string,
+  description: string,
+  keyResults: Array<{ code: string; name: string; description: string; points: number }>
+) {
+  const template = await prisma.goalTemplate.upsert({
+    where: {
+      departmentId_name: {
+        departmentId,
+        name
+      }
+    },
+    update: {
+      description,
+      isActive: true
+    },
+    create: {
+      departmentId,
+      name,
+      description,
+      isActive: true
+    }
+  });
+
+  await prisma.goalTemplateKeyResult.deleteMany({
+    where: {
+      goalTemplateId: template.id
+    }
+  });
+
+  if (keyResults.length) {
+    await prisma.goalTemplateKeyResult.createMany({
+      data: keyResults.map((keyResult) => ({
+        goalTemplateId: template.id,
+        code: keyResult.code,
+        name: keyResult.name,
+        description: keyResult.description,
+        points: keyResult.points
+      }))
+    });
+  }
+
+  return template;
 }
 
 async function seedGoalsForZhang(ownerUserId: string, reviewerUserId: string) {

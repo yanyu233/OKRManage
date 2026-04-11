@@ -2,10 +2,13 @@ import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/commo
 import { Prisma, User } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { AuthUser } from '../../../shared/types/auth-user';
+import { DomainValidationError } from '../../../shared/errors/domain-validation.error';
 import {
   EmployeeCompletionUpdateResult,
   EmployeeGoalDetailRecord,
   EmployeeGoalSummaryRecord,
+  EmployeeGoalTemplateImportResult,
+  EmployeeGoalTemplateRecord,
   EmployeeKeyResultRecord,
   EmployeeProofRecord,
   EmployeeProofUploadResult,
@@ -58,6 +61,230 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
       quarter,
       employee: this.toEmployeeQuarterSummary(employee),
       goals: employee.ownedGoals.map((goal) => this.toGoalSummary(goal))
+    };
+  }
+
+  async getGoalTemplates(actor: AuthUser, year: number, quarter: number): Promise<EmployeeGoalTemplateRecord> {
+    const employee = await this.prisma.user.findUnique({
+      where: { id: actor.id },
+      include: {
+        department: {
+          include: {
+            goalTemplates: {
+              where: {
+                isActive: true
+              },
+              orderBy: {
+                createdAt: 'asc'
+              },
+              include: {
+                keyResults: {
+                  orderBy: {
+                    code: 'asc'
+                  }
+                },
+                imports: {
+                  where: {
+                    ownerUserId: actor.id,
+                    year,
+                    quarter
+                  },
+                  select: {
+                    id: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!employee) {
+      throw new NotFoundException('employee not found');
+    }
+
+    if (!employee.departmentId || !employee.department) {
+      return {
+        year,
+        quarter,
+        departmentId: null,
+        departmentName: null,
+        templates: []
+      };
+    }
+
+    return {
+      year,
+      quarter,
+      departmentId: employee.departmentId,
+      departmentName: employee.department.name,
+      templates: employee.department.goalTemplates.map((template) => ({
+        id: template.id,
+        departmentId: template.departmentId,
+        departmentName: employee.department?.name ?? null,
+        name: template.name,
+        description: template.description,
+        isActive: template.isActive,
+        totalPoints: template.keyResults.reduce((sum, keyResult) => sum + keyResult.points, 0),
+        keyResultCount: template.keyResults.length,
+        alreadyImported: template.imports.length > 0,
+        keyResults: template.keyResults.map((keyResult) => ({
+          id: keyResult.id,
+          code: keyResult.code,
+          name: keyResult.name,
+          description: keyResult.description,
+          points: keyResult.points
+        }))
+      }))
+    };
+  }
+
+  async importGoalTemplates(
+    actor: AuthUser,
+    year: number,
+    quarter: number,
+    templateIds: string[]
+  ): Promise<EmployeeGoalTemplateImportResult> {
+    const employee = await this.prisma.user.findUnique({
+      where: { id: actor.id },
+      include: {
+        department: true
+      }
+    });
+
+    if (!employee) {
+      throw new NotFoundException('employee not found');
+    }
+
+    if (!employee.departmentId) {
+      throw new DomainValidationError('employee department is required');
+    }
+
+    const templates = await this.prisma.goalTemplate.findMany({
+      where: {
+        id: {
+          in: templateIds
+        },
+        departmentId: employee.departmentId,
+        isActive: true
+      },
+      orderBy: {
+        createdAt: 'asc'
+      },
+      include: {
+        keyResults: {
+          orderBy: {
+            code: 'asc'
+          }
+        }
+      }
+    });
+
+    if (templates.length !== templateIds.length) {
+      throw new DomainValidationError('selected template is unavailable');
+    }
+
+    const existingImports = await this.prisma.importedGoalTemplate.findMany({
+      where: {
+        ownerUserId: actor.id,
+        year,
+        quarter,
+        goalTemplateId: {
+          in: templateIds
+        }
+      },
+      select: {
+        goalTemplateId: true
+      }
+    });
+
+    if (existingImports.length > 0) {
+      throw new DomainValidationError('selected template already imported for this quarter');
+    }
+
+    const existingGoals = await this.prisma.goal.findMany({
+      where: {
+        ownerUserId: actor.id,
+        year,
+        quarter
+      },
+      select: {
+        code: true
+      }
+    });
+
+    let nextGoalIndex = getNextGoalIndex(existingGoals.map((goal) => goal.code));
+
+    const importedGoals = await this.prisma.$transaction(async (transaction) => {
+      const summaries: EmployeeGoalSummaryRecord[] = [];
+
+      for (const templateId of templateIds) {
+        const template = templates.find((entry) => entry.id === templateId);
+        if (!template) {
+          throw new DomainValidationError('selected template is unavailable');
+        }
+
+        const goalCode = `O${nextGoalIndex}`;
+        nextGoalIndex += 1;
+
+        const goal = await transaction.goal.create({
+          data: {
+            ownerUserId: actor.id,
+            year,
+            quarter,
+            code: goalCode,
+            name: template.name,
+            description: template.description,
+            status: 'draft',
+            totalPoints: template.keyResults.reduce((sum, keyResult) => sum + keyResult.points, 0)
+          }
+        });
+
+        if (template.keyResults.length > 0) {
+          await transaction.keyResult.createMany({
+            data: template.keyResults.map((keyResult) => ({
+              goalId: goal.id,
+              code: keyResult.code,
+              name: keyResult.name,
+              description: keyResult.description,
+              points: keyResult.points,
+              completionState: 'incomplete'
+            }))
+          });
+        }
+
+        await transaction.importedGoalTemplate.create({
+          data: {
+            goalTemplateId: template.id,
+            goalId: goal.id,
+            ownerUserId: actor.id,
+            year,
+            quarter
+          }
+        });
+
+        summaries.push({
+          id: goal.id,
+          code: goal.code,
+          name: goal.name,
+          description: goal.description,
+          status: goal.status,
+          totalPoints: goal.totalPoints,
+          keyResultCount: template.keyResults.length,
+          completedKeyResultCount: 0,
+          proofCount: 0,
+          currentScore: null
+        });
+      }
+
+      return summaries;
+    });
+
+    return {
+      year,
+      quarter,
+      importedGoals
     };
   }
 
@@ -406,4 +633,17 @@ function scoreFromKeyResults(
 
   const total = scored.reduce((sum, keyResult) => sum + keyResult.points * ((keyResult.reviewScore ?? 0) / 100), 0);
   return Number(total.toFixed(1));
+}
+
+function getNextGoalIndex(goalCodes: string[]) {
+  const maxIndex = goalCodes.reduce((currentMax, code) => {
+    const match = /^O(\d+)$/i.exec(code.trim());
+    if (!match) {
+      return currentMax;
+    }
+
+    return Math.max(currentMax, Number(match[1]));
+  }, 0);
+
+  return maxIndex + 1;
 }

@@ -167,6 +167,47 @@ body {
   background: rgba(239, 68, 68, 0.08);
 }
 
+.goal-template-list {
+  display: grid;
+  gap: 16px;
+}
+
+.goal-template-card {
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(248, 250, 255, 0.92), rgba(255, 255, 255, 0.96));
+}
+
+.goal-template-meta-grid,
+.goal-template-kr-meta-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.goal-template-meta-grid {
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+}
+
+.goal-template-kr-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.goal-template-kr-card {
+  border-radius: 18px;
+}
+
+.goal-template-kr-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.goal-template-kr-meta-grid {
+  grid-template-columns: 160px 140px;
+}
+
 @media (max-width: 992px) {
   .app-shell__content {
     padding: 20px;
@@ -175,7 +216,8 @@ body {
   .page-hero,
   .page-toolbar,
   .admin-section-card__header,
-  .review-group-card__topline {
+  .review-group-card__topline,
+  .goal-template-kr-header {
     flex-direction: column;
     align-items: stretch;
   }
@@ -187,5 +229,10 @@ body {
 
   .page-toolbar__search {
     width: 100%;
+  }
+
+  .goal-template-meta-grid,
+  .goal-template-kr-meta-grid {
+    grid-template-columns: 1fr;
   }
 }

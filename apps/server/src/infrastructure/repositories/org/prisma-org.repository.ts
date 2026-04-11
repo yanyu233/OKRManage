@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import bcrypt from 'bcryptjs';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import {
   type AdminLocalAccountInput,
@@ -11,6 +12,7 @@ import {
   OrgRepository
 } from './org.repository';
 import { REVIEW_GRADE_CODES } from '../../../shared/constants/review-grade-codes';
+import { DomainValidationError } from '../../../shared/errors/domain-validation.error';
 
 @Injectable()
 export class PrismaOrgRepository implements OrgRepository {
@@ -179,12 +181,17 @@ export class PrismaOrgRepository implements OrgRepository {
       const existingLocalAccounts = await tx.localAccount.findMany();
       const existingAccountsByUserId = new Map(existingLocalAccounts.map((account) => [account.userId, account]));
       const existingAssignments = await tx.userRoleAssignment.findMany();
+      const existingTemplates = await tx.goalTemplate.findMany();
       const existingAssignmentsById = new Map(existingAssignments.map((assignment) => [assignment.id, assignment]));
       const existingAssignmentsByComposite = new Map(
         existingAssignments.map((assignment) => [
           `${assignment.userId}|${assignment.roleCode}|${assignment.scopeType}|${assignment.scopeId}`,
           assignment
         ])
+      );
+      const existingTemplatesById = new Map(existingTemplates.map((template) => [template.id, template]));
+      const existingTemplatesByComposite = new Map(
+        existingTemplates.map((template) => [`${template.departmentId}|${template.name.toLowerCase()}`, template])
       );
 
       for (const department of input.departments) {
@@ -241,7 +248,14 @@ export class PrismaOrgRepository implements OrgRepository {
         }
       });
 
-      const persistedTemplateIds = input.goalTemplates.map((entry) => entry.id);
+      const persistedTemplateIds = input.goalTemplates.map((entry) => {
+        if (existingTemplatesById.has(entry.id)) {
+          return entry.id;
+        }
+
+        const existingTemplate = existingTemplatesByComposite.get(`${entry.departmentId}|${entry.name.toLowerCase()}`);
+        return existingTemplate?.id ?? entry.id;
+      });
 
       await tx.goalTemplateKeyResult.deleteMany({
         where: {
@@ -251,29 +265,43 @@ export class PrismaOrgRepository implements OrgRepository {
         }
       });
 
-      for (const template of input.goalTemplates) {
-        await tx.goalTemplate.upsert({
-          where: { id: template.id },
-          update: {
-            departmentId: template.departmentId,
-            name: template.name,
-            description: template.description,
-            isActive: template.isActive
-          },
-          create: {
-            id: template.id,
-            departmentId: template.departmentId,
-            name: template.name,
-            description: template.description,
-            isActive: template.isActive
+      for (const [index, template] of input.goalTemplates.entries()) {
+        const persistedTemplateId = persistedTemplateIds[index];
+
+        try {
+          await tx.goalTemplate.upsert({
+            where: { id: persistedTemplateId },
+            update: {
+              departmentId: template.departmentId,
+              name: template.name,
+              description: template.description,
+              isActive: template.isActive
+            },
+            create: {
+              id: persistedTemplateId,
+              departmentId: template.departmentId,
+              name: template.name,
+              description: template.description,
+              isActive: template.isActive
+            }
+          });
+        } catch (error) {
+          if (
+            error instanceof Prisma.PrismaClientKnownRequestError &&
+            error.code === 'P2002' &&
+            String(error.meta?.target ?? '').includes('GoalTemplate_departmentId_name_key')
+          ) {
+            throw new DomainValidationError(`duplicate goal template name in department: ${template.name}`);
           }
-        });
+
+          throw error;
+        }
 
         if (template.keyResults.length > 0) {
           await tx.goalTemplateKeyResult.createMany({
             data: template.keyResults.map((keyResult) => ({
               id: keyResult.id,
-              goalTemplateId: template.id,
+              goalTemplateId: persistedTemplateId,
               code: keyResult.code,
               name: keyResult.name,
               description: keyResult.description,

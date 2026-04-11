@@ -1,4 +1,12 @@
-import type { EmployeeGoalDetail, EmployeeOkrResponse, EmployeeProof, UpdateKrCompletionInput } from '../types/employee';
+import type {
+  EmployeeGoalDetail,
+  EmployeeGoalTemplateResponse,
+  EmployeeOkrResponse,
+  EmployeeProof,
+  ImportEmployeeGoalTemplatesInput,
+  ImportEmployeeGoalTemplatesResponse,
+  UpdateKrCompletionInput
+} from '../types/employee';
 import { apiRequest } from './http';
 
 type EmployeeQuarterQuery = {
@@ -15,6 +23,19 @@ export function getEmployeeOkr(query: EmployeeQuarterQuery) {
 export function getEmployeeGoalDetail(goalId: string) {
   return apiRequest<EmployeeGoalDetail>(`/employee/goals/${goalId}`, {
     method: 'GET'
+  });
+}
+
+export function getEmployeeGoalTemplates(query: EmployeeQuarterQuery) {
+  return apiRequest<EmployeeGoalTemplateResponse>(`/employee/goal-templates${toQueryString(query)}`, {
+    method: 'GET'
+  });
+}
+
+export function importEmployeeGoalTemplates(payload: ImportEmployeeGoalTemplatesInput) {
+  return apiRequest<ImportEmployeeGoalTemplatesResponse>('/employee/goal-templates/import', {
+    method: 'POST',
+    body: JSON.stringify(payload)
   });
 }
 

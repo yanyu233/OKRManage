@@ -67,6 +67,23 @@ export type ReviewGroupRecord = {
   quotas: ReviewGroupQuota[];
 };
 
+export type GoalTemplateKeyResultRecord = {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  points: number;
+};
+
+export type GoalTemplateRecord = {
+  id: string;
+  departmentId: string;
+  name: string;
+  description: string | null;
+  isActive: boolean;
+  keyResults: GoalTemplateKeyResultRecord[];
+};
+
 export type AdminOrgBootstrap = {
   departments: DepartmentRecord[];
   sections: SectionRecord[];
@@ -76,6 +93,7 @@ export type AdminOrgBootstrap = {
   sectionLeaderBindings: SectionLeaderBindingRecord[];
   groupLeaderBindings: GroupLeaderBindingRecord[];
   reviewGroups: ReviewGroupRecord[];
+  goalTemplates: GoalTemplateRecord[];
 };
 
 export type AdminOrgBootstrapInput = {
@@ -87,4 +105,5 @@ export type AdminOrgBootstrapInput = {
   sectionLeaderBindings: SectionLeaderBindingRecord[];
   groupLeaderBindings: GroupLeaderBindingRecord[];
   reviewGroups: Array<Omit<ReviewGroupRecord, 'memberCount'>>;
+  goalTemplates: GoalTemplateRecord[];
 };

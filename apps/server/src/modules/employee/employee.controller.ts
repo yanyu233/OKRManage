@@ -22,6 +22,7 @@ import { SessionService } from '../session/session.service';
 import { AuthUser } from '../../shared/types/auth-user';
 import { DomainValidationError } from '../../shared/errors/domain-validation.error';
 import { EmployeeService } from './employee.service';
+import { ImportGoalTemplatesDto } from './dto/import-goal-templates.dto';
 import { UpdateKrCompletionDto } from './dto/update-kr-completion.dto';
 import { UploadProofDto } from './dto/upload-proof.dto';
 
@@ -42,6 +43,32 @@ export class EmployeeController {
 
     try {
       return await this.employeeService.getQuarterOverview(actor, year, quarter);
+    } catch (error) {
+      this.rethrowDomainError(error);
+    }
+  }
+
+  @Get('goal-templates')
+  async getGoalTemplates(
+    @Req() request: Request,
+    @Query('year', ParseIntPipe) year: number,
+    @Query('quarter', ParseIntPipe) quarter: number
+  ) {
+    const actor = await this.requireEmployee(request);
+
+    try {
+      return await this.employeeService.getGoalTemplates(actor, year, quarter);
+    } catch (error) {
+      this.rethrowDomainError(error);
+    }
+  }
+
+  @Post('goal-templates/import')
+  async importGoalTemplates(@Req() request: Request, @Body() payload: ImportGoalTemplatesDto) {
+    const actor = await this.requireEmployee(request);
+
+    try {
+      return await this.employeeService.importGoalTemplates(actor, payload.year, payload.quarter, payload.templateIds);
     } catch (error) {
       this.rethrowDomainError(error);
     }

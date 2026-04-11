@@ -14,7 +14,8 @@
 .employee-goal-list,
 .employee-proof-list,
 .employee-kr-list,
-.employee-summary-grid {
+.employee-summary-grid,
+.employee-template-list {
   display: grid;
   gap: 16px;
 }
@@ -46,9 +47,40 @@
   gap: 4px;
 }
 
+.employee-template-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 16px;
+  padding: 18px 20px;
+  border-radius: 20px;
+  border: 1px solid rgba(191, 219, 254, 0.72);
+  background: #f8fbff;
+}
+
+.employee-template-card--disabled {
+  background: rgba(241, 245, 249, 0.72);
+}
+
+.employee-template-card__checkbox {
+  padding-top: 4px;
+}
+
+.employee-template-card__content {
+  min-width: 0;
+}
+
+.employee-template-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
 @media (max-width: 992px) {
   .employee-proof-row,
-  .employee-goal-row {
+  .employee-goal-row,
+  .employee-template-card__header {
     flex-direction: column;
     align-items: stretch;
   }

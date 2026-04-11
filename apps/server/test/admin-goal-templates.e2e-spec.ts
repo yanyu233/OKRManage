@@ -25,8 +25,9 @@ describe('Admin goal templates in bootstrap', () => {
       .send({
         ...bootstrap.body,
         goalTemplates: [
+          ...bootstrap.body.goalTemplates,
           {
-            id: 'template-okr-platform',
+            id: 'template-okr-platform-standard',
             departmentId,
             name: '平台科标准交付模板',
             description: '平台产品科季度标准目标',
@@ -54,23 +55,25 @@ describe('Admin goal templates in bootstrap', () => {
 
     const refreshed = await agent.get('/api/admin/org/bootstrap').expect(200);
 
-    expect(refreshed.body.goalTemplates).toEqual([
-      expect.objectContaining({
-        name: '平台科标准交付模板',
-        departmentId,
-        keyResults: [
-          expect.objectContaining({
-            code: 'KR1',
-            name: '完成季度版本交付',
-            points: 30
-          }),
-          expect.objectContaining({
-            code: 'KR2',
-            name: '沉淀季度知识库案例',
-            points: 20
-          })
-        ]
-      })
-    ]);
+    expect(refreshed.body.goalTemplates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: '平台科标准交付模板',
+          departmentId,
+          keyResults: [
+            expect.objectContaining({
+              code: 'KR1',
+              name: '完成季度版本交付',
+              points: 30
+            }),
+            expect.objectContaining({
+              code: 'KR2',
+              name: '沉淀季度知识库案例',
+              points: 20
+            })
+          ]
+        })
+      ])
+    );
   });
 });

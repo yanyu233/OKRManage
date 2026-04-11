@@ -19,6 +19,36 @@ export class EmployeeService {
     return this.employeeRepository.getQuarterOverview(actor, year, quarter);
   }
 
+  getGoalTemplates(actor: AuthUser, year: number, quarter: number) {
+    this.validateQuarter(year, quarter);
+    return this.employeeRepository.getGoalTemplates(actor, year, quarter);
+  }
+
+  async importGoalTemplates(actor: AuthUser, year: number, quarter: number, templateIds: string[]) {
+    this.validateQuarter(year, quarter);
+
+    const uniqueTemplateIds = [...new Set(templateIds.map((entry) => entry.trim()).filter(Boolean))];
+    if (!uniqueTemplateIds.length) {
+      throw new DomainValidationError('at least one template must be selected');
+    }
+
+    const result = await this.employeeRepository.importGoalTemplates(actor, year, quarter, uniqueTemplateIds);
+    await this.auditService.write({
+      actorUserId: actor.id,
+      actorRoleCode: actor.role,
+      action: 'employee.goal-templates.import',
+      entityType: 'goal-template-import',
+      entityId: actor.id,
+      afterJson: {
+        year,
+        quarter,
+        templateIds: uniqueTemplateIds,
+        importedGoalIds: result.importedGoals.map((goal) => goal.id)
+      }
+    });
+    return result;
+  }
+
   getGoalDetail(actor: AuthUser, goalId: string) {
     return this.employeeRepository.getGoalDetail(actor, goalId);
   }

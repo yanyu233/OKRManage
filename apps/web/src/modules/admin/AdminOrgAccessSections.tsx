@@ -9,29 +9,60 @@ type UpdateCollection = <Key extends keyof AdminOrgBootstrapInput>(
   updater: (items: AdminOrgBootstrapInput[Key]) => AdminOrgBootstrapInput[Key]
 ) => void;
 
+const TEXT = {
+  localAccountTitle: '\u672c\u5730\u515c\u5e95\u8d26\u53f7',
+  addLocalAccount: '\u65b0\u589e\u672c\u5730\u8d26\u53f7',
+  linkedUser: '\u5173\u8054\u5458\u5de5',
+  selectUser: '\u8bf7\u9009\u62e9\u5458\u5de5',
+  loginName: '\u767b\u5f55\u540d',
+  loginNamePlaceholder: '\u8bf7\u8f93\u5165\u767b\u5f55\u540d',
+  resetPassword: '\u91cd\u7f6e\u5bc6\u7801',
+  passwordPlaceholder: '\u7559\u7a7a\u5219\u4fdd\u6301\u5f53\u524d\u5bc6\u7801',
+  enableLocalLogin: '\u542f\u7528\u672c\u5730\u767b\u5f55',
+  actions: '\u64cd\u4f5c',
+  remove: '\u5220\u9664',
+  rolesTitle: '\u89d2\u8272\u5206\u914d',
+  addRole: '\u65b0\u589e\u89d2\u8272',
+  rolesTipTitle: '\u540c\u4e00\u5458\u5de5\u53ef\u4ee5\u5206\u914d\u591a\u4e2a\u89d2\u8272',
+  rolesTipDescription:
+    '\u4f8b\u5982\u540c\u4e00\u4e2a\u4eba\u53ef\u4ee5\u540c\u65f6\u5177\u5907\u201c\u5458\u5de5\u201d\u548c\u201c\u5c0f\u7ec4\u8d1f\u8d23\u4eba\u201d\u4e24\u6761\u89d2\u8272\u8bb0\u5f55\uff0c\u524d\u53f0\u4f1a\u6309\u89d2\u8272\u5206\u7ec4\u5c55\u793a\u529f\u80fd\u83dc\u5355\u3002',
+  role: '\u89d2\u8272',
+  scopeType: '\u8303\u56f4\u7c7b\u578b',
+  scope: '\u8303\u56f4',
+  scopePlaceholder: '\u8bf7\u9009\u62e9\u8303\u56f4',
+  primaryRole: '\u4e3b\u89d2\u8272',
+  enabled: '\u542f\u7528'
+} as const;
+
 const ROLE_OPTIONS: Array<{ label: string; value: UserRoleCode }> = [
-  { label: '系统管理员', value: 'system-admin' },
-  { label: '科室领导', value: 'section-leader' },
-  { label: '小组负责人', value: 'group-leader' },
-  { label: '员工', value: 'employee' }
+  { label: '\u7cfb\u7edf\u7ba1\u7406\u5458', value: 'system-admin' },
+  { label: '\u79d1\u5ba4\u9886\u5bfc', value: 'section-leader' },
+  { label: '\u5c0f\u7ec4\u8d1f\u8d23\u4eba', value: 'group-leader' },
+  { label: '\u5458\u5de5', value: 'employee' }
 ];
 
 const ROLE_SCOPE_OPTIONS: Array<{ label: string; value: RoleScopeType }> = [
-  { label: '系统', value: 'system' },
-  { label: '部门', value: 'department' },
-  { label: '科室', value: 'section' },
-  { label: '评价组', value: 'review-group' },
-  { label: '用户', value: 'user' }
+  { label: '\u7cfb\u7edf', value: 'system' },
+  { label: '\u90e8\u95e8', value: 'department' },
+  { label: '\u79d1\u5ba4', value: 'section' },
+  { label: '\u8bc4\u4ef7\u7ec4', value: 'review-group' },
+  { label: '\u7528\u6237', value: 'user' }
 ];
 
-export function AccessSections({ draft, updateCollection }: { draft: AdminOrgBootstrapInput; updateCollection: UpdateCollection }) {
+export function AccessSections({
+  draft,
+  updateCollection
+}: {
+  draft: AdminOrgBootstrapInput;
+  updateCollection: UpdateCollection;
+}) {
   const userOptions = draft.users.map((user) => ({ label: user.name || user.id, value: user.id }));
 
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
       <SectionCard
-        title="本地兜底账号"
-        actionLabel="新增本地账号"
+        title={TEXT.localAccountTitle}
+        actionLabel={TEXT.addLocalAccount}
         onAdd={() =>
           updateCollection('localAccounts', (items) => [...items, createLocalAccountRecord(draft.users.at(0)?.id ?? null)])
         }
@@ -43,12 +74,12 @@ export function AccessSections({ draft, updateCollection }: { draft: AdminOrgBoo
           dataSource={draft.localAccounts}
           columns={[
             {
-              title: '关联员工',
+              title: TEXT.linkedUser,
               render: (_value, record) => (
                 <Select
                   value={record.userId || undefined}
                   options={userOptions}
-                  placeholder="请选择员工"
+                  placeholder={TEXT.selectUser}
                   onChange={(value) =>
                     updateCollection('localAccounts', (items) =>
                       items.map((item) => (item.userId === record.userId ? { ...item, userId: value } : item))
@@ -58,11 +89,11 @@ export function AccessSections({ draft, updateCollection }: { draft: AdminOrgBoo
               )
             },
             {
-              title: '登录名',
+              title: TEXT.loginName,
               render: (_value, record) => (
                 <Input
                   value={record.loginName}
-                  placeholder="请输入登录名"
+                  placeholder={TEXT.loginNamePlaceholder}
                   onChange={(event) =>
                     updateCollection('localAccounts', (items) =>
                       items.map((item) =>
@@ -74,11 +105,11 @@ export function AccessSections({ draft, updateCollection }: { draft: AdminOrgBoo
               )
             },
             {
-              title: '重置密码',
+              title: TEXT.resetPassword,
               render: (_value, record) => (
                 <Input.Password
                   value={record.password ?? ''}
-                  placeholder="留空则保持当前密码"
+                  placeholder={TEXT.passwordPlaceholder}
                   onChange={(event) =>
                     updateCollection('localAccounts', (items) =>
                       items.map((item) => (item.userId === record.userId ? { ...item, password: event.target.value } : item))
@@ -88,8 +119,8 @@ export function AccessSections({ draft, updateCollection }: { draft: AdminOrgBoo
               )
             },
             {
-              title: '启用本地登录',
-              width: 140,
+              title: TEXT.enableLocalLogin,
+              width: 160,
               render: (_value, record) => (
                 <Switch
                   checked={record.localLoginEnabled}
@@ -102,7 +133,7 @@ export function AccessSections({ draft, updateCollection }: { draft: AdminOrgBoo
               )
             },
             {
-              title: '操作',
+              title: TEXT.actions,
               width: 100,
               render: (_value, record) => (
                 <Button
@@ -113,7 +144,7 @@ export function AccessSections({ draft, updateCollection }: { draft: AdminOrgBoo
                     updateCollection('localAccounts', (items) => items.filter((item) => item.userId !== record.userId))
                   }
                 >
-                  删除
+                  {TEXT.remove}
                 </Button>
               )
             }
@@ -122,18 +153,13 @@ export function AccessSections({ draft, updateCollection }: { draft: AdminOrgBoo
       </SectionCard>
 
       <SectionCard
-        title="角色分配"
-        actionLabel="新增角色"
+        title={TEXT.rolesTitle}
+        actionLabel={TEXT.addRole}
         onAdd={() =>
           updateCollection('roleAssignments', (items) => [...items, createRoleAssignmentRecord(draft.users.at(0)?.id ?? null)])
         }
       >
-        <Alert
-          type="info"
-          showIcon
-          message="同一员工可以分配多个角色"
-          description="例如同一个人可以同时具备“员工”和“小组负责人”两条角色记录，前台会按角色分组展示功能菜单。"
-        />
+        <Alert type="info" showIcon message={TEXT.rolesTipTitle} description={TEXT.rolesTipDescription} />
 
         <Table
           rowKey="id"
@@ -142,12 +168,12 @@ export function AccessSections({ draft, updateCollection }: { draft: AdminOrgBoo
           dataSource={draft.roleAssignments}
           columns={[
             {
-              title: '关联员工',
+              title: TEXT.linkedUser,
               render: (_value, record) => (
                 <Select
                   value={record.userId || undefined}
                   options={userOptions}
-                  placeholder="请选择员工"
+                  placeholder={TEXT.selectUser}
                   onChange={(value) =>
                     updateCollection('roleAssignments', (items) =>
                       items.map((item) => (item.id === record.id ? { ...item, userId: value } : item))
@@ -157,7 +183,7 @@ export function AccessSections({ draft, updateCollection }: { draft: AdminOrgBoo
               )
             },
             {
-              title: '角色',
+              title: TEXT.role,
               render: (_value, record) => (
                 <Select
                   value={record.roleCode}
@@ -180,7 +206,7 @@ export function AccessSections({ draft, updateCollection }: { draft: AdminOrgBoo
               )
             },
             {
-              title: '范围类型',
+              title: TEXT.scopeType,
               render: (_value, record) => (
                 <Select
                   value={record.scopeType}
@@ -194,13 +220,13 @@ export function AccessSections({ draft, updateCollection }: { draft: AdminOrgBoo
               )
             },
             {
-              title: '范围',
+              title: TEXT.scope,
               render: (_value, record) => (
                 <Select
                   value={record.scopeId || undefined}
                   options={scopeOptions(record.scopeType, draft)}
                   showSearch
-                  placeholder="请选择范围"
+                  placeholder={TEXT.scopePlaceholder}
                   onChange={(value) =>
                     updateCollection('roleAssignments', (items) =>
                       items.map((item) => (item.id === record.id ? { ...item, scopeId: value } : item))
@@ -210,7 +236,7 @@ export function AccessSections({ draft, updateCollection }: { draft: AdminOrgBoo
               )
             },
             {
-              title: '主角色',
+              title: TEXT.primaryRole,
               width: 110,
               render: (_value, record) => (
                 <Switch
@@ -224,7 +250,7 @@ export function AccessSections({ draft, updateCollection }: { draft: AdminOrgBoo
               )
             },
             {
-              title: '启用',
+              title: TEXT.enabled,
               width: 110,
               render: (_value, record) => (
                 <Switch
@@ -238,7 +264,7 @@ export function AccessSections({ draft, updateCollection }: { draft: AdminOrgBoo
               )
             },
             {
-              title: '操作',
+              title: TEXT.actions,
               width: 100,
               render: (_value, record) => (
                 <Button
@@ -249,7 +275,7 @@ export function AccessSections({ draft, updateCollection }: { draft: AdminOrgBoo
                     updateCollection('roleAssignments', (items) => items.filter((item) => item.id !== record.id))
                   }
                 >
-                  删除
+                  {TEXT.remove}
                 </Button>
               )
             }
@@ -291,7 +317,7 @@ function SectionCard({
 function scopeOptions(scopeType: RoleScopeType, draft: AdminOrgBootstrapInput) {
   switch (scopeType) {
     case 'system':
-      return [{ label: '系统', value: 'system' }];
+      return [{ label: '\u7cfb\u7edf', value: 'system' }];
     case 'department':
       return draft.departments.map((department) => ({ label: department.name || department.id, value: department.id }));
     case 'section':
