@@ -454,7 +454,7 @@ export class PrismaLeaderRepository implements LeaderRepository {
     return {
       id: proof.id,
       fileName: proof.fileName,
-      fileUrl: proof.fileUrl,
+      fileUrl: `/api/employee/proofs/${proof.id}/download`,
       fileSize: proof.fileSize,
       note: proof.note,
       uploadedAt: proof.uploadedAt.toISOString()

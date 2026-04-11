@@ -6,6 +6,12 @@ $appRoot = Split-Path -Parent $scriptRoot
 $npmCmd = 'C:\Program Files\nodejs\npm.cmd'
 $previousPath = $env:Path
 $env:Path = 'C:\Program Files\nodejs;' + $previousPath
+$proofStorageDir = if ($env:PROOF_STORAGE_DIR -and $env:PROOF_STORAGE_DIR.Trim().Length -gt 0) {
+  $env:PROOF_STORAGE_DIR.Trim()
+} else {
+  'storage/proofs'
+}
+$proofStoragePath = Join-Path $appRoot $proofStorageDir
 
 function Set-DefaultEnv {
   param(
@@ -38,6 +44,10 @@ try {
   Set-DefaultEnv -Name 'DEBUG_SYSADMIN_NAME' -Value 'System Admin'
 
   Push-Location $appRoot
+
+  if (Test-Path -LiteralPath $proofStoragePath) {
+    Remove-Item -LiteralPath $proofStoragePath -Recurse -Force
+  }
 
   if ($env:OKR_SKIP_PRISMA_GENERATE -ne '1') {
     Invoke-NativeChecked -FilePath $npmCmd -Arguments @('run', 'prisma:generate')

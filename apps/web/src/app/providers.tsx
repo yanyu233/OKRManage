@@ -1,4 +1,5 @@
 import { App as AntdApp, ConfigProvider, theme } from 'antd';
+import zhCN from 'antd/locale/zh_CN';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { type PropsWithChildren, useState } from 'react';
 
@@ -17,6 +18,7 @@ export function AppProviders({ children }: PropsWithChildren) {
 
   return (
     <ConfigProvider
+      locale={zhCN}
       theme={{
         algorithm: theme.defaultAlgorithm,
         token: {

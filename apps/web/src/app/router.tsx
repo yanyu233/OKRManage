@@ -2,8 +2,8 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { AdminOrgPage } from '../modules/admin/AdminOrgPage';
 import { LoginPage } from '../modules/auth/LoginPage';
 import { UnauthorizedPage } from '../modules/auth/UnauthorizedPage';
-import { EmployeeGoalPlaceholder } from '../modules/employee/EmployeeGoalPlaceholder';
-import { EmployeeOkrPlaceholder } from '../modules/employee/EmployeeOkrPlaceholder';
+import { EmployeeGoalPage } from '../modules/employee/EmployeeGoalPage';
+import { EmployeeOkrPage } from '../modules/employee/EmployeeOkrPage';
 import { LeaderRankingPage } from '../modules/leader/LeaderRankingPage';
 import { LeaderWorkbenchPage } from '../modules/leader/LeaderWorkbenchPage';
 import { AppShell } from '../modules/layout/AppShell';
@@ -55,7 +55,7 @@ export const router = createBrowserRouter([
         path: 'employee/okr',
         element: (
           <RoleRoute allow={['employee']}>
-            <EmployeeOkrPlaceholder />
+            <EmployeeOkrPage />
           </RoleRoute>
         )
       },
@@ -63,7 +63,7 @@ export const router = createBrowserRouter([
         path: 'employee/goal/:goalId',
         element: (
           <RoleRoute allow={['employee']}>
-            <EmployeeGoalPlaceholder />
+            <EmployeeGoalPage />
           </RoleRoute>
         )
       }

@@ -11,11 +11,11 @@ export function UnauthorizedPage() {
         <Result
           status="403"
           icon={<LockOutlined />}
-          title="This role cannot access the page"
-          subTitle="The account is signed in, but the current role is not allowed to open this module."
+          title="当前角色无权访问此页面"
+          subTitle="账号已经登录，但当前角色不允许打开这个模块。"
           extra={
             <Button type="primary" onClick={() => navigate('/')}>
-              Back to home
+              返回首页
             </Button>
           }
         />

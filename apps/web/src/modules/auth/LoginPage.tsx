@@ -38,7 +38,7 @@ export function LoginPage() {
       }
     },
     onError: (error) => {
-      const description = error instanceof ApiError ? error.message : 'Login failed. Please retry.';
+      const description = error instanceof ApiError ? error.message : '登录失败，请重试。';
       message.error(description);
     }
   });
@@ -53,10 +53,10 @@ export function LoginPage() {
         <Space direction="vertical" size={18} style={{ width: '100%' }}>
           <div>
             <Typography.Title level={2} style={{ marginBottom: 8 }}>
-              OKR Sign In
+              OKR 登录
             </Typography.Title>
             <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-              Enterprise WeCom login remains the primary entrance. This page exists for unmapped users and local development fallback only.
+              企业微信仍然是正式入口，这个页面仅用于企业微信未映射账号时的兜底登录，以及本地开发调试。
             </Typography.Paragraph>
           </div>
 
@@ -64,8 +64,8 @@ export function LoginPage() {
             <Alert
               type="warning"
               showIcon
-              message="WeCom user is not mapped"
-              description="Use a locally assigned fallback account, or ask a system administrator to finish the WeCom to user mapping."
+              message="当前企业微信账号尚未映射"
+              description="请使用系统管理员分配的本地兜底账号登录，或联系系统管理员完成企业微信账号映射。"
             />
           ) : null}
 
@@ -73,22 +73,22 @@ export function LoginPage() {
             <Space align="start">
               <WechatOutlined className="auth-hint-icon" />
               <Typography.Text type="secondary">
-                Production users should enter from the WeCom workbench. Local login is kept for controlled fallback and development access.
+                正式用户请从企业微信工作台进入。本地账号登录只对少量兜底场景和开发调试开放。
               </Typography.Text>
             </Space>
           </Card>
 
           <Form<LoginFormValues> layout="vertical" onFinish={(values) => loginMutation.mutate(values)} disabled={loginMutation.isPending}>
-            <Form.Item label="Login name" name="loginName" rules={[{ required: true, message: 'Please enter a login name.' }]}>
-              <Input size="large" prefix={<UserOutlined />} placeholder="Enter login name" />
+            <Form.Item label="登录名" name="loginName" rules={[{ required: true, message: '请输入登录名。' }]}>
+              <Input size="large" prefix={<UserOutlined />} placeholder="请输入登录名" />
             </Form.Item>
 
-            <Form.Item label="Password" name="password" rules={[{ required: true, message: 'Please enter a password.' }]}>
-              <Input.Password size="large" prefix={<LockOutlined />} placeholder="Enter password" />
+            <Form.Item label="密码" name="password" rules={[{ required: true, message: '请输入密码。' }]}>
+              <Input.Password size="large" prefix={<LockOutlined />} placeholder="请输入密码" />
             </Form.Item>
 
             <Button type="primary" htmlType="submit" size="large" loading={loginMutation.isPending} block>
-              Sign in
+              登录
             </Button>
           </Form>
         </Space>

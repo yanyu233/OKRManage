@@ -4,8 +4,9 @@ import { App, Avatar, Button, Dropdown, Layout, Menu, Skeleton, Space, Tag, Typo
 import { useEffect, useMemo } from 'react';
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { getCurrentSession, logout } from '../../shared/api/auth';
+import { getRoleLabel } from '../../shared/i18n/labels';
 import { useSessionStore } from '../../shared/store/session-store';
-import { defaultPathForRole, menuItemsForRole } from './routing';
+import { menuItemsForRole } from './routing';
 
 const { Header, Sider, Content } = Layout;
 
@@ -14,7 +15,6 @@ export function AppShell() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const user = useSessionStore((state) => state.user);
   const setUser = useSessionStore((state) => state.setUser);
   const siderCollapsed = useSessionStore((state) => state.siderCollapsed);
   const toggleSider = useSessionStore((state) => state.toggleSider);
@@ -36,11 +36,14 @@ export function AppShell() {
       navigate('/login', { replace: true });
     },
     onError: () => {
-      message.error('Logout failed. Please retry.');
+      message.error('退出登录失败，请重试。');
     }
   });
 
-  const menuItems = useMemo(() => (user ? menuItemsForRole(user.role) : []), [user]);
+  const menuItems = useMemo(
+    () => (sessionQuery.data?.authenticated && sessionQuery.data.user ? menuItemsForRole(sessionQuery.data.user.role) : []),
+    [sessionQuery.data]
+  );
 
   if (sessionQuery.isLoading) {
     return (
@@ -61,7 +64,7 @@ export function AppShell() {
       {
         key: 'logout',
         icon: <LogoutOutlined />,
-        label: 'Sign out',
+        label: '退出登录',
         onClick: () => logoutMutation.mutate()
       }
     ]
@@ -79,9 +82,9 @@ export function AppShell() {
       >
         <div className="app-shell__brand">
           <Typography.Title level={4} style={{ color: '#eff6ff', margin: 0 }}>
-            {siderCollapsed ? 'OKR' : 'OKR Console'}
+            {siderCollapsed ? 'OKR' : 'OKR 系统'}
           </Typography.Title>
-          {!siderCollapsed ? <Typography.Text className="app-shell__brand-subtitle">Route C / React Shell</Typography.Text> : null}
+          {!siderCollapsed ? <Typography.Text className="app-shell__brand-subtitle">Route C / React 前台</Typography.Text> : null}
         </div>
 
         <Menu theme="dark" mode="inline" selectedKeys={[location.pathname]} items={menuItems} onClick={(info) => navigate(info.key)} />
@@ -90,17 +93,22 @@ export function AppShell() {
       <Layout>
         <Header className="app-shell__header">
           <Space align="center" size={16}>
-            <Button type="text" size="large" icon={siderCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />} onClick={toggleSider} />
+            <Button
+              type="text"
+              size="large"
+              icon={siderCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+              onClick={toggleSider}
+            />
             <div>
               <Typography.Title level={4} style={{ margin: 0 }}>
                 {currentUser.name}
               </Typography.Title>
-              <Typography.Text type="secondary">Default route: {defaultPathForRole(currentUser.role)}</Typography.Text>
+              <Typography.Text type="secondary">当前角色：{getRoleLabel(currentUser.role)}</Typography.Text>
             </div>
           </Space>
 
           <Space align="center" size={16}>
-            <Tag color="blue">{currentUser.role}</Tag>
+            <Tag color="blue">{getRoleLabel(currentUser.role)}</Tag>
             <Dropdown menu={menu} trigger={['click']}>
               <Button type="text" size="large">
                 <Space>

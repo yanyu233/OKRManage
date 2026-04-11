@@ -10,13 +10,23 @@ export class ApiError extends Error {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:3000/api';
 
+export function resolveApiUrl(path: string) {
+  if (/^https?:\/\//.test(path)) {
+    return path;
+  }
+
+  return `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
+}
+
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const headers = new Headers(init?.headers ?? {});
+  if (!(init?.body instanceof FormData) && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  const response = await fetch(resolveApiUrl(path), {
     credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {})
-    },
+    headers,
     ...init
   });
 

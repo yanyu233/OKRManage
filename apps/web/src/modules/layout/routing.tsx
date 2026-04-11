@@ -21,7 +21,7 @@ export function menuItemsForRole(role: UserRole): ItemType[] {
       {
         key: '/admin/org',
         icon: <SettingOutlined />,
-        label: 'Admin Console'
+        label: '系统配置'
       }
     ];
   }
@@ -31,12 +31,12 @@ export function menuItemsForRole(role: UserRole): ItemType[] {
       {
         key: '/leader/workbench',
         icon: <TeamOutlined />,
-        label: 'Scoring Workbench'
+        label: '评分工作台'
       },
       {
         key: '/leader/ranking',
         icon: <BarChartOutlined />,
-        label: 'Score Ranking'
+        label: '评分排名'
       }
     ];
   }
@@ -45,7 +45,7 @@ export function menuItemsForRole(role: UserRole): ItemType[] {
     {
       key: '/employee/okr',
       icon: <ApartmentOutlined />,
-      label: 'My OKR'
+      label: '我的 OKR'
     }
   ];
 }

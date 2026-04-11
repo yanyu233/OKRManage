@@ -2,7 +2,12 @@ import type { ReactNode } from 'react';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { Button, Card, Input, InputNumber, Select, Space, Switch, Table, Typography } from 'antd';
 import type { AdminOrgBootstrapInput, ReviewGroupRecord } from '../../shared/types/admin-config';
-import { createGroupLeaderBindingRecord, createReviewGroupRecord, createSectionLeaderBindingRecord, totalQuotaSeats } from './admin-org-form';
+import {
+  createGroupLeaderBindingRecord,
+  createReviewGroupRecord,
+  createSectionLeaderBindingRecord,
+  totalQuotaSeats
+} from './admin-org-form';
 
 type UpdateCollection = <Key extends keyof AdminOrgBootstrapInput>(
   key: Key,
@@ -16,68 +21,106 @@ export function LeaderSections({ draft, updateCollection }: { draft: AdminOrgBoo
 
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
-      <SectionCard title="Section Leader Bindings" actionLabel="Add Section Leader" onAdd={() => updateCollection('sectionLeaderBindings', (items) => [...items, createSectionLeaderBindingRecord(draft.users.at(0)?.id ?? null, draft.sections.at(0)?.id ?? null)])}>
+      <SectionCard
+        title="科室领导绑定"
+        actionLabel="新增科室领导"
+        onAdd={() =>
+          updateCollection('sectionLeaderBindings', (items) => [
+            ...items,
+            createSectionLeaderBindingRecord(draft.users.at(0)?.id ?? null, draft.sections.at(0)?.id ?? null)
+          ])
+        }
+      >
         <Table
           rowKey="id"
           pagination={false}
           dataSource={draft.sectionLeaderBindings}
           columns={[
             {
-              title: 'Leader',
+              title: '负责人',
               render: (_value, record) => (
                 <Select
                   value={record.leaderUserId || undefined}
                   options={userOptions}
-                  placeholder="Choose leader"
-                  onChange={(value) => updateCollection('sectionLeaderBindings', (items) => items.map((item) => (item.id === record.id ? { ...item, leaderUserId: value } : item)))}
+                  placeholder="请选择负责人"
+                  onChange={(value) =>
+                    updateCollection('sectionLeaderBindings', (items) =>
+                      items.map((item) => (item.id === record.id ? { ...item, leaderUserId: value } : item))
+                    )
+                  }
                 />
               )
             },
             {
-              title: 'Section',
+              title: '科室',
               render: (_value, record) => (
                 <Select
                   value={record.sectionId || undefined}
                   options={sectionOptions}
-                  placeholder="Choose section"
-                  onChange={(value) => updateCollection('sectionLeaderBindings', (items) => items.map((item) => (item.id === record.id ? { ...item, sectionId: value } : item)))}
+                  placeholder="请选择科室"
+                  onChange={(value) =>
+                    updateCollection('sectionLeaderBindings', (items) =>
+                      items.map((item) => (item.id === record.id ? { ...item, sectionId: value } : item))
+                    )
+                  }
                 />
               )
             },
-            deleteColumn((record) => updateCollection('sectionLeaderBindings', (items) => items.filter((item) => item.id !== record.id)))
+            deleteColumn((record) =>
+              updateCollection('sectionLeaderBindings', (items) => items.filter((item) => item.id !== record.id))
+            )
           ]}
         />
       </SectionCard>
 
-      <SectionCard title="Group Leader Bindings" actionLabel="Add Group Leader" onAdd={() => updateCollection('groupLeaderBindings', (items) => [...items, createGroupLeaderBindingRecord(draft.users.at(0)?.id ?? null, draft.reviewGroups.at(0)?.id ?? null)])}>
+      <SectionCard
+        title="小组负责人绑定"
+        actionLabel="新增小组负责人"
+        onAdd={() =>
+          updateCollection('groupLeaderBindings', (items) => [
+            ...items,
+            createGroupLeaderBindingRecord(draft.users.at(0)?.id ?? null, draft.reviewGroups.at(0)?.id ?? null)
+          ])
+        }
+      >
         <Table
           rowKey="id"
           pagination={false}
           dataSource={draft.groupLeaderBindings}
           columns={[
             {
-              title: 'Leader',
+              title: '负责人',
               render: (_value, record) => (
                 <Select
                   value={record.leaderUserId || undefined}
                   options={userOptions}
-                  placeholder="Choose leader"
-                  onChange={(value) => updateCollection('groupLeaderBindings', (items) => items.map((item) => (item.id === record.id ? { ...item, leaderUserId: value } : item)))}
+                  placeholder="请选择负责人"
+                  onChange={(value) =>
+                    updateCollection('groupLeaderBindings', (items) =>
+                      items.map((item) => (item.id === record.id ? { ...item, leaderUserId: value } : item))
+                    )
+                  }
                 />
               )
             },
             {
-              title: 'Review Group',
+              title: '评价组',
               render: (_value, record) => (
                 <Select
                   value={record.reviewGroupId || undefined}
                   options={reviewGroupOptions}
-                  placeholder="Choose review group"
-                  onChange={(value) => updateCollection('groupLeaderBindings', (items) => items.map((item) => (item.id === record.id ? { ...item, reviewGroupId: value } : item)))}
+                  placeholder="请选择评价组"
+                  onChange={(value) =>
+                    updateCollection('groupLeaderBindings', (items) =>
+                      items.map((item) => (item.id === record.id ? { ...item, reviewGroupId: value } : item))
+                    )
+                  }
                 />
               )
             },
-            deleteColumn((record) => updateCollection('groupLeaderBindings', (items) => items.filter((item) => item.id !== record.id)))
+            deleteColumn((record) =>
+              updateCollection('groupLeaderBindings', (items) => items.filter((item) => item.id !== record.id))
+            )
           ]}
         />
       </SectionCard>
@@ -97,7 +140,11 @@ export function ReviewGroupSection({
   updateReviewGroup: (reviewGroupId: string, patch: Partial<Omit<ReviewGroupRecord, 'memberCount'>>) => void;
 }) {
   return (
-    <SectionCard title="Review Groups & Fixed Seats" actionLabel="Add Review Group" onAdd={() => updateCollection('reviewGroups', (items) => [...items, createReviewGroupRecord()])}>
+    <SectionCard
+      title="评价组与档位名额"
+      actionLabel="新增评价组"
+      onAdd={() => updateCollection('reviewGroups', (items) => [...items, createReviewGroupRecord()])}
+    >
       <Space direction="vertical" size={18} style={{ width: '100%' }}>
         {draft.reviewGroups.map((reviewGroup) => {
           const memberCount = memberCountByReviewGroup.get(reviewGroup.id) ?? 0;
@@ -108,21 +155,32 @@ export function ReviewGroupSection({
             <Card className="review-group-card" key={reviewGroup.id} variant="borderless">
               <Space direction="vertical" size={18} style={{ width: '100%' }}>
                 <div className="admin-section-card__header">
-                  <Input value={reviewGroup.name} placeholder="Review group name" onChange={(event) => updateReviewGroup(reviewGroup.id, { name: event.target.value })} />
-                  <Button danger type="text" icon={<DeleteOutlined />} onClick={() => updateCollection('reviewGroups', (items) => items.filter((item) => item.id !== reviewGroup.id))}>
-                    Delete
+                  <Input
+                    value={reviewGroup.name}
+                    placeholder="请输入评价组名称"
+                    onChange={(event) => updateReviewGroup(reviewGroup.id, { name: event.target.value })}
+                  />
+                  <Button
+                    danger
+                    type="text"
+                    icon={<DeleteOutlined />}
+                    onClick={() => updateCollection('reviewGroups', (items) => items.filter((item) => item.id !== reviewGroup.id))}
+                  >
+                    删除
                   </Button>
                 </div>
+
                 <div className="review-group-card__topline">
                   <Space size={12}>
-                    <Typography.Text type="secondary">Members {memberCount}</Typography.Text>
-                    <Typography.Text type="secondary">Seats {seatCount}</Typography.Text>
+                    <Typography.Text type="secondary">组内员工 {memberCount} 人</Typography.Text>
+                    <Typography.Text type="secondary">当前名额 {seatCount} 人</Typography.Text>
                   </Space>
                   <Space size={8}>
-                    <Typography.Text type="secondary">Active</Typography.Text>
+                    <Typography.Text type="secondary">启用</Typography.Text>
                     <Switch checked={reviewGroup.isActive} onChange={(checked) => updateReviewGroup(reviewGroup.id, { isActive: checked })} />
                   </Space>
                 </div>
+
                 <div className="quota-grid">
                   {reviewGroup.quotas.map((quota) => (
                     <Card className="quota-card" size="small" key={quota.gradeCode}>
@@ -132,14 +190,28 @@ export function ReviewGroupSection({
                           min={0}
                           precision={0}
                           value={quota.seatCount}
+                          controls={false}
                           style={{ width: '100%' }}
-                          onChange={(value) => updateReviewGroup(reviewGroup.id, { quotas: reviewGroup.quotas.map((entry) => (entry.gradeCode === quota.gradeCode ? { ...entry, seatCount: Number(value ?? 0) } : entry)) })}
+                          onChange={(value) =>
+                            updateReviewGroup(reviewGroup.id, {
+                              quotas: reviewGroup.quotas.map((entry) =>
+                                entry.gradeCode === quota.gradeCode
+                                  ? { ...entry, seatCount: Number(value ?? 0) }
+                                  : entry
+                              )
+                            })
+                          }
                         />
                       </Space>
                     </Card>
                   ))}
                 </div>
-                {overflow ? <Typography.Text type="danger">Total seats exceed active member count. Save will be blocked.</Typography.Text> : null}
+
+                {overflow ? (
+                  <Typography.Text type="danger">当前总名额超过组内员工人数，保存时会被阻止。</Typography.Text>
+                ) : (
+                  <Typography.Text type="secondary">固定名额按人数控制，保存时会再次校验。</Typography.Text>
+                )}
               </Space>
             </Card>
           );
@@ -165,11 +237,11 @@ function SectionCard({ title, actionLabel, onAdd, children }: { title: string; a
 
 function deleteColumn<T extends { id: string }>(onDelete: (record: T) => void) {
   return {
-    title: 'Actions',
+    title: '操作',
     width: 100,
     render: (_value: unknown, record: T) => (
       <Button danger type="text" icon={<DeleteOutlined />} onClick={() => onDelete(record)}>
-        Delete
+        删除
       </Button>
     )
   };

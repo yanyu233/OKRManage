@@ -15,29 +15,37 @@ export function StructureSections({ draft, updateCollection }: { draft: AdminOrg
 
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
-      <SectionCard title="Departments" actionLabel="Add Department" onAdd={() => updateCollection('departments', (items) => [...items, createDepartmentRecord()])}>
+      <SectionCard title="部门管理" actionLabel="新增部门" onAdd={() => updateCollection('departments', (items) => [...items, createDepartmentRecord()])}>
         <Table
           rowKey="id"
           pagination={false}
           dataSource={draft.departments}
           columns={[
             {
-              title: 'Name',
+              title: '部门名称',
               render: (_value, record) => (
                 <Input
                   value={record.name}
-                  placeholder="Department name"
-                  onChange={(event) => updateCollection('departments', (items) => items.map((item) => (item.id === record.id ? { ...item, name: event.target.value } : item)))}
+                  placeholder="请输入部门名称"
+                  onChange={(event) =>
+                    updateCollection('departments', (items) =>
+                      items.map((item) => (item.id === record.id ? { ...item, name: event.target.value } : item))
+                    )
+                  }
                 />
               )
             },
             {
-              title: 'Active',
+              title: '启用',
               width: 120,
               render: (_value, record) => (
                 <Switch
                   checked={record.isActive}
-                  onChange={(checked) => updateCollection('departments', (items) => items.map((item) => (item.id === record.id ? { ...item, isActive: checked } : item)))}
+                  onChange={(checked) =>
+                    updateCollection('departments', (items) =>
+                      items.map((item) => (item.id === record.id ? { ...item, isActive: checked } : item))
+                    )
+                  }
                 />
               )
             },
@@ -46,40 +54,52 @@ export function StructureSections({ draft, updateCollection }: { draft: AdminOrg
         />
       </SectionCard>
 
-      <SectionCard title="Sections" actionLabel="Add Section" onAdd={() => updateCollection('sections', (items) => [...items, createSectionRecord(draft.departments.at(0)?.id ?? null)])}>
+      <SectionCard title="科室管理" actionLabel="新增科室" onAdd={() => updateCollection('sections', (items) => [...items, createSectionRecord(draft.departments.at(0)?.id ?? null)])}>
         <Table
           rowKey="id"
           pagination={false}
           dataSource={draft.sections}
           columns={[
             {
-              title: 'Name',
+              title: '科室名称',
               render: (_value, record) => (
                 <Input
                   value={record.name}
-                  placeholder="Section name"
-                  onChange={(event) => updateCollection('sections', (items) => items.map((item) => (item.id === record.id ? { ...item, name: event.target.value } : item)))}
+                  placeholder="请输入科室名称"
+                  onChange={(event) =>
+                    updateCollection('sections', (items) =>
+                      items.map((item) => (item.id === record.id ? { ...item, name: event.target.value } : item))
+                    )
+                  }
                 />
               )
             },
             {
-              title: 'Department',
+              title: '所属部门',
               render: (_value, record) => (
                 <Select
                   value={record.departmentId || undefined}
                   options={departmentOptions}
-                  placeholder="Choose department"
-                  onChange={(value) => updateCollection('sections', (items) => items.map((item) => (item.id === record.id ? { ...item, departmentId: value } : item)))}
+                  placeholder="请选择所属部门"
+                  onChange={(value) =>
+                    updateCollection('sections', (items) =>
+                      items.map((item) => (item.id === record.id ? { ...item, departmentId: value } : item))
+                    )
+                  }
                 />
               )
             },
             {
-              title: 'Active',
+              title: '启用',
               width: 120,
               render: (_value, record) => (
                 <Switch
                   checked={record.isActive}
-                  onChange={(checked) => updateCollection('sections', (items) => items.map((item) => (item.id === record.id ? { ...item, isActive: checked } : item)))}
+                  onChange={(checked) =>
+                    updateCollection('sections', (items) =>
+                      items.map((item) => (item.id === record.id ? { ...item, isActive: checked } : item))
+                    )
+                  }
                 />
               )
             },
@@ -88,7 +108,7 @@ export function StructureSections({ draft, updateCollection }: { draft: AdminOrg
         />
       </SectionCard>
 
-      <SectionCard title="Users" actionLabel="Add User" onAdd={() => updateCollection('users', (items) => [...items, createUserRecord(draft.departments.at(0)?.id ?? null, draft.sections.at(0)?.id ?? null)])}>
+      <SectionCard title="员工管理" actionLabel="新增员工" onAdd={() => updateCollection('users', (items) => [...items, createUserRecord(draft.departments.at(0)?.id ?? null, draft.sections.at(0)?.id ?? null)])}>
         <Table
           rowKey="id"
           pagination={false}
@@ -96,68 +116,96 @@ export function StructureSections({ draft, updateCollection }: { draft: AdminOrg
           dataSource={draft.users}
           columns={[
             {
-              title: 'Name',
+              title: '姓名',
               render: (_value, record) => (
                 <Input
                   value={record.name}
-                  placeholder="User name"
-                  onChange={(event) => updateCollection('users', (items) => items.map((item) => (item.id === record.id ? { ...item, name: event.target.value } : item)))}
+                  placeholder="请输入员工姓名"
+                  onChange={(event) =>
+                    updateCollection('users', (items) =>
+                      items.map((item) => (item.id === record.id ? { ...item, name: event.target.value } : item))
+                    )
+                  }
                 />
               )
             },
             {
-              title: 'Employee No',
+              title: '工号',
               render: (_value, record) => (
                 <Input
                   value={record.employeeNo ?? ''}
-                  placeholder="Optional"
-                  onChange={(event) => updateCollection('users', (items) => items.map((item) => (item.id === record.id ? { ...item, employeeNo: event.target.value || null } : item)))}
+                  placeholder="选填"
+                  onChange={(event) =>
+                    updateCollection('users', (items) =>
+                      items.map((item) => (item.id === record.id ? { ...item, employeeNo: event.target.value || null } : item))
+                    )
+                  }
                 />
               )
             },
             {
-              title: 'Department',
+              title: '所属部门',
               render: (_value, record) => (
                 <Select
                   value={record.departmentId || undefined}
                   options={departmentOptions}
                   allowClear
-                  placeholder="Choose department"
-                  onChange={(value) => updateCollection('users', (items) => items.map((item) => (item.id === record.id ? { ...item, departmentId: value ?? null, sectionId: null } : item)))}
+                  placeholder="请选择所属部门"
+                  onChange={(value) =>
+                    updateCollection('users', (items) =>
+                      items.map((item) =>
+                        item.id === record.id ? { ...item, departmentId: value ?? null, sectionId: null } : item
+                      )
+                    )
+                  }
                 />
               )
             },
             {
-              title: 'Section',
+              title: '所属科室',
               render: (_value, record) => (
                 <Select
                   value={record.sectionId || undefined}
                   allowClear
-                  options={draft.sections.filter((section) => (record.departmentId ? section.departmentId === record.departmentId : true)).map((section) => ({ label: section.name || section.id, value: section.id }))}
-                  placeholder="Choose section"
-                  onChange={(value) => updateCollection('users', (items) => items.map((item) => (item.id === record.id ? { ...item, sectionId: value ?? null } : item)))}
+                  options={draft.sections
+                    .filter((section) => (record.departmentId ? section.departmentId === record.departmentId : true))
+                    .map((section) => ({ label: section.name || section.id, value: section.id }))}
+                  placeholder="请选择所属科室"
+                  onChange={(value) =>
+                    updateCollection('users', (items) =>
+                      items.map((item) => (item.id === record.id ? { ...item, sectionId: value ?? null } : item))
+                    )
+                  }
                 />
               )
             },
             {
-              title: 'Review Group',
+              title: '所属评价组',
               render: (_value, record) => (
                 <Select
                   value={record.reviewGroupId || undefined}
                   allowClear
                   options={reviewGroupOptions}
-                  placeholder="Choose review group"
-                  onChange={(value) => updateCollection('users', (items) => items.map((item) => (item.id === record.id ? { ...item, reviewGroupId: value ?? null } : item)))}
+                  placeholder="请选择评价组"
+                  onChange={(value) =>
+                    updateCollection('users', (items) =>
+                      items.map((item) => (item.id === record.id ? { ...item, reviewGroupId: value ?? null } : item))
+                    )
+                  }
                 />
               )
             },
             {
-              title: 'Active',
+              title: '启用',
               width: 120,
               render: (_value, record) => (
                 <Switch
                   checked={record.isActive}
-                  onChange={(checked) => updateCollection('users', (items) => items.map((item) => (item.id === record.id ? { ...item, isActive: checked } : item)))}
+                  onChange={(checked) =>
+                    updateCollection('users', (items) =>
+                      items.map((item) => (item.id === record.id ? { ...item, isActive: checked } : item))
+                    )
+                  }
                 />
               )
             },
@@ -185,11 +233,11 @@ function SectionCard({ title, actionLabel, onAdd, children }: { title: string; a
 
 function deleteColumn<T extends { id: string }>(onDelete: (record: T) => void) {
   return {
-    title: 'Actions',
+    title: '操作',
     width: 100,
     render: (_value: unknown, record: T) => (
       <Button danger type="text" icon={<DeleteOutlined />} onClick={() => onDelete(record)}>
-        Delete
+        删除
       </Button>
     )
   };

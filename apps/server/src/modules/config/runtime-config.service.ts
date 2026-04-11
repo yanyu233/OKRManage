@@ -49,6 +49,15 @@ export class RuntimeConfigService {
       .filter((entry) => entry.length > 0);
   }
 
+  get proofStorageDir(): string {
+    const configured = this.configService.get<string>('PROOF_STORAGE_DIR');
+    if (configured && configured.trim().length > 0) {
+      return configured.trim();
+    }
+
+    return 'storage/proofs';
+  }
+
   get serviceName(): string {
     return 'okr-node-foundation';
   }

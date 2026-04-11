@@ -7,8 +7,9 @@ import { AuthModule } from './modules/auth/auth.module';
 import { PrismaModule } from './infrastructure/database/prisma.module';
 import { AdminConfigModule } from './modules/admin-config/admin-config.module';
 import { LeaderModule } from './modules/leader/leader.module';
+import { EmployeeModule } from './modules/employee/employee.module';
 
 @Module({
-  imports: [RuntimeConfigModule, PrismaModule, SessionModule, UsersModule, AuthModule, HealthModule, AdminConfigModule, LeaderModule]
+  imports: [RuntimeConfigModule, PrismaModule, SessionModule, UsersModule, AuthModule, HealthModule, AdminConfigModule, LeaderModule, EmployeeModule]
 })
 export class AppModule {}

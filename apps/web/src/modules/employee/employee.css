@@ -1,0 +1,55 @@
+.employee-page {
+  width: 100%;
+}
+
+.employee-toolbar-card,
+.employee-summary-card,
+.employee-goal-card,
+.employee-detail-card,
+.employee-kr-card {
+  border-radius: 24px;
+  box-shadow: 0 18px 50px rgba(37, 99, 235, 0.08);
+}
+
+.employee-goal-list,
+.employee-proof-list,
+.employee-kr-list,
+.employee-summary-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.employee-summary-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.employee-goal-card {
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.employee-goal-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px rgba(59, 130, 246, 0.16);
+}
+
+.employee-proof-row,
+.employee-goal-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.employee-proof-meta {
+  display: grid;
+  gap: 4px;
+}
+
+@media (max-width: 992px) {
+  .employee-proof-row,
+  .employee-goal-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

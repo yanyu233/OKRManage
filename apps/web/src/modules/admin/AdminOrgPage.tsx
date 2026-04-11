@@ -20,7 +20,10 @@ export function AdminOrgPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!bootstrapQuery.data || isDirty) return;
+    if (!bootstrapQuery.data || isDirty) {
+      return;
+    }
+
     setDraft(toAdminBootstrapInput(bootstrapQuery.data));
   }, [bootstrapQuery.data, isDirty]);
 
@@ -31,10 +34,10 @@ export function AdminOrgPage() {
       setIsDirty(false);
       setSaveError(null);
       await queryClient.invalidateQueries({ queryKey: ['admin-org-bootstrap'] });
-      message.success('Admin configuration saved.');
+      message.success('系统配置已保存。');
     },
     onError: (error) => {
-      const nextError = error instanceof ApiError ? error.message : 'Save failed. Please retry.';
+      const nextError = error instanceof ApiError ? error.message : '保存失败，请稍后重试。';
       setSaveError(nextError);
       message.error(nextError);
     }
@@ -44,20 +47,23 @@ export function AdminOrgPage() {
   const memberCountByReviewGroup = useMemo(() => {
     const result = new Map<string, number>();
     for (const user of draft.users) {
-      if (!user.isActive || !user.reviewGroupId) continue;
+      if (!user.isActive || !user.reviewGroupId) {
+        continue;
+      }
+
       result.set(user.reviewGroupId, (result.get(user.reviewGroupId) ?? 0) + 1);
     }
     return result;
   }, [draft.users]);
 
   if (bootstrapQuery.isLoading) {
-    return <Card className="admin-page" variant="borderless">Loading admin configuration...</Card>;
+    return <Card className="admin-page" variant="borderless">正在加载系统配置...</Card>;
   }
 
   if (bootstrapQuery.isError) {
     return (
       <Card className="admin-page" variant="borderless">
-        <Alert type="error" showIcon message="Failed to load admin configuration." />
+        <Alert type="error" showIcon message="系统配置加载失败。" />
       </Card>
     );
   }
@@ -67,32 +73,32 @@ export function AdminOrgPage() {
       <div className="page-hero">
         <div>
           <Typography.Title level={1} style={{ marginBottom: 8 }}>
-            System Admin Console
+            系统管理员配置台
           </Typography.Title>
           <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-            Manage departments, sections, users, roles, fallback local accounts, owner bindings, and fixed review quotas.
+            统一维护部门、科室、员工角色、本地登录账号、负责人绑定以及评价组固定名额。
           </Typography.Paragraph>
         </div>
         <Space>
           <Button icon={<ReloadOutlined />} size="large" onClick={() => bootstrapQuery.data && resetDraft()}>
-            Reset Draft
+            重置草稿
           </Button>
           <Button type="primary" icon={<SaveOutlined />} size="large" loading={saveMutation.isPending} onClick={() => saveMutation.mutate(draft)}>
-            Save Changes
+            保存变更
           </Button>
         </Space>
       </div>
 
-      {saveError ? <Alert type="error" showIcon message="Save failed" description={saveError} /> : null}
+      {saveError ? <Alert type="error" showIcon message="保存失败" description={saveError} /> : null}
 
       <Row gutter={[20, 20]}>
         {[
-          ['Departments', summary.departmentCount],
-          ['Sections', summary.sectionCount],
-          ['Users', summary.userCount],
-          ['Review Groups', summary.reviewGroupCount],
-          ['Local Accounts', summary.localAccountCount],
-          ['Role Bindings', summary.roleAssignmentCount]
+          ['部门数', summary.departmentCount],
+          ['科室数', summary.sectionCount],
+          ['员工数', summary.userCount],
+          ['评价组数', summary.reviewGroupCount],
+          ['本地账号数', summary.localAccountCount],
+          ['角色绑定数', summary.roleAssignmentCount]
         ].map(([title, value]) => (
           <Col xs={24} md={12} xl={4} key={title}>
             <Card className="metric-card" variant="borderless">
@@ -106,12 +112,12 @@ export function AdminOrgPage() {
         <Tabs
           size="large"
           items={[
-            { key: 'structure', label: 'Organization', children: <StructureSections draft={draft} updateCollection={updateCollection} /> },
-            { key: 'access', label: 'People & Roles', children: <AccessSections draft={draft} updateCollection={updateCollection} /> },
-            { key: 'leaders', label: 'Owner Bindings', children: <LeaderSections draft={draft} updateCollection={updateCollection} /> },
+            { key: 'structure', label: '组织结构', children: <StructureSections draft={draft} updateCollection={updateCollection} /> },
+            { key: 'access', label: '员工与角色', children: <AccessSections draft={draft} updateCollection={updateCollection} /> },
+            { key: 'leaders', label: '负责人绑定', children: <LeaderSections draft={draft} updateCollection={updateCollection} /> },
             {
               key: 'review-groups',
-              label: 'Review Groups',
+              label: '评价组与档位名额',
               children: (
                 <ReviewGroupSection
                   draft={draft}

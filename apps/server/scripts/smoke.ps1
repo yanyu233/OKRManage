@@ -138,8 +138,53 @@ try {
     throw 'leader ranking did not return ranking entries'
   }
 
+  $employeeSession = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+  $employeeLoginBody = @{
+    loginName = 'zhang.chen'
+    password = 'Employee123!'
+  } | ConvertTo-Json
+
+  $employeeLogin = Invoke-RestMethod `
+    -Method Post `
+    -Uri "$baseUrl/auth/manual-login" `
+    -ContentType 'application/json' `
+    -Body $employeeLoginBody `
+    -WebSession $employeeSession
+
+  if ($employeeLogin.ok -ne $true) {
+    throw 'employee login did not return ok=true'
+  }
+
+  $employeeOkr = Invoke-RestMethod -Method Get -Uri "$baseUrl/employee/okr?year=2026&quarter=1" -WebSession $employeeSession
+  if (-not $employeeOkr.goals -or $employeeOkr.goals.Count -lt 1) {
+    throw 'employee okr list did not return goals'
+  }
+
+  $goalId = $employeeOkr.goals[0].id
+  $employeeGoal = Invoke-RestMethod -Method Get -Uri "$baseUrl/employee/goals/$goalId" -WebSession $employeeSession
+  if (-not $employeeGoal.keyResults -or $employeeGoal.keyResults.Count -lt 1) {
+    throw 'employee goal detail did not return key results'
+  }
+
+  $krId = $employeeGoal.keyResults[0].id
+  $completionBody = @{
+    completionState = 'completed'
+  } | ConvertTo-Json
+
+  $completion = Invoke-RestMethod `
+    -Method Put `
+    -Uri "$baseUrl/employee/key-results/$krId/completion" `
+    -ContentType 'application/json' `
+    -Body $completionBody `
+    -WebSession $employeeSession
+
+  if ($completion.completionState -ne 'completed') {
+    throw 'employee completion toggle did not persist'
+  }
+
   Write-Host "[smoke] leader workbench ok: $($workbench.selectedEmployee.name) / $($workbench.selectedGoal.code)"
   Write-Host "[smoke] leader ranking ok: $($ranking.ranking.Count) entries"
+  Write-Host "[smoke] employee okr ok: $($employeeOkr.employee.name) / $($employeeOkr.goals.Count) goals"
   Write-Host '[smoke] PASS'
 } finally {
   Pop-Location

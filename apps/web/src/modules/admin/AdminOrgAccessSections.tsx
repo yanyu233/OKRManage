@@ -10,18 +10,18 @@ type UpdateCollection = <Key extends keyof AdminOrgBootstrapInput>(
 ) => void;
 
 const ROLE_OPTIONS: Array<{ label: string; value: UserRoleCode }> = [
-  { label: 'System Admin', value: 'system-admin' },
-  { label: 'Section Leader', value: 'section-leader' },
-  { label: 'Group Leader', value: 'group-leader' },
-  { label: 'Employee', value: 'employee' }
+  { label: '系统管理员', value: 'system-admin' },
+  { label: '科室领导', value: 'section-leader' },
+  { label: '小组负责人', value: 'group-leader' },
+  { label: '员工', value: 'employee' }
 ];
 
 const ROLE_SCOPE_OPTIONS: Array<{ label: string; value: RoleScopeType }> = [
-  { label: 'System', value: 'system' },
-  { label: 'Department', value: 'department' },
-  { label: 'Section', value: 'section' },
-  { label: 'Review Group', value: 'review-group' },
-  { label: 'User', value: 'user' }
+  { label: '系统', value: 'system' },
+  { label: '部门', value: 'department' },
+  { label: '科室', value: 'section' },
+  { label: '评价组', value: 'review-group' },
+  { label: '用户', value: 'user' }
 ];
 
 export function AccessSections({ draft, updateCollection }: { draft: AdminOrgBootstrapInput; updateCollection: UpdateCollection }) {
@@ -29,60 +29,85 @@ export function AccessSections({ draft, updateCollection }: { draft: AdminOrgBoo
 
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
-      <SectionCard title="Local Fallback Accounts" actionLabel="Add Local Account" onAdd={() => updateCollection('localAccounts', (items) => [...items, createLocalAccountRecord(draft.users.at(0)?.id ?? null)])}>
+      <SectionCard title="本地兜底账号" actionLabel="新增本地账号" onAdd={() => updateCollection('localAccounts', (items) => [...items, createLocalAccountRecord(draft.users.at(0)?.id ?? null)])}>
         <Table
           rowKey={(record) => `${record.userId}:${record.loginName}`}
           pagination={false}
-          scroll={{ x: 1000 }}
+          scroll={{ x: 1080 }}
           dataSource={draft.localAccounts}
           columns={[
             {
-              title: 'User',
+              title: '关联员工',
               render: (_value, record) => (
                 <Select
                   value={record.userId || undefined}
                   options={userOptions}
-                  placeholder="Choose user"
-                  onChange={(value) => updateCollection('localAccounts', (items) => items.map((item) => (item.userId === record.userId ? { ...item, userId: value } : item)))}
+                  placeholder="请选择员工"
+                  onChange={(value) =>
+                    updateCollection('localAccounts', (items) =>
+                      items.map((item) => (item.userId === record.userId ? { ...item, userId: value } : item))
+                    )
+                  }
                 />
               )
             },
             {
-              title: 'Login Name',
+              title: '登录名',
               render: (_value, record) => (
                 <Input
                   value={record.loginName}
-                  placeholder="Login name"
-                  onChange={(event) => updateCollection('localAccounts', (items) => items.map((item) => (item.userId === record.userId ? { ...item, loginName: event.target.value.toLowerCase() } : item)))}
+                  placeholder="请输入登录名"
+                  onChange={(event) =>
+                    updateCollection('localAccounts', (items) =>
+                      items.map((item) =>
+                        item.userId === record.userId ? { ...item, loginName: event.target.value.toLowerCase() } : item
+                      )
+                    )
+                  }
                 />
               )
             },
             {
-              title: 'Reset Password',
+              title: '重置密码',
               render: (_value, record) => (
                 <Input.Password
                   value={record.password ?? ''}
-                  placeholder="Blank keeps current password"
-                  onChange={(event) => updateCollection('localAccounts', (items) => items.map((item) => (item.userId === record.userId ? { ...item, password: event.target.value } : item)))}
+                  placeholder="留空则保持当前密码"
+                  onChange={(event) =>
+                    updateCollection('localAccounts', (items) =>
+                      items.map((item) => (item.userId === record.userId ? { ...item, password: event.target.value } : item))
+                    )
+                  }
                 />
               )
             },
             {
-              title: 'Enabled',
-              width: 120,
+              title: '启用本地登录',
+              width: 140,
               render: (_value, record) => (
                 <Switch
                   checked={record.localLoginEnabled}
-                  onChange={(checked) => updateCollection('localAccounts', (items) => items.map((item) => (item.userId === record.userId ? { ...item, localLoginEnabled: checked } : item)))}
+                  onChange={(checked) =>
+                    updateCollection('localAccounts', (items) =>
+                      items.map((item) => (item.userId === record.userId ? { ...item, localLoginEnabled: checked } : item))
+                    )
+                  }
                 />
               )
             },
             {
-              title: 'Actions',
+              title: '操作',
               width: 100,
               render: (_value, record) => (
-                <Button danger type="text" icon={<DeleteOutlined />} onClick={() => updateCollection('localAccounts', (items) => items.filter((item) => item.userId !== record.userId))}>
-                  Delete
+                <Button
+                  danger
+                  type="text"
+                  icon={<DeleteOutlined />}
+                  onClick={() =>
+                    updateCollection('localAccounts', (items) => items.filter((item) => item.userId !== record.userId))
+                  }
+                >
+                  删除
                 </Button>
               )
             }
@@ -90,7 +115,7 @@ export function AccessSections({ draft, updateCollection }: { draft: AdminOrgBoo
         />
       </SectionCard>
 
-      <SectionCard title="Role Assignments" actionLabel="Add Role" onAdd={() => updateCollection('roleAssignments', (items) => [...items, createRoleAssignmentRecord(draft.users.at(0)?.id ?? null)])}>
+      <SectionCard title="角色分配" actionLabel="新增角色" onAdd={() => updateCollection('roleAssignments', (items) => [...items, createRoleAssignmentRecord(draft.users.at(0)?.id ?? null)])}>
         <Table
           rowKey="id"
           pagination={false}
@@ -98,74 +123,114 @@ export function AccessSections({ draft, updateCollection }: { draft: AdminOrgBoo
           dataSource={draft.roleAssignments}
           columns={[
             {
-              title: 'User',
+              title: '关联员工',
               render: (_value, record) => (
                 <Select
                   value={record.userId || undefined}
                   options={userOptions}
-                  placeholder="Choose user"
-                  onChange={(value) => updateCollection('roleAssignments', (items) => items.map((item) => (item.id === record.id ? { ...item, userId: value } : item)))}
+                  placeholder="请选择员工"
+                  onChange={(value) =>
+                    updateCollection('roleAssignments', (items) =>
+                      items.map((item) => (item.id === record.id ? { ...item, userId: value } : item))
+                    )
+                  }
                 />
               )
             },
             {
-              title: 'Role',
+              title: '角色',
               render: (_value, record) => (
                 <Select
                   value={record.roleCode}
                   options={ROLE_OPTIONS}
-                  onChange={(value) => updateCollection('roleAssignments', (items) => items.map((item) => (item.id === record.id ? { ...item, roleCode: value, scopeType: value === 'system-admin' ? 'system' : item.scopeType, scopeId: value === 'system-admin' ? 'system' : item.scopeId } : item)))}
+                  onChange={(value) =>
+                    updateCollection('roleAssignments', (items) =>
+                      items.map((item) =>
+                        item.id === record.id
+                          ? {
+                              ...item,
+                              roleCode: value,
+                              scopeType: value === 'system-admin' ? 'system' : item.scopeType,
+                              scopeId: value === 'system-admin' ? 'system' : item.scopeId
+                            }
+                          : item
+                      )
+                    )
+                  }
                 />
               )
             },
             {
-              title: 'Scope Type',
+              title: '范围类型',
               render: (_value, record) => (
                 <Select
                   value={record.scopeType}
                   options={ROLE_SCOPE_OPTIONS}
-                  onChange={(value) => updateCollection('roleAssignments', (items) => items.map((item) => (item.id === record.id ? { ...item, scopeType: value } : item)))}
+                  onChange={(value) =>
+                    updateCollection('roleAssignments', (items) =>
+                      items.map((item) => (item.id === record.id ? { ...item, scopeType: value } : item))
+                    )
+                  }
                 />
               )
             },
             {
-              title: 'Scope',
+              title: '范围',
               render: (_value, record) => (
                 <Select
                   value={record.scopeId || undefined}
                   options={scopeOptions(record.scopeType, draft)}
                   showSearch
-                  placeholder="Choose scope"
-                  onChange={(value) => updateCollection('roleAssignments', (items) => items.map((item) => (item.id === record.id ? { ...item, scopeId: value } : item)))}
+                  placeholder="请选择范围"
+                  onChange={(value) =>
+                    updateCollection('roleAssignments', (items) =>
+                      items.map((item) => (item.id === record.id ? { ...item, scopeId: value } : item))
+                    )
+                  }
                 />
               )
             },
             {
-              title: 'Primary',
+              title: '主角色',
               width: 110,
               render: (_value, record) => (
                 <Switch
                   checked={record.isPrimary}
-                  onChange={(checked) => updateCollection('roleAssignments', (items) => items.map((item) => (item.id === record.id ? { ...item, isPrimary: checked } : item)))}
+                  onChange={(checked) =>
+                    updateCollection('roleAssignments', (items) =>
+                      items.map((item) => (item.id === record.id ? { ...item, isPrimary: checked } : item))
+                    )
+                  }
                 />
               )
             },
             {
-              title: 'Enabled',
+              title: '启用',
               width: 110,
               render: (_value, record) => (
                 <Switch
                   checked={record.isEnabled}
-                  onChange={(checked) => updateCollection('roleAssignments', (items) => items.map((item) => (item.id === record.id ? { ...item, isEnabled: checked } : item)))}
+                  onChange={(checked) =>
+                    updateCollection('roleAssignments', (items) =>
+                      items.map((item) => (item.id === record.id ? { ...item, isEnabled: checked } : item))
+                    )
+                  }
                 />
               )
             },
             {
-              title: 'Actions',
+              title: '操作',
               width: 100,
               render: (_value, record) => (
-                <Button danger type="text" icon={<DeleteOutlined />} onClick={() => updateCollection('roleAssignments', (items) => items.filter((item) => item.id !== record.id))}>
-                  Delete
+                <Button
+                  danger
+                  type="text"
+                  icon={<DeleteOutlined />}
+                  onClick={() =>
+                    updateCollection('roleAssignments', (items) => items.filter((item) => item.id !== record.id))
+                  }
+                >
+                  删除
                 </Button>
               )
             }
@@ -193,7 +258,7 @@ function SectionCard({ title, actionLabel, onAdd, children }: { title: string; a
 function scopeOptions(scopeType: RoleScopeType, draft: AdminOrgBootstrapInput) {
   switch (scopeType) {
     case 'system':
-      return [{ label: 'System', value: 'system' }];
+      return [{ label: '系统', value: 'system' }];
     case 'department':
       return draft.departments.map((department) => ({ label: department.name || department.id, value: department.id }));
     case 'section':

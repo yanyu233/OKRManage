@@ -1,16 +1,19 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
 
 const prisma = new PrismaClient();
 
 const GRADE_CODES = ['A+', 'A', 'B+', 'B', 'C'] as const;
 const QUARTER_YEAR = 2026;
 const QUARTER_NUMBER = 1;
+const proofStorageRoot = resolve(process.cwd(), process.env.PROOF_STORAGE_DIR?.trim() || 'storage/proofs');
 
 async function main(): Promise<void> {
-  const loginName = requiredEnv('DEBUG_SYSADMIN_LOGIN');
-  const password = requiredEnv('DEBUG_SYSADMIN_PASSWORD');
-  const sysadminName = requiredEnv('DEBUG_SYSADMIN_NAME');
+  const loginName = envOrDefault('DEBUG_SYSADMIN_LOGIN', 'sysadmin.local');
+  const password = envOrDefault('DEBUG_SYSADMIN_PASSWORD', 'Admin123!');
+  const sysadminName = envOrDefault('DEBUG_SYSADMIN_NAME', 'System Admin');
 
   const department = await upsertDepartment('Industrial Internet Center');
   const sectionPlatform = await upsertSection(department.id, 'Platform Products');
@@ -30,6 +33,8 @@ async function main(): Promise<void> {
     B: 0,
     C: 0
   });
+
+  await mkdir(proofStorageRoot, { recursive: true });
   await upsertReviewGroup('General Group', {
     'A+': 0,
     A: 0,
@@ -105,11 +110,11 @@ async function main(): Promise<void> {
   await seedGoalsForLi(liLei.id, sectionLeader.id);
 }
 
-function requiredEnv(key: string): string {
+function envOrDefault(key: string, fallback: string): string {
   const value = process.env[key];
 
   if (typeof value !== 'string' || value.trim().length === 0) {
-    throw new Error(`Missing required environment variable: ${key}`);
+    return fallback;
   }
 
   return value;
@@ -342,8 +347,8 @@ async function seedGoalsForZhang(ownerUserId: string, reviewerUserId: string) {
     reviewComment: 'Release cadence is improving steadily.',
     reviewedByUserId: reviewerUserId
   });
-  await upsertProof(kr1.id, 'release-checklist.xlsx', '/proofs/release-checklist.xlsx', 132 * 1024, 'Release tracking sheet');
-  await upsertProof(kr1.id, 'release-summary.pdf', '/proofs/release-summary.pdf', 684 * 1024, 'Quarter release summary');
+  await upsertProof(kr1.id, 'release-checklist.xlsx', 'seed-release-checklist.xlsx', 'Release tracking sheet', 'seed release checklist');
+  await upsertProof(kr1.id, 'release-summary.pdf', 'seed-release-summary.pdf', 'Quarter release summary', 'seed release summary');
 
   await upsertKeyResult({
     goalId: goalOne.id,
@@ -567,13 +572,22 @@ async function upsertKeyResult(input: {
   });
 }
 
-async function upsertProof(keyResultId: string, fileName: string, fileUrl: string, fileSize: number, note: string) {
+async function upsertProof(
+  keyResultId: string,
+  fileName: string,
+  storageKey: string,
+  note: string,
+  content: string
+) {
+  const fileBuffer = Buffer.from(content, 'utf8');
+  await writeFile(join(proofStorageRoot, storageKey), fileBuffer);
+
   return prisma.proof.create({
     data: {
       keyResultId,
       fileName,
-      fileUrl,
-      fileSize,
+      fileUrl: storageKey,
+      fileSize: fileBuffer.length,
       note,
       uploadedAt: new Date('2026-03-25T09:40:00Z')
     }
