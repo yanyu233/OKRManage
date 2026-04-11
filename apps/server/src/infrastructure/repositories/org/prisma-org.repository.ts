@@ -26,7 +26,7 @@ export class PrismaOrgRepository implements OrgRepository {
   }
 
   async getAdminBootstrap(): Promise<AdminOrgBootstrap> {
-    const [departments, sections, users, localAccounts, roleAssignments, sectionLeaderBindings, groupLeaderBindings, reviewGroups] =
+    const [departments, sections, users, localAccounts, roleAssignments, sectionLeaderBindings, groupLeaderBindings, reviewGroups, goalTemplates] =
       await this.prisma.$transaction([
         this.prisma.department.findMany({
           where: { isActive: true },
@@ -91,6 +91,14 @@ export class PrismaOrgRepository implements OrgRepository {
               select: { id: true }
             }
           }
+        }),
+        this.prisma.goalTemplate.findMany({
+          orderBy: { createdAt: 'asc' },
+          include: {
+            keyResults: {
+              orderBy: { createdAt: 'asc' }
+            }
+          }
         })
       ]);
 
@@ -147,6 +155,20 @@ export class PrismaOrgRepository implements OrgRepository {
         quotas: REVIEW_GRADE_CODES.map((gradeCode) => ({
           gradeCode,
           seatCount: reviewGroup.quotas.find((quota) => quota.gradeCode === gradeCode)?.seatCount ?? 0
+        }))
+      })),
+      goalTemplates: goalTemplates.map((template) => ({
+        id: template.id,
+        departmentId: template.departmentId,
+        name: template.name,
+        description: template.description,
+        isActive: template.isActive,
+        keyResults: template.keyResults.map((keyResult) => ({
+          id: keyResult.id,
+          code: keyResult.code,
+          name: keyResult.name,
+          description: keyResult.description,
+          points: keyResult.points
         }))
       }))
     };
@@ -218,6 +240,71 @@ export class PrismaOrgRepository implements OrgRepository {
           isActive: false
         }
       });
+
+      const persistedTemplateIds = input.goalTemplates.map((entry) => entry.id);
+
+      await tx.goalTemplateKeyResult.deleteMany({
+        where: {
+          goalTemplateId: {
+            in: persistedTemplateIds
+          }
+        }
+      });
+
+      for (const template of input.goalTemplates) {
+        await tx.goalTemplate.upsert({
+          where: { id: template.id },
+          update: {
+            departmentId: template.departmentId,
+            name: template.name,
+            description: template.description,
+            isActive: template.isActive
+          },
+          create: {
+            id: template.id,
+            departmentId: template.departmentId,
+            name: template.name,
+            description: template.description,
+            isActive: template.isActive
+          }
+        });
+
+        if (template.keyResults.length > 0) {
+          await tx.goalTemplateKeyResult.createMany({
+            data: template.keyResults.map((keyResult) => ({
+              id: keyResult.id,
+              goalTemplateId: template.id,
+              code: keyResult.code,
+              name: keyResult.name,
+              description: keyResult.description,
+              points: keyResult.points
+            }))
+          });
+        }
+      }
+
+      if (persistedTemplateIds.length > 0) {
+        await tx.goalTemplate.updateMany({
+          where: {
+            isActive: true,
+            id: {
+              notIn: persistedTemplateIds
+            }
+          },
+          data: {
+            isActive: false
+          }
+        });
+      } else {
+        await tx.goalTemplate.updateMany({
+          where: {
+            isActive: true
+          },
+          data: {
+            isActive: false
+          }
+        });
+      }
 
       for (const section of input.sections) {
         await tx.section.upsert({

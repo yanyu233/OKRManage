@@ -169,6 +169,54 @@ class ReviewGroupSnapshotDto {
   quotas!: ReviewGroupQuotaSnapshotDto[];
 }
 
+class GoalTemplateKeyResultSnapshotDto {
+  @IsString()
+  @IsNotEmpty()
+  id!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  code!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  name!: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string | null;
+
+  @Type(() => Number)
+  points!: number;
+}
+
+class GoalTemplateSnapshotDto {
+  @IsString()
+  @IsNotEmpty()
+  id!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  departmentId!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  name!: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string | null;
+
+  @IsBoolean()
+  isActive!: boolean;
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => GoalTemplateKeyResultSnapshotDto)
+  keyResults!: GoalTemplateKeyResultSnapshotDto[];
+}
+
 export class SaveOrgBootstrapDto {
   @IsArray()
   @ValidateNested({ each: true })
@@ -210,4 +258,9 @@ export class SaveOrgBootstrapDto {
   @ValidateNested({ each: true })
   @Type(() => ReviewGroupSnapshotDto)
   reviewGroups!: ReviewGroupSnapshotDto[];
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => GoalTemplateSnapshotDto)
+  goalTemplates!: GoalTemplateSnapshotDto[];
 }

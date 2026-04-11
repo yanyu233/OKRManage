@@ -31,6 +31,7 @@ model User {
   auditLogs          AuditLog[]             @relation("AuditLogActor")
   ownedGoals         Goal[]                 @relation("GoalOwner")
   reviewedKeyResults KeyResult[]            @relation("KeyResultReviewer")
+  importedTemplates  ImportedGoalTemplate[] @relation("ImportedTemplateOwner")
 }
 
 model LocalAccount {
@@ -68,6 +69,7 @@ model Department {
   updatedAt DateTime  @updatedAt
   users     User[]    @relation("UserDepartment")
   sections  Section[]
+  goalTemplates GoalTemplate[]
 }
 
 model Section {
@@ -178,8 +180,53 @@ model Goal {
   updatedAt   DateTime    @updatedAt
   owner       User        @relation("GoalOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
   keyResults  KeyResult[]
+  importedTemplates ImportedGoalTemplate[] @relation("ImportedTemplateGoal")
 
   @@unique([ownerUserId, year, quarter, code])
+}
+
+model GoalTemplate {
+  id           String                 @id @default(cuid())
+  departmentId String
+  name         String
+  description  String?
+  isActive     Boolean                @default(true)
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+  department   Department             @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  keyResults   GoalTemplateKeyResult[]
+  imports      ImportedGoalTemplate[]
+
+  @@unique([departmentId, name])
+}
+
+model GoalTemplateKeyResult {
+  id             String       @id @default(cuid())
+  goalTemplateId String
+  code           String
+  name           String
+  description    String?
+  points         Int
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  goalTemplate   GoalTemplate @relation(fields: [goalTemplateId], references: [id], onDelete: Cascade)
+
+  @@unique([goalTemplateId, code])
+}
+
+model ImportedGoalTemplate {
+  id             String       @id @default(cuid())
+  goalTemplateId String
+  goalId         String
+  ownerUserId    String
+  year           Int
+  quarter        Int
+  createdAt      DateTime     @default(now())
+  goalTemplate   GoalTemplate @relation(fields: [goalTemplateId], references: [id], onDelete: Cascade)
+  goal           Goal         @relation("ImportedTemplateGoal", fields: [goalId], references: [id], onDelete: Cascade)
+  owner          User         @relation("ImportedTemplateOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  @@unique([goalTemplateId, ownerUserId, year, quarter])
 }
 
 model KeyResult {

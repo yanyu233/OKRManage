@@ -192,6 +192,21 @@ export class AdminConfigService {
           gradeCode: quota.gradeCode,
           seatCount: Number(quota.seatCount)
         }))
+      })),
+      goalTemplates: input.goalTemplates.map((template) => ({
+        ...template,
+        id: template.id.trim(),
+        departmentId: template.departmentId.trim(),
+        name: template.name.trim(),
+        description: template.description?.trim() || null,
+        keyResults: template.keyResults.map((keyResult) => ({
+          ...keyResult,
+          id: keyResult.id.trim(),
+          code: keyResult.code.trim(),
+          name: keyResult.name.trim(),
+          description: keyResult.description?.trim() || null,
+          points: Number(keyResult.points)
+        }))
       }))
     };
   }
@@ -203,6 +218,11 @@ export class AdminConfigService {
     this.ensureUnique(input.users.map((entry) => entry.id), 'duplicate user id');
     this.ensureUnique(input.reviewGroups.map((entry) => entry.id), 'duplicate review group id');
     this.ensureUnique(input.reviewGroups.map((entry) => entry.name.toLowerCase()), 'duplicate review group name');
+    this.ensureUnique(input.goalTemplates.map((entry) => entry.id), 'duplicate goal template id');
+    this.ensureUnique(
+      input.goalTemplates.map((entry) => `${entry.departmentId}|${entry.name.toLowerCase()}`),
+      'duplicate goal template name in department'
+    );
     this.ensureUnique(input.localAccounts.map((entry) => entry.userId), 'duplicate local account user');
     this.ensureUnique(input.localAccounts.map((entry) => entry.loginName), 'duplicate local account login');
     this.ensureUnique(input.roleAssignments.map((entry) => entry.id), 'duplicate role assignment id');
@@ -221,6 +241,39 @@ export class AdminConfigService {
     for (const department of input.departments) {
       if (!department.id || !department.name) {
         throw new DomainValidationError('department id and name are required');
+      }
+    }
+
+    for (const template of input.goalTemplates) {
+      if (!template.id || !template.name) {
+        throw new DomainValidationError('goal template id and name are required');
+      }
+
+      if (!departmentIds.has(template.departmentId)) {
+        throw new DomainValidationError(`goal template ${template.name} references unknown department`);
+      }
+
+      if (template.keyResults.length === 0) {
+        throw new DomainValidationError(`goal template ${template.name} requires at least one key result`);
+      }
+
+      this.ensureUnique(
+        template.keyResults.map((entry) => entry.id),
+        `duplicate goal template key result id in ${template.name}`
+      );
+      this.ensureUnique(
+        template.keyResults.map((entry) => entry.code.toLowerCase()),
+        `duplicate goal template key result code in ${template.name}`
+      );
+
+      for (const keyResult of template.keyResults) {
+        if (!keyResult.code || !keyResult.name) {
+          throw new DomainValidationError(`goal template ${template.name} has incomplete key result data`);
+        }
+
+        if (!Number.isInteger(keyResult.points) || keyResult.points < 0) {
+          throw new DomainValidationError(`goal template ${template.name} has invalid key result points`);
+        }
       }
     }
 

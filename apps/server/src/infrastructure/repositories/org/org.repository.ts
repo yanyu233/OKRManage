@@ -72,6 +72,23 @@ export type AdminReviewGroupRecord = {
 
 export type AdminReviewGroupInput = Omit<AdminReviewGroupRecord, 'memberCount'>;
 
+export type AdminGoalTemplateKeyResultRecord = {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  points: number;
+};
+
+export type AdminGoalTemplateRecord = {
+  id: string;
+  departmentId: string;
+  name: string;
+  description: string | null;
+  isActive: boolean;
+  keyResults: AdminGoalTemplateKeyResultRecord[];
+};
+
 export type AdminOrgBootstrap = {
   departments: AdminDepartmentRecord[];
   sections: AdminSectionRecord[];
@@ -81,6 +98,7 @@ export type AdminOrgBootstrap = {
   sectionLeaderBindings: AdminSectionLeaderBindingRecord[];
   groupLeaderBindings: AdminGroupLeaderBindingRecord[];
   reviewGroups: AdminReviewGroupRecord[];
+  goalTemplates: AdminGoalTemplateRecord[];
 };
 
 export type AdminOrgBootstrapInput = {
@@ -92,6 +110,7 @@ export type AdminOrgBootstrapInput = {
   sectionLeaderBindings: AdminSectionLeaderBindingRecord[];
   groupLeaderBindings: AdminGroupLeaderBindingRecord[];
   reviewGroups: AdminReviewGroupInput[];
+  goalTemplates: AdminGoalTemplateRecord[];
 };
 
 export interface OrgRepository {
