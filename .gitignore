@@ -17,6 +17,8 @@ mvp/server.err.log
 mvp/data/store.json
 mvp/uploads/
 apps/server/storage/
+apps/server/server.out.log
+apps/server/server.err.log
 
 # Local browser automation / screenshots
 mvp/.edge-cdp/
