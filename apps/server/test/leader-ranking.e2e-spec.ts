@@ -22,7 +22,7 @@ describe('Leader ranking', () => {
     expect(response.body.reviewGroups).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          name: 'Digital Group'
+          name: '信息化组'
         })
       ])
     );
@@ -40,10 +40,14 @@ describe('Leader ranking', () => {
     );
     expect(response.body.ranking[0]).toEqual(
       expect.objectContaining({
-        employeeName: 'Wang Min',
+        employeeName: '王敏',
         currentGrade: 'A+'
       })
     );
-    expect(response.body.ranking.some((entry: { employeeName: string; currentGrade: string }) => entry.employeeName === 'Zhang Chen' && entry.currentGrade === 'B+')).toBe(true);
+    expect(
+      response.body.ranking.some(
+        (entry: { employeeName: string; currentGrade: string }) => entry.employeeName === '张晨' && entry.currentGrade === 'B+'
+      )
+    ).toBe(true);
   });
 });

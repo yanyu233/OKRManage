@@ -32,10 +32,10 @@ export function EmployeeGoalPage() {
         queryClient.invalidateQueries({ queryKey: ['employee-goal', goalId] }),
         queryClient.invalidateQueries({ queryKey: ['employee-okr'] })
       ]);
-      message.success('关键结果完成状态已更新');
+      message.success('\u5173\u952e\u7ed3\u679c\u5b8c\u6210\u72b6\u6001\u5df2\u66f4\u65b0');
     },
     onError: (error) => {
-      message.error(error instanceof ApiError ? error.message : '完成状态更新失败。');
+      message.error(error instanceof ApiError ? error.message : '\u5b8c\u6210\u72b6\u6001\u66f4\u65b0\u5931\u8d25');
     }
   });
 
@@ -52,22 +52,24 @@ export function EmployeeGoalPage() {
         queryClient.invalidateQueries({ queryKey: ['leader-workbench'] }),
         queryClient.invalidateQueries({ queryKey: ['leader-ranking'] })
       ]);
-      message.success('证明材料上传成功');
+      message.success('\u8bc1\u660e\u6750\u6599\u4e0a\u4f20\u6210\u529f');
     },
     onError: (error) => {
-      message.error(error instanceof ApiError ? error.message : '证明材料上传失败。');
+      message.error(error instanceof ApiError ? error.message : '\u8bc1\u660e\u6750\u6599\u4e0a\u4f20\u5931\u8d25');
     }
   });
 
   if (goalQuery.isLoading) {
-    return <Card className="employee-toolbar-card">正在加载目标详情...</Card>;
+    return <Card className="employee-toolbar-card">{'\u6b63\u5728\u52a0\u8f7d\u76ee\u6807\u8be6\u60c5...'}</Card>;
   }
 
   if (goalQuery.isError || !goalQuery.data) {
-    const description = goalQuery.error instanceof ApiError ? goalQuery.error.message : '目标详情加载失败。';
+    const description =
+      goalQuery.error instanceof ApiError ? goalQuery.error.message : '\u76ee\u6807\u8be6\u60c5\u52a0\u8f7d\u5931\u8d25';
+
     return (
       <Card className="employee-toolbar-card">
-        <Alert type="error" showIcon message="加载失败" description={description} />
+        <Alert type="error" showIcon message="\u52a0\u8f7d\u5931\u8d25" description={description} />
       </Card>
     );
   }
@@ -80,28 +82,29 @@ export function EmployeeGoalPage() {
         <div className="page-hero">
           <div>
             <Button type="link" icon={<ArrowLeftOutlined />} style={{ paddingInline: 0 }} onClick={() => navigate('/employee/okr')}>
-              返回我的 OKR
+              {'\u8fd4\u56de\u6211\u7684 OKR'}
             </Button>
             <Typography.Title level={2} style={{ marginBottom: 8 }}>
               {goal.code} {goal.name}
             </Typography.Title>
             <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-              {formatQuarterLabel(goal.year, goal.quarter)} · {getGoalStatusLabel(goal.status)} · {goal.totalPoints} 分
+              {formatQuarterLabel(goal.year, goal.quarter)} {'\u00b7'} {getGoalStatusLabel(goal.status)} {'\u00b7'} {goal.totalPoints}
+              {' \u5206'}
             </Typography.Paragraph>
           </div>
           <Space wrap size={[8, 8]}>
             <Tag color={goal.status === 'confirmed' ? 'green' : 'default'}>{getGoalStatusLabel(goal.status)}</Tag>
-            <Tag>{goal.keyResultCount} 条关键结果</Tag>
-            <Tag>{goal.completedKeyResultCount} 条已完成</Tag>
-            <Tag>{goal.proofCount} 份材料</Tag>
-            <Tag>当前得分 {formatNullableScore(goal.currentScore)}</Tag>
+            <Tag>{goal.keyResultCount}{'\u0020\u6761\u5173\u952e\u7ed3\u679c'}</Tag>
+            <Tag>{goal.completedKeyResultCount}{'\u0020\u6761\u5df2\u5b8c\u6210'}</Tag>
+            <Tag>{goal.proofCount}{'\u0020\u4efd\u6750\u6599'}</Tag>
+            <Tag>{'\u5f53\u524d\u5f97\u5206 '} {formatNullableScore(goal.currentScore)}</Tag>
           </Space>
         </div>
       </Card>
 
       <Card className="employee-detail-card" variant="borderless">
         <Typography.Paragraph style={{ marginBottom: 0 }}>
-          {goal.description ?? '暂无目标说明'}
+          {goal.description ?? '\u6682\u65e0\u76ee\u6807\u8bf4\u660e'}
         </Typography.Paragraph>
       </Card>
 
@@ -115,27 +118,27 @@ export function EmployeeGoalPage() {
                     {keyResult.code} {keyResult.name}
                   </Typography.Title>
                   <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-                    {keyResult.description ?? '暂无关键结果说明'}
+                    {keyResult.description ?? '\u6682\u65e0\u5173\u952e\u7ed3\u679c\u8bf4\u660e'}
                   </Typography.Paragraph>
                 </div>
                 <Space wrap size={[8, 8]}>
-                  <Tag>{keyResult.points} 分</Tag>
+                  <Tag>{keyResult.points}{'\u0020\u5206'}</Tag>
                   <Tag color={keyResult.completionState === 'completed' ? 'green' : 'red'}>
                     {getCompletionStateLabel(keyResult.completionState)}
                   </Tag>
-                  <Tag icon={<FileTextOutlined />}>{keyResult.proofCount} 份材料</Tag>
-                  <Tag>评分 {formatNullableScore(keyResult.reviewScore)}</Tag>
+                  <Tag icon={<FileTextOutlined />}>{keyResult.proofCount}{'\u0020\u4efd\u6750\u6599'}</Tag>
+                  <Tag>{'\u8bc4\u5206 '} {formatNullableScore(keyResult.reviewScore)}</Tag>
                 </Space>
               </div>
 
               <div>
-                <Typography.Text strong>完成确认</Typography.Text>
+                <Typography.Text strong>{'\u5b8c\u6210\u786e\u8ba4'}</Typography.Text>
                 <div style={{ marginTop: 10 }}>
                   <Segmented
                     value={keyResult.completionState}
                     options={[
-                      { label: '待补充', value: 'incomplete' },
-                      { label: '已完成', value: 'completed' }
+                      { label: '\u5f85\u8865\u5145', value: 'incomplete' },
+                      { label: '\u5df2\u5b8c\u6210', value: 'completed' }
                     ]}
                     onChange={(value) =>
                       completionMutation.mutate({
@@ -148,10 +151,10 @@ export function EmployeeGoalPage() {
               </div>
 
               <div>
-                <Typography.Text strong>补充说明</Typography.Text>
+                <Typography.Text strong>{'\u8865\u5145\u8bf4\u660e'}</Typography.Text>
                 <Input
                   style={{ marginTop: 10 }}
-                  placeholder="选填，上传时会一并记录"
+                  placeholder="\u9009\u586b\uff0c\u4e0a\u4f20\u65f6\u4f1a\u4e00\u5e76\u8bb0\u5f55"
                   value={noteDrafts[keyResult.id] ?? ''}
                   onChange={(event) =>
                     setNoteDrafts((current) => ({
@@ -162,13 +165,9 @@ export function EmployeeGoalPage() {
                 />
               </div>
 
-              <Upload
-                showUploadList={false}
-                customRequest={(options) => uploadProof(options, keyResult)}
-                accept="*"
-              >
+              <Upload showUploadList={false} customRequest={(options) => uploadProof(options, keyResult)} accept="*">
                 <Button type="primary" loading={uploadMutation.isPending}>
-                  上传证明材料
+                  {'\u4e0a\u4f20\u8bc1\u660e\u6750\u6599'}
                 </Button>
               </Upload>
 
@@ -180,20 +179,20 @@ export function EmployeeGoalPage() {
                         <div className="employee-proof-meta">
                           <Typography.Text strong>{proof.fileName}</Typography.Text>
                           <Typography.Text type="secondary">
-                            {proof.note?.trim() ? proof.note : '无补充说明'}
+                            {proof.note?.trim() ? proof.note : '\u65e0\u8865\u5145\u8bf4\u660e'}
                           </Typography.Text>
                           <Typography.Text type="secondary">
-                            {new Date(proof.uploadedAt).toLocaleString()} · {formatProofSize(proof.fileSize)}
+                            {new Date(proof.uploadedAt).toLocaleString()} {'\u00b7'} {formatProofSize(proof.fileSize)}
                           </Typography.Text>
                         </div>
                         <a href={resolveApiUrl(proof.fileUrl)} target="_blank" rel="noreferrer">
-                          打开文件
+                          {'\u6253\u5f00\u6587\u4ef6'}
                         </a>
                       </div>
                     </Card>
                   ))
                 ) : (
-                  <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="当前还没有上传证明材料" />
+                  <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="\u5f53\u524d\u8fd8\u6ca1\u6709\u4e0a\u4f20\u8bc1\u660e\u6750\u6599" />
                 )}
               </div>
             </Space>

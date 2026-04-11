@@ -19,36 +19,36 @@ describe('Leader workbench', () => {
     const agent = await loginAsSectionLeader(app);
 
     const response = await agent.get('/api/leader/workbench?year=2026&quarter=1').expect(200);
-    const zhang = response.body.employees.find((entry: { name: string }) => entry.name === 'Zhang Chen');
+    const zhang = response.body.employees.find((entry: { name: string }) => entry.name === '张晨');
 
     expect(response.body.employees).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          name: 'Zhang Chen',
+          name: '张晨',
           goalCount: 2,
           keyResultCount: 6
         }),
         expect.objectContaining({
-          name: 'Wang Min',
+          name: '王敏',
           goalCount: 1,
           keyResultCount: 3
         })
       ])
     );
-    expect(response.body.employees.some((entry: { name: string }) => entry.name === 'Li Lei')).toBe(false);
+    expect(response.body.employees.some((entry: { name: string }) => entry.name === '李雷')).toBe(false);
     expect(zhang).toBeTruthy();
 
     const selectedResponse = await agent
       .get(`/api/leader/workbench?year=2026&quarter=1&employeeId=${zhang.id}`)
       .expect(200);
 
-    expect(selectedResponse.body.selectedEmployee.name).toBe('Zhang Chen');
+    expect(selectedResponse.body.selectedEmployee.name).toBe('张晨');
     expect(selectedResponse.body.goals).toHaveLength(2);
     expect(selectedResponse.body.selectedGoal.keyResults).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           code: 'KR1',
-          name: 'Deliver 6 releases',
+          name: '完成 6 个版本交付',
           points: 35,
           proofCount: 2
         })

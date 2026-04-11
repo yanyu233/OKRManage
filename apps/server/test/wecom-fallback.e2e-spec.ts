@@ -81,7 +81,7 @@ describe('WeCom auth skeleton', () => {
 
     const me = await agent.get('/api/me').expect(200);
     expect(me.body.authenticated).toBe(true);
-    expect(me.body.user.name).toBe('Zhang Chen');
+    expect(me.body.user.name).toBe('\u5f20\u6668');
     expect(me.body.user.activeRole).toBe('employee');
 
     const auditRows = await readAuditRows('auth.wecom.login.success');

@@ -26,7 +26,7 @@ describe('Employee goal detail', () => {
     expect(detail.body).toEqual(
       expect.objectContaining({
         code: 'O1',
-        name: 'Zhang Chen 2026 Q1 OKR'
+        name: '\u5f20\u6668 2026 \u5e74\u4e00\u5b63\u5ea6 OKR'
       })
     );
 

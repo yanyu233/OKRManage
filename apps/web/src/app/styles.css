@@ -88,6 +88,25 @@ body {
   gap: 20px;
 }
 
+.page-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.page-toolbar__controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px;
+  min-width: min(100%, 540px);
+}
+
+.page-toolbar__search {
+  width: min(100%, 320px);
+}
+
 .feature-card,
 .metric-card,
 .admin-page,
@@ -142,9 +161,19 @@ body {
   }
 
   .page-hero,
+  .page-toolbar,
   .admin-section-card__header,
   .review-group-card__topline {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .page-toolbar__controls {
+    min-width: 0;
+    justify-content: stretch;
+  }
+
+  .page-toolbar__search {
+    width: 100%;
   }
 }

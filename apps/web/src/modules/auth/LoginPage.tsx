@@ -13,6 +13,26 @@ type LoginFormValues = {
   password: string;
 };
 
+const TEXT = {
+  titleFallback: '\u672c\u5730\u8c03\u8bd5\u767b\u5f55',
+  titleUnmapped: '\u672c\u5730\u515c\u5e95\u767b\u5f55',
+  description:
+    '\u4f01\u4e1a\u5fae\u4fe1\u4ecd\u7136\u662f\u6b63\u5f0f\u5165\u53e3\uff0c\u8fd9\u4e2a\u9875\u9762\u4ec5\u7528\u4e8e\u4f01\u4e1a\u5fae\u4fe1\u8d26\u53f7\u672a\u6620\u5c04\u65f6\u7684\u515c\u5e95\u767b\u5f55\uff0c\u4ee5\u53ca\u5f53\u524d\u672c\u5730\u8c03\u8bd5\u3002',
+  unmappedTitle: '\u4f01\u4e1a\u5fae\u4fe1\u8d26\u53f7\u672a\u8bc6\u522b',
+  unmappedDescription:
+    '\u8bf7\u4f7f\u7528\u7cfb\u7edf\u7ba1\u7406\u5458\u5206\u914d\u7684\u672c\u5730\u515c\u5e95\u8d26\u53f7\u767b\u5f55\uff0c\u6216\u8054\u7cfb\u7cfb\u7edf\u7ba1\u7406\u5458\u8865\u9f50\u4f01\u4e1a\u5fae\u4fe1\u8d26\u53f7\u6620\u5c04\u3002',
+  hint:
+    '\u6b63\u5f0f\u7528\u6237\u8bf7\u4ece\u4f01\u4e1a\u5fae\u4fe1\u5de5\u4f5c\u53f0\u8fdb\u5165\u3002\u8fd9\u91cc\u4fdd\u7559\u672c\u5730\u8d26\u53f7\u767b\u5f55\uff0c\u662f\u4e3a\u4e86\u5c11\u91cf\u515c\u5e95\u573a\u666f\u548c\u5f53\u524d\u5f00\u53d1\u8c03\u8bd5\u3002',
+  loginName: '\u767b\u5f55\u540d',
+  password: '\u5bc6\u7801',
+  loginNamePlaceholder: '\u8bf7\u8f93\u5165\u767b\u5f55\u540d',
+  passwordPlaceholder: '\u8bf7\u8f93\u5165\u5bc6\u7801',
+  loginNameRequired: '\u8bf7\u8f93\u5165\u767b\u5f55\u540d\u3002',
+  passwordRequired: '\u8bf7\u8f93\u5165\u5bc6\u7801\u3002',
+  submit: '\u767b\u5f55',
+  loginFailed: '\u767b\u5f55\u5931\u8d25\uff0c\u8bf7\u91cd\u8bd5\u3002'
+} as const;
+
 export function LoginPage() {
   const { message } = App.useApp();
   const location = useLocation();
@@ -39,7 +59,7 @@ export function LoginPage() {
       }
     },
     onError: (error) => {
-      const description = error instanceof ApiError ? error.message : '登录失败，请重试。';
+      const description = error instanceof ApiError ? error.message : TEXT.loginFailed;
       message.error(description);
     }
   });
@@ -54,46 +74,35 @@ export function LoginPage() {
         <Space direction="vertical" size={18} style={{ width: '100%' }}>
           <div>
             <Typography.Title level={2} style={{ marginBottom: 8 }}>
-              {isUnmappedFallback ? '本地兜底登录' : '本地调试登录'}
+              {isUnmappedFallback ? TEXT.titleUnmapped : TEXT.titleFallback}
             </Typography.Title>
             <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-              企业微信仍然是正式入口，这个页面仅用于企业微信账号未映射时的兜底登录，以及当前本地调试。
+              {TEXT.description}
             </Typography.Paragraph>
           </div>
 
           {isUnmappedFallback ? (
-            <Alert
-              type="warning"
-              showIcon
-              message="企业微信账号未识别"
-              description="请使用系统管理员分配的本地兜底账号登录，或联系系统管理员补齐企业微信账号映射。"
-            />
+            <Alert type="warning" showIcon message={TEXT.unmappedTitle} description={TEXT.unmappedDescription} />
           ) : null}
 
           <Card size="small" className="auth-hint-card">
             <Space align="start">
               <WechatOutlined className="auth-hint-icon" />
-              <Typography.Text type="secondary">
-                正式用户请从企业微信工作台进入。这里保留本地账号登录，是为了少量兜底场景和当前开发调试。
-              </Typography.Text>
+              <Typography.Text type="secondary">{TEXT.hint}</Typography.Text>
             </Space>
           </Card>
 
-          <Form<LoginFormValues>
-            layout="vertical"
-            onFinish={(values) => loginMutation.mutate(values)}
-            disabled={loginMutation.isPending}
-          >
-            <Form.Item label="登录名" name="loginName" rules={[{ required: true, message: '请输入登录名。' }]}>
-              <Input size="large" prefix={<UserOutlined />} placeholder="请输入登录名" />
+          <Form<LoginFormValues> layout="vertical" onFinish={(values) => loginMutation.mutate(values)} disabled={loginMutation.isPending}>
+            <Form.Item label={TEXT.loginName} name="loginName" rules={[{ required: true, message: TEXT.loginNameRequired }]}>
+              <Input size="large" prefix={<UserOutlined />} placeholder={TEXT.loginNamePlaceholder} />
             </Form.Item>
 
-            <Form.Item label="密码" name="password" rules={[{ required: true, message: '请输入密码。' }]}>
-              <Input.Password size="large" prefix={<LockOutlined />} placeholder="请输入密码" />
+            <Form.Item label={TEXT.password} name="password" rules={[{ required: true, message: TEXT.passwordRequired }]}>
+              <Input.Password size="large" prefix={<LockOutlined />} placeholder={TEXT.passwordPlaceholder} />
             </Form.Item>
 
             <Button type="primary" htmlType="submit" size="large" loading={loginMutation.isPending} block>
-              登录
+              {TEXT.submit}
             </Button>
           </Form>
         </Space>

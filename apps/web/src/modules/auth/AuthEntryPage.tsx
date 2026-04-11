@@ -5,6 +5,14 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { ApiError } from '../../shared/api/http';
 import { authStart, redirectToWecom } from '../../shared/api/auth';
 
+const TEXT = {
+  title: '\u6b63\u5728\u8fdb\u5165 OKR \u7cfb\u7edf',
+  description: '\u6211\u4eec\u6b63\u5728\u6839\u636e\u5f53\u524d\u73af\u5883\u9009\u62e9\u5408\u9002\u7684\u767b\u5f55\u65b9\u5f0f\uff0c\u8bf7\u7a0d\u5019\u3002',
+  errorTitle: '\u8ba4\u8bc1\u5165\u53e3\u4e0d\u53ef\u7528',
+  errorDescription: '\u8ba4\u8bc1\u5165\u53e3\u521d\u59cb\u5316\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002',
+  loading: '\u6b63\u5728\u68c0\u67e5\u5f53\u524d\u4f1a\u8bdd\u5e76\u51c6\u5907\u767b\u5f55\u5165\u53e3...'
+} as const;
+
 export function AuthEntryPage() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -33,7 +41,7 @@ export function AuthEntryPage() {
           return;
         }
 
-        const message = error instanceof ApiError ? error.message : '认证入口初始化失败，请稍后重试。';
+        const message = error instanceof ApiError ? error.message : TEXT.errorDescription;
         setErrorMessage(message);
       });
 
@@ -48,25 +56,20 @@ export function AuthEntryPage() {
         <Space direction="vertical" size={18} style={{ width: '100%' }}>
           <div>
             <Typography.Title level={2} style={{ marginBottom: 8 }}>
-              正在进入 OKR 系统
+              {TEXT.title}
             </Typography.Title>
             <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-              我们正在根据当前环境选择合适的登录方式，请稍候。
+              {TEXT.description}
             </Typography.Paragraph>
           </div>
 
           {errorMessage ? (
-            <Alert
-              type="error"
-              showIcon
-              message="认证入口不可用"
-              description={errorMessage}
-            />
+            <Alert type="error" showIcon message={TEXT.errorTitle} description={errorMessage} />
           ) : (
             <Card size="small" className="auth-hint-card">
               <Space align="center" size={12}>
                 <Spin indicator={<LoadingOutlined spin />} />
-                <Typography.Text type="secondary">正在检查当前会话并准备登录入口…</Typography.Text>
+                <Typography.Text type="secondary">{TEXT.loading}</Typography.Text>
               </Space>
             </Card>
           )}

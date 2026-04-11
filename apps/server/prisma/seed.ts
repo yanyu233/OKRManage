@@ -13,20 +13,20 @@ const proofStorageRoot = resolve(process.cwd(), process.env.PROOF_STORAGE_DIR?.t
 async function main(): Promise<void> {
   const loginName = envOrDefault('DEBUG_SYSADMIN_LOGIN', 'sysadmin.local');
   const password = envOrDefault('DEBUG_SYSADMIN_PASSWORD', 'Admin123!');
-  const sysadminName = envOrDefault('DEBUG_SYSADMIN_NAME', 'System Admin');
+  const sysadminName = envOrDefault('DEBUG_SYSADMIN_NAME', '\u4e25\u4e3b\u4efb');
 
-  const department = await upsertDepartment('Industrial Internet Center');
-  const sectionPlatform = await upsertSection(department.id, 'Platform Products');
-  const sectionSolutions = await upsertSection(department.id, 'Solution Delivery');
+  const department = await upsertDepartment('\u5de5\u4e1a\u4e92\u8054\u7f51\u4e2d\u5fc3');
+  const sectionPlatform = await upsertSection(department.id, '\u5e73\u53f0\u4ea7\u54c1\u79d1');
+  const sectionSolutions = await upsertSection(department.id, '\u89e3\u51b3\u65b9\u6848\u79d1');
 
-  const digitalGroup = await upsertReviewGroup('Digital Group', {
+  const digitalGroup = await upsertReviewGroup('\u4fe1\u606f\u5316\u7ec4', {
     'A+': 1,
     A: 0,
     'B+': 1,
     B: 0,
     C: 0
   });
-  const operationsGroup = await upsertReviewGroup('Operations Group', {
+  const operationsGroup = await upsertReviewGroup('\u8fd0\u8425\u7ec4', {
     'A+': 0,
     A: 0,
     'B+': 0,
@@ -35,7 +35,7 @@ async function main(): Promise<void> {
   });
 
   await mkdir(proofStorageRoot, { recursive: true });
-  await upsertReviewGroup('General Group', {
+  await upsertReviewGroup('\u7efc\u5408\u7ec4', {
     'A+': 0,
     A: 0,
     'B+': 0,
@@ -56,7 +56,7 @@ async function main(): Promise<void> {
 
   const sectionLeader = await upsertUser({
     employeeNo: 'LEADER-SECTION-01',
-    name: 'Liu Section',
+    name: '\u5218\u79d1\u957f',
     wecomUserId: 'liu.section',
     departmentId: department.id,
     sectionId: sectionPlatform.id,
@@ -68,7 +68,7 @@ async function main(): Promise<void> {
 
   const groupLeader = await upsertUser({
     employeeNo: 'LEADER-GROUP-01',
-    name: 'Ma Group',
+    name: '\u9a6c\u7ec4\u957f',
     wecomUserId: 'ma.group',
     departmentId: department.id,
     sectionId: sectionPlatform.id,
@@ -81,7 +81,7 @@ async function main(): Promise<void> {
 
   const zhangChen = await upsertUser({
     employeeNo: 'EMP-0001',
-    name: 'Zhang Chen',
+    name: '\u5f20\u6668',
     wecomUserId: 'zhangchen',
     departmentId: department.id,
     sectionId: sectionPlatform.id,
@@ -92,7 +92,7 @@ async function main(): Promise<void> {
 
   const wangMin = await upsertUser({
     employeeNo: 'EMP-0002',
-    name: 'Wang Min',
+    name: '\u738b\u654f',
     wecomUserId: 'wangmin',
     departmentId: department.id,
     sectionId: sectionPlatform.id,
@@ -103,7 +103,7 @@ async function main(): Promise<void> {
 
   const liLei = await upsertUser({
     employeeNo: 'EMP-0003',
-    name: 'Li Lei',
+    name: '\u674e\u96f7',
     wecomUserId: 'lilei',
     departmentId: department.id,
     sectionId: sectionSolutions.id,
@@ -303,8 +303,8 @@ async function seedGoalsForZhang(ownerUserId: string, reviewerUserId: string) {
       }
     },
     update: {
-      name: 'Zhang Chen 2026 Q1 OKR',
-      description: 'Improve release delivery pace and close operational issues on time.',
+      name: '\u5f20\u6668 2026 \u5e74\u4e00\u5b63\u5ea6 OKR',
+      description: '\u56f4\u7ed5\u5e73\u53f0\u4ea4\u4ed8\u6548\u7387\u3001\u77e5\u8bc6\u6c89\u6dc0\u548c\u95ee\u9898\u95ed\u73af\u63a8\u8fdb\u5b63\u5ea6\u5de5\u4f5c\u3002',
       status: 'confirmed',
       totalPoints: 80
     },
@@ -313,8 +313,8 @@ async function seedGoalsForZhang(ownerUserId: string, reviewerUserId: string) {
       year: QUARTER_YEAR,
       quarter: QUARTER_NUMBER,
       code: 'O1',
-      name: 'Zhang Chen 2026 Q1 OKR',
-      description: 'Improve release delivery pace and close operational issues on time.',
+      name: '\u5f20\u6668 2026 \u5e74\u4e00\u5b63\u5ea6 OKR',
+      description: '\u56f4\u7ed5\u5e73\u53f0\u4ea4\u4ed8\u6548\u7387\u3001\u77e5\u8bc6\u6c89\u6dc0\u548c\u95ee\u9898\u95ed\u73af\u63a8\u8fdb\u5b63\u5ea6\u5de5\u4f5c\u3002',
       status: 'confirmed',
       totalPoints: 80
     }
@@ -330,8 +330,8 @@ async function seedGoalsForZhang(ownerUserId: string, reviewerUserId: string) {
       }
     },
     update: {
-      name: 'Zhang Chen Knowledge Program',
-      description: 'Capture recurring incidents and delivery cases as reusable knowledge assets.',
+      name: '\u5f20\u6668 \u77e5\u8bc6\u5e93\u6c89\u6dc0\u4e13\u9879',
+      description: '\u6c89\u6dc0\u5e73\u53f0\u5e38\u89c1\u95ee\u9898\u548c\u4ea4\u4ed8\u6848\u4f8b\uff0c\u4f5c\u4e3a\u5b63\u5ea6\u8865\u5145\u76ee\u6807\u3002',
       status: 'confirmed',
       totalPoints: 40
     },
@@ -340,8 +340,8 @@ async function seedGoalsForZhang(ownerUserId: string, reviewerUserId: string) {
       year: QUARTER_YEAR,
       quarter: QUARTER_NUMBER,
       code: 'O4',
-      name: 'Zhang Chen Knowledge Program',
-      description: 'Capture recurring incidents and delivery cases as reusable knowledge assets.',
+      name: '\u5f20\u6668 \u77e5\u8bc6\u5e93\u6c89\u6dc0\u4e13\u9879',
+      description: '\u6c89\u6dc0\u5e73\u53f0\u5e38\u89c1\u95ee\u9898\u548c\u4ea4\u4ed8\u6848\u4f8b\uff0c\u4f5c\u4e3a\u5b63\u5ea6\u8865\u5145\u76ee\u6807\u3002',
       status: 'confirmed',
       totalPoints: 40
     }
@@ -350,46 +350,58 @@ async function seedGoalsForZhang(ownerUserId: string, reviewerUserId: string) {
   const kr1 = await upsertKeyResult({
     goalId: goalOne.id,
     code: 'KR1',
-    name: 'Deliver 6 releases',
-    description: 'Track planned release delivery through the quarter.',
+    name: '\u5b8c\u6210 6 \u4e2a\u7248\u672c\u4ea4\u4ed8',
+    description: '\u8ddf\u8e2a\u5b63\u5ea6\u8ba1\u5212\u7248\u672c\u7684\u4ea4\u4ed8\u8282\u594f\u3002',
     points: 35,
     completionState: 'incomplete',
     reviewScore: 86,
-    reviewComment: 'Release cadence is improving steadily.',
+    reviewComment: '\u7248\u672c\u4ea4\u4ed8\u8282\u594f\u7a33\u6b65\u63d0\u5347\u3002',
     reviewedByUserId: reviewerUserId
   });
-  await upsertProof(kr1.id, 'release-checklist.xlsx', 'seed-release-checklist.xlsx', 'Release tracking sheet', 'seed release checklist');
-  await upsertProof(kr1.id, 'release-summary.pdf', 'seed-release-summary.pdf', 'Quarter release summary', 'seed release summary');
+  await upsertProof(
+    kr1.id,
+    '\u7248\u672c\u4ea4\u4ed8\u6e05\u5355.xlsx',
+    'seed-release-checklist.xlsx',
+    '\u7248\u672c\u4ea4\u4ed8\u8ddf\u8e2a\u8868',
+    '\u7248\u672c\u4ea4\u4ed8\u8ddf\u8e2a\u8868'
+  );
+  await upsertProof(
+    kr1.id,
+    '\u5b63\u5ea6\u7248\u672c\u603b\u7ed3.pdf',
+    'seed-release-summary.pdf',
+    '\u5b63\u5ea6\u7248\u672c\u603b\u7ed3',
+    '\u5b63\u5ea6\u7248\u672c\u603b\u7ed3'
+  );
 
   await upsertKeyResult({
     goalId: goalOne.id,
     code: 'KR2',
-    name: 'Reach 80% knowledge coverage',
-    description: 'Expand documented solutions in the knowledge base.',
+    name: '\u77e5\u8bc6\u5e93\u8986\u76d6\u7387\u8fbe\u5230 80%',
+    description: '\u8865\u9f50\u9ad8\u9891\u95ee\u9898\u548c\u89e3\u51b3\u65b9\u6848\u6587\u6863\u3002',
     points: 25,
     completionState: 'incomplete',
     reviewScore: 78,
-    reviewComment: 'Coverage is improving but not complete yet.',
+    reviewComment: '\u8986\u76d6\u7387\u6301\u7eed\u63d0\u5347\uff0c\u8fd8\u9700\u7ee7\u7eed\u8865\u9f50\u3002',
     reviewedByUserId: reviewerUserId
   });
 
   await upsertKeyResult({
     goalId: goalOne.id,
     code: 'KR3',
-    name: 'Keep incident closure under 2 days',
-    description: 'Reduce cycle time for issue closure.',
+    name: '\u95ee\u9898\u95ed\u73af\u65f6\u6548\u4e0d\u8d85\u8fc7 2 \u5929',
+    description: '\u7f29\u77ed\u9ad8\u4f18\u95ee\u9898\u7684\u95ed\u73af\u5468\u671f\u3002',
     points: 20,
     completionState: 'incomplete',
     reviewScore: 70,
-    reviewComment: 'Cycle time improved, still needs consistency.',
+    reviewComment: '\u95ed\u73af\u65f6\u6548\u6539\u5584\u660e\u663e\uff0c\u4f46\u7a33\u5b9a\u6027\u8fd8\u9700\u52a0\u5f3a\u3002',
     reviewedByUserId: reviewerUserId
   });
 
   await upsertKeyResult({
     goalId: goalTwo.id,
     code: 'KR1',
-    name: 'Publish 20 knowledge articles',
-    description: 'Create reusable content from recurring delivery issues.',
+    name: '\u6c89\u6dc0 20 \u7bc7\u77e5\u8bc6\u5e93\u5185\u5bb9',
+    description: '\u5c06\u91cd\u590d\u4ea4\u4ed8\u95ee\u9898\u8f6c\u4e3a\u53ef\u590d\u7528\u77e5\u8bc6\u3002',
     points: 20,
     completionState: 'incomplete',
     reviewScore: null,
@@ -400,8 +412,8 @@ async function seedGoalsForZhang(ownerUserId: string, reviewerUserId: string) {
   await upsertKeyResult({
     goalId: goalTwo.id,
     code: 'KR2',
-    name: 'Pilot FAQ workflow',
-    description: 'Create a lightweight FAQ process for repeated questions.',
+    name: '\u8bd5\u8fd0\u884c FAQ \u6d41\u7a0b',
+    description: '\u5efa\u7acb\u5e38\u89c1\u95ee\u9898\u7684\u8f7b\u91cf\u7b54\u7591\u673a\u5236\u3002',
     points: 10,
     completionState: 'incomplete',
     reviewScore: null,
@@ -412,8 +424,8 @@ async function seedGoalsForZhang(ownerUserId: string, reviewerUserId: string) {
   await upsertKeyResult({
     goalId: goalTwo.id,
     code: 'KR3',
-    name: 'Build article review checklist',
-    description: 'Create a reusable quality gate for new knowledge entries.',
+    name: '\u5efa\u7acb\u6587\u7ae0\u8bc4\u5ba1\u6e05\u5355',
+    description: '\u4e3a\u77e5\u8bc6\u5e93\u5185\u5bb9\u589e\u52a0\u7edf\u4e00\u8d28\u91cf\u95e8\u69db\u3002',
     points: 10,
     completionState: 'incomplete',
     reviewScore: null,
@@ -433,8 +445,8 @@ async function seedGoalsForWang(ownerUserId: string, reviewerUserId: string) {
       }
     },
     update: {
-      name: 'Wang Min 2026 Q1 Delivery Quality',
-      description: 'Improve stability and delivery quality for the platform product line.',
+      name: '\u738b\u654f 2026 \u5e74\u4e00\u5b63\u5ea6\u4ea4\u4ed8\u8d28\u91cf\u63d0\u5347',
+      description: '\u63d0\u5347\u5e73\u53f0\u4ea7\u54c1\u7ebf\u7684\u7a33\u5b9a\u6027\u548c\u4ea4\u4ed8\u8d28\u91cf\u3002',
       status: 'confirmed',
       totalPoints: 100
     },
@@ -443,8 +455,8 @@ async function seedGoalsForWang(ownerUserId: string, reviewerUserId: string) {
       year: QUARTER_YEAR,
       quarter: QUARTER_NUMBER,
       code: 'O2',
-      name: 'Wang Min 2026 Q1 Delivery Quality',
-      description: 'Improve stability and delivery quality for the platform product line.',
+      name: '\u738b\u654f 2026 \u5e74\u4e00\u5b63\u5ea6\u4ea4\u4ed8\u8d28\u91cf\u63d0\u5347',
+      description: '\u63d0\u5347\u5e73\u53f0\u4ea7\u54c1\u7ebf\u7684\u7a33\u5b9a\u6027\u548c\u4ea4\u4ed8\u8d28\u91cf\u3002',
       status: 'confirmed',
       totalPoints: 100
     }
@@ -453,36 +465,36 @@ async function seedGoalsForWang(ownerUserId: string, reviewerUserId: string) {
   await upsertKeyResult({
     goalId: goal.id,
     code: 'KR1',
-    name: 'Improve weekly delivery predictability',
-    description: 'Keep committed weekly deliveries on schedule.',
+    name: '\u63d0\u5347\u5468\u5ea6\u4ea4\u4ed8\u8fbe\u6210\u7387',
+    description: '\u786e\u4fdd\u5468\u5ea6\u627f\u8bfa\u4ea4\u4ed8\u6309\u8ba1\u5212\u843d\u5730\u3002',
     points: 50,
     completionState: 'completed',
     reviewScore: 92.5,
-    reviewComment: 'Delivery discipline is strong.',
+    reviewComment: '\u4ea4\u4ed8\u8282\u594f\u7a33\u5b9a\uff0c\u8fbe\u6210\u60c5\u51b5\u826f\u597d\u3002',
     reviewedByUserId: reviewerUserId
   });
 
   await upsertKeyResult({
     goalId: goal.id,
     code: 'KR2',
-    name: 'Raise defect closure quality to 95%',
-    description: 'Improve resolution quality for major defects.',
+    name: '\u7f3a\u9677\u95ed\u73af\u8d28\u91cf\u8fbe\u5230 95%',
+    description: '\u63d0\u5347\u91cd\u70b9\u7f3a\u9677\u7684\u5904\u7406\u8d28\u91cf\u3002',
     points: 30,
     completionState: 'completed',
     reviewScore: 90,
-    reviewComment: 'Defect quality target is mostly achieved.',
+    reviewComment: '\u7f3a\u9677\u5904\u7406\u8d28\u91cf\u76ee\u6807\u57fa\u672c\u8fbe\u6210\u3002',
     reviewedByUserId: reviewerUserId
   });
 
   await upsertKeyResult({
     goalId: goal.id,
     code: 'KR3',
-    name: 'Keep review rework under 10%',
-    description: 'Reduce avoidable rework in review loops.',
+    name: '\u8bc4\u5ba1\u8fd4\u5de5\u7387\u63a7\u5236\u5728 10% \u5185',
+    description: '\u964d\u4f4e\u8bc4\u5ba1\u73af\u8282\u4e2d\u53ef\u907f\u514d\u7684\u8fd4\u5de5\u3002',
     points: 20,
     completionState: 'completed',
     reviewScore: 87,
-    reviewComment: 'Stable and above target overall.',
+    reviewComment: '\u6574\u4f53\u7a33\u5b9a\uff0c\u5e76\u8fbe\u5230\u9884\u671f\u76ee\u6807\u3002',
     reviewedByUserId: reviewerUserId
   });
 }
@@ -498,8 +510,8 @@ async function seedGoalsForLi(ownerUserId: string, reviewerUserId: string) {
       }
     },
     update: {
-      name: 'Li Lei Operations Enablement',
-      description: 'Support the operations stream with structured follow-up work.',
+      name: '\u674e\u96f7 \u8fd0\u8425\u652f\u6491\u4e13\u9879',
+      description: '\u56f4\u7ed5\u8fd0\u8425\u94fe\u8def\u505a\u7ed3\u6784\u5316\u652f\u6491\u4e0e\u8ddf\u8fdb\u3002',
       status: 'confirmed',
       totalPoints: 60
     },
@@ -508,8 +520,8 @@ async function seedGoalsForLi(ownerUserId: string, reviewerUserId: string) {
       year: QUARTER_YEAR,
       quarter: QUARTER_NUMBER,
       code: 'O3',
-      name: 'Li Lei Operations Enablement',
-      description: 'Support the operations stream with structured follow-up work.',
+      name: '\u674e\u96f7 \u8fd0\u8425\u652f\u6491\u4e13\u9879',
+      description: '\u56f4\u7ed5\u8fd0\u8425\u94fe\u8def\u505a\u7ed3\u6784\u5316\u652f\u6491\u4e0e\u8ddf\u8fdb\u3002',
       status: 'confirmed',
       totalPoints: 60
     }
@@ -518,24 +530,24 @@ async function seedGoalsForLi(ownerUserId: string, reviewerUserId: string) {
   await upsertKeyResult({
     goalId: goal.id,
     code: 'KR1',
-    name: 'Complete 10 support handoffs',
-    description: 'Ensure support handoffs are documented and closed.',
+    name: '\u5b8c\u6210 10 \u6b21\u652f\u6301\u4ea4\u63a5',
+    description: '\u786e\u4fdd\u652f\u6301\u4ea4\u63a5\u8fc7\u7a0b\u53ef\u8ffd\u8e2a\u3001\u53ef\u95ed\u73af\u3002',
     points: 30,
     completionState: 'incomplete',
     reviewScore: 85,
-    reviewComment: 'Solid support execution.',
+    reviewComment: '\u652f\u6491\u4ea4\u63a5\u6267\u884c\u8f83\u7a33\u5b9a\u3002',
     reviewedByUserId: reviewerUserId
   });
 
   await upsertKeyResult({
     goalId: goal.id,
     code: 'KR2',
-    name: 'Maintain weekly service dashboard',
-    description: 'Keep the weekly dashboard updated.',
+    name: '\u7ef4\u62a4\u5468\u5ea6\u670d\u52a1\u770b\u677f',
+    description: '\u6309\u5468\u66f4\u65b0\u670d\u52a1\u770b\u677f\u5e76\u6301\u7eed\u8ddf\u8fdb\u3002',
     points: 30,
     completionState: 'incomplete',
     reviewScore: 80,
-    reviewComment: 'Dashboard coverage is acceptable.',
+    reviewComment: '\u770b\u677f\u8986\u76d6\u7387\u8fbe\u5230\u9884\u671f\u3002',
     reviewedByUserId: reviewerUserId
   });
 }
@@ -551,8 +563,8 @@ async function seedGoalsForGroupLeader(ownerUserId: string) {
       }
     },
     update: {
-      name: 'Ma Group Dual Role Goal',
-      description: 'Keep leader and employee flows available for the dual-role account.',
+      name: '\u9a6c\u7ec4\u957f \u53cc\u89d2\u8272\u9a8c\u8bc1\u76ee\u6807',
+      description: '\u7528\u4e8e\u9a8c\u8bc1\u540c\u4e00\u8d26\u53f7\u517c\u5177\u8d1f\u8d23\u4eba\u548c\u5458\u5de5\u89d2\u8272\u7684\u6d41\u7a0b\u3002',
       status: 'confirmed',
       totalPoints: 40
     },
@@ -561,8 +573,8 @@ async function seedGoalsForGroupLeader(ownerUserId: string) {
       year: QUARTER_YEAR,
       quarter: QUARTER_NUMBER,
       code: 'O6',
-      name: 'Ma Group Dual Role Goal',
-      description: 'Keep leader and employee flows available for the dual-role account.',
+      name: '\u9a6c\u7ec4\u957f \u53cc\u89d2\u8272\u9a8c\u8bc1\u76ee\u6807',
+      description: '\u7528\u4e8e\u9a8c\u8bc1\u540c\u4e00\u8d26\u53f7\u517c\u5177\u8d1f\u8d23\u4eba\u548c\u5458\u5de5\u89d2\u8272\u7684\u6d41\u7a0b\u3002',
       status: 'confirmed',
       totalPoints: 40
     }
@@ -571,8 +583,8 @@ async function seedGoalsForGroupLeader(ownerUserId: string) {
   await upsertKeyResult({
     goalId: goal.id,
     code: 'KR1',
-    name: 'Keep dual-role smoke path available',
-    description: 'A lightweight KR for employee-side validation with the dual-role account.',
+    name: '\u4fdd\u6301\u53cc\u89d2\u8272\u94fe\u8def\u53ef\u7528',
+    description: '\u7528\u4e8e\u5458\u5de5\u7aef\u4e0e\u8d1f\u8d23\u4eba\u7aef\u8054\u8c03\u9a8c\u8bc1\u3002',
     points: 40,
     completionState: 'incomplete',
     reviewScore: null,

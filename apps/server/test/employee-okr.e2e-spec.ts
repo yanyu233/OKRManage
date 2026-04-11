@@ -22,7 +22,7 @@ describe('Employee OKR list', () => {
 
     expect(response.body.employee).toEqual(
       expect.objectContaining({
-        name: 'Zhang Chen',
+        name: '张晨',
         goalCount: 2,
         keyResultCount: 6
       })
@@ -31,11 +31,11 @@ describe('Employee OKR list', () => {
       expect.arrayContaining([
         expect.objectContaining({
           code: 'O1',
-          name: 'Zhang Chen 2026 Q1 OKR'
+          name: '张晨 2026 年一季度 OKR'
         }),
         expect.objectContaining({
           code: 'O4',
-          name: 'Zhang Chen Knowledge Program'
+          name: '张晨 知识库沉淀专项'
         })
       ])
     );

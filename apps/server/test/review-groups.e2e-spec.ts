@@ -54,7 +54,7 @@ describe('Review group admin config', () => {
 
     const bootstrap = await agent.get('/api/admin/org/bootstrap').expect(200);
     const seededReviewGroup = bootstrap.body.reviewGroups.find(
-      (reviewGroup: { name: string; id: string }) => reviewGroup.name === 'Digital Group'
+      (reviewGroup: { name: string; id: string }) => reviewGroup.name === '\u4fe1\u606f\u5316\u7ec4'
     );
 
     expect(seededReviewGroup?.id).toBeDefined();
