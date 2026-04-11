@@ -34,7 +34,7 @@ export function LoginPage() {
       setUser(payload.user);
       await queryClient.invalidateQueries({ queryKey: ['session'] });
       if (payload.user) {
-        navigate(returnTo || defaultPathForRole(payload.user.role), { replace: true });
+        navigate(returnTo || defaultPathForRole(payload.user.activeRole), { replace: true });
       }
     },
     onError: (error) => {
@@ -44,7 +44,7 @@ export function LoginPage() {
   });
 
   if (sessionQuery.data?.authenticated && sessionQuery.data.user) {
-    return <Navigate to={returnTo || defaultPathForRole(sessionQuery.data.user.role)} replace />;
+    return <Navigate to={returnTo || defaultPathForRole(sessionQuery.data.user.activeRole)} replace />;
   }
 
   return (
@@ -56,7 +56,7 @@ export function LoginPage() {
               OKR 登录
             </Typography.Title>
             <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-              企业微信仍然是正式入口，这个页面仅用于企业微信未映射账号时的兜底登录，以及本地开发调试。
+              企业微信仍然是正式入口，这个页面仅用于企业微信未映射到账户时的兜底登录，以及本地开发调试。
             </Typography.Paragraph>
           </div>
 

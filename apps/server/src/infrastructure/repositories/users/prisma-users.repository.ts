@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { AuthUser } from '../../../shared/types/auth-user';
+import { AuthRoleAssignment, AuthUser } from '../../../shared/types/auth-user';
 import { LocalLoginAccount, UsersRepository } from '../../../modules/users/users.repository';
+
+const ROLE_PRIORITY = ['system-admin', 'section-leader', 'group-leader', 'employee'];
 
 @Injectable()
 export class PrismaUsersRepository implements UsersRepository {
@@ -18,10 +20,8 @@ export class PrismaUsersRepository implements UsersRepository {
           include: {
             roleAssignments: {
               where: {
-                isPrimary: true,
                 isEnabled: true
-              },
-              take: 1
+              }
             }
           }
         }
@@ -32,16 +32,13 @@ export class PrismaUsersRepository implements UsersRepository {
       return null;
     }
 
-    const primaryRole = account.user.roleAssignments[0];
-    if (!primaryRole) {
+    const authUser = this.toAuthUser(account.user.id, account.user.name, account.loginName, account.user.roleAssignments);
+    if (!authUser) {
       return null;
     }
 
     return {
-      id: account.user.id,
-      name: account.user.name,
-      role: primaryRole.roleCode,
-      loginName: account.loginName,
+      ...authUser,
       passwordHash: account.passwordHash,
       localLoginEnabled: account.localLoginEnabled,
       isActive: account.user.isActive
@@ -55,10 +52,8 @@ export class PrismaUsersRepository implements UsersRepository {
         localAccount: true,
         roleAssignments: {
           where: {
-            isPrimary: true,
             isEnabled: true
-          },
-          take: 1
+          }
         }
       }
     });
@@ -67,12 +62,7 @@ export class PrismaUsersRepository implements UsersRepository {
       return null;
     }
 
-    const primaryRole = user.roleAssignments[0];
-    if (!primaryRole) {
-      return null;
-    }
-
-    return this.toAuthUser(user.id, user.name, primaryRole.roleCode, user.localAccount.loginName);
+    return this.toAuthUser(user.id, user.name, user.localAccount.loginName, user.roleAssignments);
   }
 
   async touchLocalLoginSuccess(userId: string): Promise<void> {
@@ -84,12 +74,67 @@ export class PrismaUsersRepository implements UsersRepository {
     });
   }
 
-  private toAuthUser(id: string, name: string, role: string, loginName: string): AuthUser {
+  private toAuthUser(
+    id: string,
+    name: string,
+    loginName: string,
+    assignments: Array<{ roleCode: string; isPrimary: boolean }>
+  ): AuthUser | null {
+    const roles = normalizeRoles(assignments);
+    const activeRole = resolveActiveRole(roles);
+
+    if (!activeRole) {
+      return null;
+    }
+
     return {
       id,
       name,
-      role,
+      role: activeRole,
+      activeRole,
+      roles,
       loginName
     };
   }
+}
+
+function normalizeRoles(assignments: Array<{ roleCode: string; isPrimary: boolean }>): AuthRoleAssignment[] {
+  const byRole = new Map<string, AuthRoleAssignment>();
+
+  for (const assignment of assignments) {
+    const current = byRole.get(assignment.roleCode);
+    if (!current) {
+      byRole.set(assignment.roleCode, {
+        role: assignment.roleCode,
+        isPrimary: assignment.isPrimary
+      });
+      continue;
+    }
+
+    if (assignment.isPrimary && !current.isPrimary) {
+      byRole.set(assignment.roleCode, {
+        role: assignment.roleCode,
+        isPrimary: true
+      });
+    }
+  }
+
+  return Array.from(byRole.values()).sort((left, right) => {
+    const leftPriority = ROLE_PRIORITY.indexOf(left.role);
+    const rightPriority = ROLE_PRIORITY.indexOf(right.role);
+    return normalizePriority(leftPriority) - normalizePriority(rightPriority);
+  });
+}
+
+function resolveActiveRole(roles: AuthRoleAssignment[]): string | null {
+  const primaryRole = roles.find((role) => role.isPrimary);
+  if (primaryRole) {
+    return primaryRole.role;
+  }
+
+  return roles[0]?.role ?? null;
+}
+
+function normalizePriority(index: number) {
+  return index === -1 ? Number.MAX_SAFE_INTEGER : index;
 }

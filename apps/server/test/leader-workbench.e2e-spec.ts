@@ -19,6 +19,7 @@ describe('Leader workbench', () => {
     const agent = await loginAsSectionLeader(app);
 
     const response = await agent.get('/api/leader/workbench?year=2026&quarter=1').expect(200);
+    const zhang = response.body.employees.find((entry: { name: string }) => entry.name === 'Zhang Chen');
 
     expect(response.body.employees).toEqual(
       expect.arrayContaining([
@@ -35,9 +36,15 @@ describe('Leader workbench', () => {
       ])
     );
     expect(response.body.employees.some((entry: { name: string }) => entry.name === 'Li Lei')).toBe(false);
-    expect(response.body.selectedEmployee.name).toBe('Zhang Chen');
-    expect(response.body.goals).toHaveLength(2);
-    expect(response.body.selectedGoal.keyResults).toEqual(
+    expect(zhang).toBeTruthy();
+
+    const selectedResponse = await agent
+      .get(`/api/leader/workbench?year=2026&quarter=1&employeeId=${zhang.id}`)
+      .expect(200);
+
+    expect(selectedResponse.body.selectedEmployee.name).toBe('Zhang Chen');
+    expect(selectedResponse.body.goals).toHaveLength(2);
+    expect(selectedResponse.body.selectedGoal.keyResults).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           code: 'KR1',

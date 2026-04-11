@@ -3,10 +3,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { App, Avatar, Button, Dropdown, Layout, Menu, Skeleton, Space, Tag, Typography } from 'antd';
 import { useEffect, useMemo } from 'react';
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { getCurrentSession, logout } from '../../shared/api/auth';
+import { getCurrentSession, logout, switchActiveRole } from '../../shared/api/auth';
 import { getRoleLabel } from '../../shared/i18n/labels';
 import { useSessionStore } from '../../shared/store/session-store';
-import { menuItemsForRole } from './routing';
+import { canAccessRoute, menuItemsForUser, resolveTargetRoleForPath, selectedMenuKeyForPath } from './routing';
 
 const { Header, Sider, Content } = Layout;
 
@@ -40,10 +40,37 @@ export function AppShell() {
     }
   });
 
-  const menuItems = useMemo(
-    () => (sessionQuery.data?.authenticated && sessionQuery.data.user ? menuItemsForRole(sessionQuery.data.user.role) : []),
-    [sessionQuery.data]
-  );
+  const activeRoleMutation = useMutation({
+    mutationFn: switchActiveRole,
+    onSuccess: (payload) => {
+      setUser(payload.user);
+      queryClient.setQueryData(['session'], {
+        authenticated: true,
+        user: payload.user
+      });
+    },
+    onError: () => {
+      message.error('切换角色失败，请重试。');
+    }
+  });
+
+  const currentUser = sessionQuery.data?.authenticated ? sessionQuery.data.user : null;
+  const requiredRole = currentUser ? resolveTargetRoleForPath(currentUser, location.pathname) : null;
+  const needsRoleAlignment = Boolean(currentUser && requiredRole && requiredRole !== currentUser.activeRole);
+
+  useEffect(() => {
+    if (!currentUser || !requiredRole || requiredRole === currentUser.activeRole || activeRoleMutation.isPending) {
+      return;
+    }
+
+    if (!canAccessRoute(currentUser, [requiredRole])) {
+      return;
+    }
+
+    activeRoleMutation.mutate(requiredRole);
+  }, [activeRoleMutation, currentUser, requiredRole]);
+
+  const menuItems = useMemo(() => (currentUser ? menuItemsForUser(currentUser) : []), [currentUser]);
 
   if (sessionQuery.isLoading) {
     return (
@@ -53,11 +80,11 @@ export function AppShell() {
     );
   }
 
-  if (!sessionQuery.data?.authenticated || !sessionQuery.data.user) {
+  if (!currentUser) {
     return <Navigate to={`/login?returnTo=${encodeURIComponent(location.pathname)}`} replace />;
   }
 
-  const currentUser = sessionQuery.data.user;
+  const authedUser = currentUser;
 
   const menu = {
     items: [
@@ -69,6 +96,20 @@ export function AppShell() {
       }
     ]
   };
+
+  async function handleMenuClick(path: string) {
+    const targetRole = resolveTargetRoleForPath(authedUser, path);
+
+    if (targetRole && targetRole !== authedUser.activeRole) {
+      const payload = await activeRoleMutation.mutateAsync(targetRole);
+      navigate(path, {
+        replace: location.pathname === path && payload.user.activeRole === targetRole
+      });
+      return;
+    }
+
+    navigate(path);
+  }
 
   return (
     <Layout className="app-shell">
@@ -87,7 +128,13 @@ export function AppShell() {
           {!siderCollapsed ? <Typography.Text className="app-shell__brand-subtitle">Route C / React 前台</Typography.Text> : null}
         </div>
 
-        <Menu theme="dark" mode="inline" selectedKeys={[location.pathname]} items={menuItems} onClick={(info) => navigate(info.key)} />
+        <Menu
+          theme="dark"
+          mode="inline"
+          selectedKeys={[selectedMenuKeyForPath(location.pathname)]}
+          items={menuItems}
+          onClick={(info) => void handleMenuClick(String(info.key))}
+        />
       </Sider>
 
       <Layout>
@@ -101,19 +148,19 @@ export function AppShell() {
             />
             <div>
               <Typography.Title level={4} style={{ margin: 0 }}>
-                {currentUser.name}
+                {authedUser.name}
               </Typography.Title>
-              <Typography.Text type="secondary">当前角色：{getRoleLabel(currentUser.role)}</Typography.Text>
+              <Typography.Text type="secondary">当前角色：{getRoleLabel(authedUser.activeRole)}</Typography.Text>
             </div>
           </Space>
 
           <Space align="center" size={16}>
-            <Tag color="blue">{getRoleLabel(currentUser.role)}</Tag>
+            <Tag color="blue">{getRoleLabel(authedUser.activeRole)}</Tag>
             <Dropdown menu={menu} trigger={['click']}>
               <Button type="text" size="large">
                 <Space>
                   <Avatar icon={<UserOutlined />} />
-                  <Typography.Text>{currentUser.loginName}</Typography.Text>
+                  <Typography.Text>{authedUser.loginName}</Typography.Text>
                 </Space>
               </Button>
             </Dropdown>
@@ -121,7 +168,13 @@ export function AppShell() {
         </Header>
 
         <Content className="app-shell__content">
-          <Outlet />
+          {needsRoleAlignment || activeRoleMutation.isPending ? (
+            <div className="shell-loading">
+              <Skeleton active paragraph={{ rows: 6 }} />
+            </div>
+          ) : (
+            <Outlet />
+          )}
         </Content>
       </Layout>
     </Layout>

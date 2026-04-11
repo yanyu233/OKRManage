@@ -73,6 +73,7 @@ async function main(): Promise<void> {
   });
   await upsertLocalAccount(groupLeader.id, 'group.leader', await bcrypt.hash('Leader123!', 10), true);
   await upsertRoleAssignment(groupLeader.id, 'group-leader', 'review-group', digitalGroup.id, true);
+  await upsertRoleAssignment(groupLeader.id, 'employee', 'user', groupLeader.id, false);
   await upsertGroupLeaderBinding(groupLeader.id, digitalGroup.id);
 
   const zhangChen = await upsertUser({
@@ -108,6 +109,7 @@ async function main(): Promise<void> {
   await seedGoalsForZhang(zhangChen.id, sectionLeader.id);
   await seedGoalsForWang(wangMin.id, sectionLeader.id);
   await seedGoalsForLi(liLei.id, sectionLeader.id);
+  await seedGoalsForGroupLeader(groupLeader.id);
 }
 
 function envOrDefault(key: string, fallback: string): string {
@@ -526,6 +528,47 @@ async function seedGoalsForLi(ownerUserId: string, reviewerUserId: string) {
     reviewScore: 80,
     reviewComment: 'Dashboard coverage is acceptable.',
     reviewedByUserId: reviewerUserId
+  });
+}
+
+async function seedGoalsForGroupLeader(ownerUserId: string) {
+  const goal = await prisma.goal.upsert({
+    where: {
+      ownerUserId_year_quarter_code: {
+        ownerUserId,
+        year: QUARTER_YEAR,
+        quarter: QUARTER_NUMBER,
+        code: 'O6'
+      }
+    },
+    update: {
+      name: 'Ma Group Dual Role Goal',
+      description: 'Keep leader and employee flows available for the dual-role account.',
+      status: 'confirmed',
+      totalPoints: 40
+    },
+    create: {
+      ownerUserId,
+      year: QUARTER_YEAR,
+      quarter: QUARTER_NUMBER,
+      code: 'O6',
+      name: 'Ma Group Dual Role Goal',
+      description: 'Keep leader and employee flows available for the dual-role account.',
+      status: 'confirmed',
+      totalPoints: 40
+    }
+  });
+
+  await upsertKeyResult({
+    goalId: goal.id,
+    code: 'KR1',
+    name: 'Keep dual-role smoke path available',
+    description: 'A lightweight KR for employee-side validation with the dual-role account.',
+    points: 40,
+    completionState: 'incomplete',
+    reviewScore: null,
+    reviewComment: null,
+    reviewedByUserId: null
   });
 }
 

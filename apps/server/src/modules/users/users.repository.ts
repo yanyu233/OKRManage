@@ -1,4 +1,4 @@
-import { AuthUser } from '../../shared/types/auth-user';
+import { AuthRoleAssignment, AuthUser } from '../../shared/types/auth-user';
 
 export const USERS_REPOSITORY = Symbol('USERS_REPOSITORY');
 
@@ -7,6 +7,8 @@ export type LocalLoginAccount = AuthUser & {
   localLoginEnabled: boolean;
   isActive: boolean;
 };
+
+export type NormalizedUserRole = AuthRoleAssignment;
 
 export interface UsersRepository {
   findByLocalLogin(loginName: string): Promise<LocalLoginAccount | null>;

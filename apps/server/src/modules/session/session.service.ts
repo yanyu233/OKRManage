@@ -29,6 +29,10 @@ export class SessionService {
     return session;
   }
 
+  switchActiveRole(sessionId: string | undefined | null, role: string) {
+    return this.sessionsRepository.switchActiveRole(sessionId ?? null, role);
+  }
+
   delete(sessionId: string | undefined | null) {
     return this.sessionsRepository.delete(sessionId ?? null);
   }

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
-import { Button, Card, Input, Select, Space, Switch, Table, Typography } from 'antd';
+import { Alert, Button, Card, Input, Select, Space, Switch, Table, Typography } from 'antd';
 import type { AdminOrgBootstrapInput, RoleScopeType, UserRoleCode } from '../../shared/types/admin-config';
 import { createLocalAccountRecord, createRoleAssignmentRecord } from './admin-org-form';
 
@@ -29,7 +29,13 @@ export function AccessSections({ draft, updateCollection }: { draft: AdminOrgBoo
 
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
-      <SectionCard title="本地兜底账号" actionLabel="新增本地账号" onAdd={() => updateCollection('localAccounts', (items) => [...items, createLocalAccountRecord(draft.users.at(0)?.id ?? null)])}>
+      <SectionCard
+        title="本地兜底账号"
+        actionLabel="新增本地账号"
+        onAdd={() =>
+          updateCollection('localAccounts', (items) => [...items, createLocalAccountRecord(draft.users.at(0)?.id ?? null)])
+        }
+      >
         <Table
           rowKey={(record) => `${record.userId}:${record.loginName}`}
           pagination={false}
@@ -115,7 +121,20 @@ export function AccessSections({ draft, updateCollection }: { draft: AdminOrgBoo
         />
       </SectionCard>
 
-      <SectionCard title="角色分配" actionLabel="新增角色" onAdd={() => updateCollection('roleAssignments', (items) => [...items, createRoleAssignmentRecord(draft.users.at(0)?.id ?? null)])}>
+      <SectionCard
+        title="角色分配"
+        actionLabel="新增角色"
+        onAdd={() =>
+          updateCollection('roleAssignments', (items) => [...items, createRoleAssignmentRecord(draft.users.at(0)?.id ?? null)])
+        }
+      >
+        <Alert
+          type="info"
+          showIcon
+          message="同一员工可以分配多个角色"
+          description="例如同一个人可以同时具备“员工”和“小组负责人”两条角色记录，前台会按角色分组展示功能菜单。"
+        />
+
         <Table
           rowKey="id"
           pagination={false}
@@ -241,13 +260,27 @@ export function AccessSections({ draft, updateCollection }: { draft: AdminOrgBoo
   );
 }
 
-function SectionCard({ title, actionLabel, onAdd, children }: { title: string; actionLabel: string; onAdd: () => void; children: ReactNode }) {
+function SectionCard({
+  title,
+  actionLabel,
+  onAdd,
+  children
+}: {
+  title: string;
+  actionLabel: string;
+  onAdd: () => void;
+  children: ReactNode;
+}) {
   return (
     <Card className="admin-section-card" variant="borderless">
       <Space direction="vertical" size={18} style={{ width: '100%' }}>
         <div className="admin-section-card__header">
-          <Typography.Title level={3} style={{ marginBottom: 0 }}>{title}</Typography.Title>
-          <Button icon={<PlusOutlined />} onClick={onAdd}>{actionLabel}</Button>
+          <Typography.Title level={3} style={{ marginBottom: 0 }}>
+            {title}
+          </Typography.Title>
+          <Button icon={<PlusOutlined />} onClick={onAdd}>
+            {actionLabel}
+          </Button>
         </div>
         {children}
       </Space>

@@ -1,4 +1,4 @@
-import type { SessionResponse } from '../types/session';
+import type { SessionResponse, SessionUser, UserRole } from '../types/session';
 import { apiRequest } from './http';
 
 export type ManualLoginInput = {
@@ -16,6 +16,13 @@ export function manualLogin(payload: ManualLoginInput) {
   return apiRequest<{ ok: true; user: SessionResponse['user'] }>('/auth/manual-login', {
     method: 'POST',
     body: JSON.stringify(payload)
+  });
+}
+
+export function switchActiveRole(role: UserRole) {
+  return apiRequest<{ ok: true; user: SessionUser }>('/auth/active-role', {
+    method: 'POST',
+    body: JSON.stringify({ role })
   });
 }
 

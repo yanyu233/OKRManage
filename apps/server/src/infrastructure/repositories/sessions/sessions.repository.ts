@@ -11,5 +11,6 @@ export type SessionRecord = {
 export interface SessionsRepository {
   create(user: AuthUser, authMethod: string, ttlMinutes: number): Promise<SessionRecord>;
   get(sessionId: string | null): Promise<SessionRecord | null>;
+  switchActiveRole(sessionId: string | null, role: string): Promise<SessionRecord>;
   delete(sessionId: string | null): Promise<void>;
 }

@@ -16,7 +16,8 @@ function HomeRedirect() {
   if (!user) {
     return <Navigate to="/login" replace />;
   }
-  return <Navigate to={defaultPathForRole(user.role)} replace />;
+
+  return <Navigate to={defaultPathForRole(user.activeRole ?? user.role)} replace />;
 }
 
 export const router = createBrowserRouter([

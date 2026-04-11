@@ -25,6 +25,8 @@ export class UsersService {
       id: account.id,
       name: account.name,
       role: account.role,
+      activeRole: account.activeRole,
+      roles: account.roles,
       loginName: account.loginName
     };
   }

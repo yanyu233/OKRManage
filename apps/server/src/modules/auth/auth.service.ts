@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { UsersService } from '../users/users.service';
 import { SessionService } from '../session/session.service';
@@ -88,6 +88,41 @@ export class AuthService {
     return {
       ok: true
     };
+  }
+
+  async switchActiveRole(request: Request, role: string) {
+    const sessionId = this.readSessionId(request);
+    const previous = await this.sessionService.get(sessionId);
+    if (!previous) {
+      throw new UnauthorizedException('authentication required');
+    }
+
+    try {
+      const session = await this.sessionService.switchActiveRole(sessionId, role);
+      await this.auditService.write({
+        actorUserId: session.user.id,
+        actorRoleCode: session.user.role,
+        action: 'auth.active-role.switch',
+        entityType: 'session',
+        entityId: session.id,
+        beforeJson: {
+          activeRole: previous.user.role
+        },
+        afterJson: {
+          activeRole: session.user.role
+        }
+      });
+
+      return {
+        ok: true,
+        user: session.user
+      };
+    } catch (error) {
+      if (error instanceof ForbiddenException || error instanceof UnauthorizedException) {
+        throw error;
+      }
+      throw error;
+    }
   }
 
   private readSessionId(request: Request) {

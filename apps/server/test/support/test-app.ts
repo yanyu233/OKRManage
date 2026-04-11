@@ -46,3 +46,14 @@ export async function loginAsEmployee(app: INestApplication) {
 
   return agent;
 }
+
+export async function loginAsGroupLeader(app: INestApplication) {
+  const agent = request.agent(app.getHttpServer());
+
+  await agent.post('/api/auth/manual-login').send({
+    loginName: 'group.leader',
+    password: 'Leader123!'
+  }).expect(200);
+
+  return agent;
+}
