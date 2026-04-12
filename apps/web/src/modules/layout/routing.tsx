@@ -16,46 +16,34 @@ export type NavigationSection = {
   items: NavigationLink[];
 };
 
-const ROLE_LINKS: Record<UserRole, NavigationLink[]> = {
-  'system-admin': [
-    {
-      key: '/admin/org',
-      label: '系统配置',
-      role: 'system-admin'
-    }
-  ],
-  'section-leader': [
-    {
-      key: '/leader/workbench',
-      label: '评分工作台',
-      role: 'section-leader'
-    },
-    {
-      key: '/leader/ranking',
-      label: '评分排名',
-      role: 'section-leader'
-    }
-  ],
-  'group-leader': [
-    {
-      key: '/leader/workbench',
-      label: '评分工作台',
-      role: 'group-leader'
-    },
-    {
-      key: '/leader/ranking',
-      label: '评分排名',
-      role: 'group-leader'
-    }
-  ],
-  employee: [
-    {
-      key: '/employee/okr',
-      label: '我的 OKR',
-      role: 'employee'
-    }
-  ]
-};
+const ADMIN_ITEMS: NavigationLink[] = [
+  {
+    key: '/admin/org',
+    label: '系统配置',
+    role: 'system-admin'
+  }
+];
+
+const LEADER_ITEMS: NavigationLink[] = [
+  {
+    key: '/leader/workbench',
+    label: '评分工作台',
+    role: 'group-leader'
+  },
+  {
+    key: '/leader/ranking',
+    label: '评分排名',
+    role: 'group-leader'
+  }
+];
+
+const EMPLOYEE_ITEMS: NavigationLink[] = [
+  {
+    key: '/employee/okr',
+    label: '我的 OKR',
+    role: 'employee'
+  }
+];
 
 const MENU_ICONS: Record<string, ReactNode> = {
   '/admin/org': <SettingOutlined />,
@@ -78,11 +66,34 @@ export function defaultPathForRole(role: UserRole) {
 }
 
 export function buildNavigationSections(user: SessionUser): NavigationSection[] {
-  return getAssignedRoles(user).map((role) => ({
-    role,
-    title: getRoleLabel(role),
-    items: ROLE_LINKS[role]
-  }));
+  const roles = getAssignedRoles(user);
+  const sections: NavigationSection[] = [];
+
+  if (roles.includes('system-admin')) {
+    sections.push({
+      role: 'system-admin',
+      title: getRoleLabel('system-admin'),
+      items: ADMIN_ITEMS
+    });
+  }
+
+  if (hasLeaderCapability(roles)) {
+    sections.push({
+      role: roles.includes('group-leader') ? 'group-leader' : 'section-leader',
+      title: '科室负责人/小组负责人',
+      items: LEADER_ITEMS
+    });
+  }
+
+  if (roles.includes('employee')) {
+    sections.push({
+      role: 'employee',
+      title: getRoleLabel('employee'),
+      items: EMPLOYEE_ITEMS
+    });
+  }
+
+  return sections;
 }
 
 export function menuItemsForUser(user: SessionUser): ItemType[] {
@@ -129,12 +140,14 @@ export function canAccessRoute(user: SessionUser, allow: UserRole[]) {
 }
 
 export function resolveTargetRoleForPath(user: SessionUser, pathname: string): UserRole | null {
+  const roles = getAssignedRoles(user);
+
   if (pathname.startsWith('/admin/')) {
-    return getAssignedRoles(user).includes('system-admin') ? 'system-admin' : null;
+    return roles.includes('system-admin') ? 'system-admin' : null;
   }
 
   if (pathname.startsWith('/employee/')) {
-    return getAssignedRoles(user).includes('employee') ? 'employee' : null;
+    return roles.includes('employee') ? 'employee' : null;
   }
 
   if (pathname.startsWith('/leader/')) {
@@ -142,7 +155,13 @@ export function resolveTargetRoleForPath(user: SessionUser, pathname: string): U
       return user.activeRole;
     }
 
-    return getAssignedRoles(user).find((role) => role === 'section-leader' || role === 'group-leader') ?? null;
+    if (roles.includes('group-leader')) {
+      return 'group-leader';
+    }
+
+    if (roles.includes('section-leader')) {
+      return 'section-leader';
+    }
   }
 
   return null;
@@ -160,6 +179,10 @@ function getAssignedRoles(user: SessionUser): UserRole[] {
   }
 
   return Array.from(new Set(roles));
+}
+
+function hasLeaderCapability(roles: UserRole[]) {
+  return roles.includes('section-leader') || roles.includes('group-leader');
 }
 
 function toMenuItem(item: NavigationLink): ItemType {

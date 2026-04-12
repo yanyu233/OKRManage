@@ -17,6 +17,7 @@ export type LeaderKeyResultRecord = {
   name: string;
   description: string | null;
   points: number;
+  canScore: boolean;
   completionState: string;
   reviewScore: number | null;
   reviewComment: string | null;
@@ -31,6 +32,8 @@ export type LeaderGoalSummaryRecord = {
   description: string | null;
   status: string;
   totalPoints: number;
+  canScore: boolean;
+  isTemplateGoal: boolean;
   keyResultCount: number;
   scoredKeyResultCount: number;
   proofCount: number;
@@ -44,9 +47,11 @@ export type LeaderGoalDetailRecord = LeaderGoalSummaryRecord & {
 export type LeaderEmployeeSummaryRecord = {
   id: string;
   name: string;
+  sectionId: string | null;
   sectionName: string | null;
   reviewGroupId: string | null;
   reviewGroupName: string | null;
+  canScore: boolean;
   goalCount: number;
   keyResultCount: number;
   scoredKeyResultCount: number;
@@ -133,6 +138,33 @@ export type LeaderScoreUpdateResult = {
   after: LeaderKeyResultRecord;
 };
 
+export type LeaderBulkScoreSkipReason = 'out-of-scope' | 'already-scored';
+
+export type LeaderBulkScoreSkipRecord = {
+  keyResultId: string;
+  reason: LeaderBulkScoreSkipReason;
+};
+
+export type LeaderBulkScoreInput = {
+  year: number;
+  quarter: number;
+  sectionId?: string | null;
+  reviewGroupId?: string | null;
+  employeeIds?: string[];
+  goalIds?: string[];
+  keyResultIds?: string[];
+  score: number;
+  comment: string | null;
+  overwriteExisting: boolean;
+  excludeTemplateGoals: boolean;
+};
+
+export type LeaderBulkScoreResult = {
+  updatedCount: number;
+  skippedCount: number;
+  skipped: LeaderBulkScoreSkipRecord[];
+};
+
 export interface LeaderRepository {
   getWorkbench(
     actor: AuthUser,
@@ -142,6 +174,7 @@ export interface LeaderRepository {
     goalId?: string | null
   ): Promise<LeaderWorkbenchRecord>;
   updateKeyResultScore(actor: AuthUser, krId: string, score: number, comment: string | null): Promise<LeaderScoreUpdateResult>;
+  batchScore(actor: AuthUser, input: LeaderBulkScoreInput): Promise<LeaderBulkScoreResult>;
   getRanking(
     actor: AuthUser,
     year: number,

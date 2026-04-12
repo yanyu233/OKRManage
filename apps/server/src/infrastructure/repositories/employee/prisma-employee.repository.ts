@@ -24,6 +24,7 @@ type EmployeeWithQuarterData = Prisma.UserGetPayload<{
     reviewGroup: true;
     ownedGoals: {
       include: {
+        importedTemplates: true;
         keyResults: {
           include: {
             proofs: true;
@@ -203,37 +204,22 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
       throw new DomainValidationError('selected template already imported for this quarter');
     }
 
-    const existingGoals = await this.prisma.goal.findMany({
-      where: {
-        ownerUserId: actor.id,
-        year,
-        quarter
-      },
-      select: {
-        code: true
-      }
-    });
-
-    let nextGoalIndex = getNextGoalIndex(existingGoals.map((goal) => goal.code));
-
     const importedGoals = await this.prisma.$transaction(async (transaction) => {
-      const summaries: EmployeeGoalSummaryRecord[] = [];
+      const importedGoalIds: string[] = [];
+      const temporaryCodePrefix = `TMP-IMPORT-${Date.now()}`;
 
-      for (const templateId of templateIds) {
+      for (const [index, templateId] of templateIds.entries()) {
         const template = templates.find((entry) => entry.id === templateId);
         if (!template) {
           throw new DomainValidationError('selected template is unavailable');
         }
-
-        const goalCode = `O${nextGoalIndex}`;
-        nextGoalIndex += 1;
 
         const goal = await transaction.goal.create({
           data: {
             ownerUserId: actor.id,
             year,
             quarter,
-            code: goalCode,
+            code: `${temporaryCodePrefix}-${index + 1}`,
             name: template.name,
             description: template.description,
             status: 'draft',
@@ -263,22 +249,31 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
             quarter
           }
         });
-
-        summaries.push({
-          id: goal.id,
-          code: goal.code,
-          name: goal.name,
-          description: goal.description,
-          status: goal.status,
-          totalPoints: goal.totalPoints,
-          keyResultCount: template.keyResults.length,
-          completedKeyResultCount: 0,
-          proofCount: 0,
-          currentScore: null
-        });
+        importedGoalIds.push(goal.id);
       }
 
-      return summaries;
+      await this.resequenceQuarterGoals(transaction, actor.id, year, quarter);
+
+      const importedGoals = await transaction.goal.findMany({
+        where: {
+          id: {
+            in: importedGoalIds
+          }
+        },
+        include: {
+          importedTemplates: true,
+          keyResults: {
+            include: {
+              proofs: true
+            }
+          }
+        }
+      });
+
+      return importedGoals
+        .slice()
+        .sort((left, right) => compareGoalCode(left.code, right.code))
+        .map((goal) => this.toGoalSummary(goal as GoalWithQuarterData));
     });
 
     return {
@@ -292,6 +287,7 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
     const goal = await this.prisma.goal.findUnique({
       where: { id: goalId },
       include: {
+        importedTemplates: true,
         keyResults: {
           orderBy: {
             code: 'asc'
@@ -458,10 +454,8 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
             year,
             quarter
           },
-          orderBy: {
-            createdAt: 'asc'
-          },
           include: {
+            importedTemplates: true,
             keyResults: {
               orderBy: {
                 code: 'asc'
@@ -483,33 +477,15 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
       throw new NotFoundException('employee not found');
     }
 
-    return employee;
+    return {
+      ...employee,
+      ownedGoals: employee.ownedGoals.slice().sort((left, right) => compareGoalCode(left.code, right.code))
+    };
   }
 
   private async canLeaderAccessEmployee(actor: AuthUser, employee: User): Promise<boolean> {
-    const where = await this.buildVisibleEmployeeWhere(actor);
     const count = await this.prisma.user.count({
       where: {
-        ...where,
-        id: employee.id
-      }
-    });
-
-    return count > 0;
-  }
-
-  private async buildVisibleEmployeeWhere(actor: AuthUser): Promise<Prisma.UserWhereInput> {
-    if (actor.role === 'section-leader') {
-      const bindings = await this.prisma.sectionLeaderBinding.findMany({
-        where: {
-          leaderUserId: actor.id
-        },
-        select: {
-          sectionId: true
-        }
-      });
-
-      return {
         isActive: true,
         roleAssignments: {
           some: {
@@ -517,33 +493,11 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
             isEnabled: true
           }
         },
-        sectionId: {
-          in: bindings.map((binding) => binding.sectionId)
-        }
-      };
-    }
-
-    const bindings = await this.prisma.groupLeaderBinding.findMany({
-      where: {
-        leaderUserId: actor.id
-      },
-      select: {
-        reviewGroupId: true
+        id: employee.id
       }
     });
 
-    return {
-      isActive: true,
-      roleAssignments: {
-        some: {
-          roleCode: 'employee',
-          isEnabled: true
-        }
-      },
-      reviewGroupId: {
-        in: bindings.map((binding) => binding.reviewGroupId)
-      }
-    };
+    return count > 0;
   }
 
   private toEmployeeQuarterSummary(employee: EmployeeWithQuarterData): EmployeeQuarterSummaryRecord {
@@ -579,6 +533,7 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
 
   private toGoalDetail(goal: GoalWithQuarterData | Prisma.GoalGetPayload<{
     include: {
+      importedTemplates: true;
       keyResults: { include: { proofs: true } };
       owner: true;
     };
@@ -621,6 +576,54 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
       uploadedAt: proof.uploadedAt.toISOString()
     };
   }
+
+  private async resequenceQuarterGoals(
+    transaction: Prisma.TransactionClient,
+    ownerUserId: string,
+    year: number,
+    quarter: number
+  ) {
+    const goals = await transaction.goal.findMany({
+      where: {
+        ownerUserId,
+        year,
+        quarter
+      },
+      include: {
+        importedTemplates: {
+          orderBy: {
+            createdAt: 'asc'
+          }
+        }
+      }
+    });
+
+    const templateGoals = goals
+      .filter((goal) => goal.importedTemplates.length > 0)
+      .sort((left, right) => compareImportedGoals(left, right));
+    const regularGoals = goals
+      .filter((goal) => goal.importedTemplates.length === 0)
+      .sort((left, right) => compareGoalCode(left.code, right.code));
+    const orderedGoals = [...templateGoals, ...regularGoals];
+
+    for (const [index, goal] of orderedGoals.entries()) {
+      await transaction.goal.update({
+        where: { id: goal.id },
+        data: {
+          code: `TMP-ORDER-${index + 1}-${goal.id}`
+        }
+      });
+    }
+
+    for (const [index, goal] of orderedGoals.entries()) {
+      await transaction.goal.update({
+        where: { id: goal.id },
+        data: {
+          code: `O${index + 1}`
+        }
+      });
+    }
+  }
 }
 
 function scoreFromKeyResults(
@@ -635,15 +638,25 @@ function scoreFromKeyResults(
   return Number(total.toFixed(1));
 }
 
-function getNextGoalIndex(goalCodes: string[]) {
-  const maxIndex = goalCodes.reduce((currentMax, code) => {
-    const match = /^O(\d+)$/i.exec(code.trim());
-    if (!match) {
-      return currentMax;
-    }
+function compareGoalCode(left: string, right: string) {
+  return extractGoalCodeIndex(left) - extractGoalCodeIndex(right) || left.localeCompare(right);
+}
 
-    return Math.max(currentMax, Number(match[1]));
-  }, 0);
+function extractGoalCodeIndex(code: string) {
+  const match = /^O(\d+)$/i.exec(code.trim());
+  return match ? Number(match[1]) : Number.MAX_SAFE_INTEGER;
+}
 
-  return maxIndex + 1;
+function compareImportedGoals(
+  left: { importedTemplates: Array<{ createdAt: Date }>; createdAt: Date; code: string },
+  right: { importedTemplates: Array<{ createdAt: Date }>; createdAt: Date; code: string }
+) {
+  const leftTimestamp = left.importedTemplates[0]?.createdAt?.getTime?.() ?? left.createdAt.getTime();
+  const rightTimestamp = right.importedTemplates[0]?.createdAt?.getTime?.() ?? right.createdAt.getTime();
+
+  if (leftTimestamp !== rightTimestamp) {
+    return leftTimestamp - rightTimestamp;
+  }
+
+  return compareGoalCode(left.code, right.code);
 }

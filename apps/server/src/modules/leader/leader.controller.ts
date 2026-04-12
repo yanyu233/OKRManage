@@ -4,8 +4,10 @@ import {
   Controller,
   ForbiddenException,
   Get,
+  HttpCode,
   Param,
   ParseIntPipe,
+  Post,
   Put,
   Query,
   Req,
@@ -16,6 +18,7 @@ import { SessionService } from '../session/session.service';
 import { AuthUser } from '../../shared/types/auth-user';
 import { DomainValidationError } from '../../shared/errors/domain-validation.error';
 import { LeaderService } from './leader.service';
+import { BulkScoreDto } from './dto/bulk-score.dto';
 import { UpdateKrScoreDto } from './dto/update-kr-score.dto';
 
 @Controller('leader')
@@ -52,6 +55,30 @@ export class LeaderController {
 
     try {
       return await this.leaderService.updateKeyResultScore(actor, krId, payload.score, payload.comment);
+    } catch (error) {
+      this.rethrowDomainError(error);
+    }
+  }
+
+  @Post('bulk-score')
+  @HttpCode(200)
+  async bulkScore(@Req() request: Request, @Body() payload: BulkScoreDto) {
+    const actor = await this.requireLeader(request);
+
+    try {
+      return await this.leaderService.batchScore(actor, {
+        year: payload.year,
+        quarter: payload.quarter,
+        sectionId: payload.sectionId ?? null,
+        reviewGroupId: payload.reviewGroupId ?? null,
+        employeeIds: payload.employeeIds ?? [],
+        goalIds: payload.goalIds ?? [],
+        keyResultIds: payload.keyResultIds ?? [],
+        score: payload.score,
+        comment: payload.comment ?? null,
+        overwriteExisting: payload.overwriteExisting ?? false,
+        excludeTemplateGoals: payload.excludeTemplateGoals ?? false
+      });
     } catch (error) {
       this.rethrowDomainError(error);
     }

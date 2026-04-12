@@ -53,7 +53,10 @@ try {
   $env:Path = "$nodeDir;$previousPath"
   Push-Location $appRoot
   Write-Host '[smoke] resetting database'
+  $previousSkipPrismaGenerate = $env:OKR_SKIP_PRISMA_GENERATE
+  $env:OKR_SKIP_PRISMA_GENERATE = '1'
   & powershell -NoProfile -ExecutionPolicy Bypass -File $dbResetScript
+  $env:OKR_SKIP_PRISMA_GENERATE = $previousSkipPrismaGenerate
   if ($LASTEXITCODE -ne 0) {
     throw 'db-reset failed'
   }

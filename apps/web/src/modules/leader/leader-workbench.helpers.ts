@@ -68,3 +68,58 @@ export function filterWorkbenchKeyResults(keyResults: LeaderGoalDetail['keyResul
     )
   );
 }
+
+export function buildWorkbenchFilterOptions(employees: LeaderWorkbenchResponse['employees']) {
+  const sections = uniqueBy(
+    employees
+      .filter((employee) => employee.sectionId && employee.sectionName)
+      .map((employee) => ({
+        value: employee.sectionId as string,
+        label: employee.sectionName as string
+      })),
+    (item) => item.value
+  );
+
+  const reviewGroups = uniqueBy(
+    employees
+      .filter((employee) => employee.reviewGroupId && employee.reviewGroupName)
+      .map((employee) => ({
+        value: employee.reviewGroupId as string,
+        label: employee.reviewGroupName as string
+      })),
+    (item) => item.value
+  );
+
+  return {
+    sections,
+    reviewGroups
+  };
+}
+
+export function filterBulkScoreEmployees(
+  employees: LeaderWorkbenchResponse['employees'],
+  filters: { sectionId?: string | null; reviewGroupId?: string | null }
+) {
+  return employees.filter((employee) => {
+    if (filters.sectionId && employee.sectionId !== filters.sectionId) {
+      return false;
+    }
+
+    if (filters.reviewGroupId && employee.reviewGroupId !== filters.reviewGroupId) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
+export function selectAllBulkEmployeeIds(
+  employees: LeaderWorkbenchResponse['employees'],
+  filters: { sectionId?: string | null; reviewGroupId?: string | null }
+) {
+  return filterBulkScoreEmployees(employees, filters).map((employee) => employee.id);
+}
+
+function uniqueBy<T>(items: T[], getKey: (item: T) => string) {
+  return Array.from(new Map(items.map((item) => [getKey(item), item])).values());
+}

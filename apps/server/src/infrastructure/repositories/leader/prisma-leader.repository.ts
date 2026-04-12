@@ -4,6 +4,8 @@ import { PrismaService } from '../../database/prisma.service';
 import { REVIEW_GRADE_CODES } from '../../../shared/constants/review-grade-codes';
 import { AuthUser } from '../../../shared/types/auth-user';
 import {
+  LeaderBulkScoreInput,
+  LeaderBulkScoreResult,
   LeaderEmployeeSummaryRecord,
   LeaderGoalDetailRecord,
   LeaderGoalSummaryRecord,
@@ -26,6 +28,7 @@ type EmployeeWithQuarterData = Prisma.UserGetPayload<{
     reviewGroup: true;
     ownedGoals: {
       include: {
+        importedTemplates: true;
         keyResults: {
           include: {
             proofs: true;
@@ -49,8 +52,9 @@ export class PrismaLeaderRepository implements LeaderRepository {
     employeeId?: string | null,
     goalId?: string | null
   ): Promise<LeaderWorkbenchRecord> {
-    const employees = await this.getVisibleEmployees(actor, year, quarter);
-    const employeeSummaries = employees.map((employee) => this.toEmployeeSummary(employee));
+    const employees = await this.getVisibleEmployees(year, quarter);
+    const scoringScope = await this.getScoringScope(actor);
+    const employeeSummaries = employees.map((employee) => this.toEmployeeSummary(employee, canScoreEmployee(employee, scoringScope)));
     const selectedEmployee = this.pickEmployee(employees, employeeId);
 
     if (!selectedEmployee) {
@@ -64,16 +68,17 @@ export class PrismaLeaderRepository implements LeaderRepository {
       };
     }
 
-    const goalSummaries = selectedEmployee.ownedGoals.map((goal) => this.toGoalSummary(goal));
+    const selectedEmployeeCanScore = canScoreEmployee(selectedEmployee, scoringScope);
+    const goalSummaries = selectedEmployee.ownedGoals.map((goal) => this.toGoalSummary(goal, selectedEmployeeCanScore));
     const selectedGoal = this.pickGoal(selectedEmployee.ownedGoals, goalId);
 
     return {
       year,
       quarter,
       employees: employeeSummaries,
-      selectedEmployee: this.toEmployeeSummary(selectedEmployee),
+      selectedEmployee: this.toEmployeeSummary(selectedEmployee, selectedEmployeeCanScore),
       goals: goalSummaries,
-      selectedGoal: selectedGoal ? this.toGoalDetail(selectedGoal) : null
+      selectedGoal: selectedGoal ? this.toGoalDetail(selectedGoal, selectedEmployeeCanScore) : null
     };
   }
 
@@ -98,8 +103,8 @@ export class PrismaLeaderRepository implements LeaderRepository {
       throw new ForbiddenException('key result not found');
     }
 
-    const canAccess = await this.canAccessEmployee(actor, keyResult.goal.owner);
-    if (!canAccess) {
+    const canScore = await this.canScoreEmployee(actor, keyResult.goal.owner);
+    if (!canScore) {
       throw new ForbiddenException('leader scope mismatch');
     }
 
@@ -130,6 +135,102 @@ export class PrismaLeaderRepository implements LeaderRepository {
     };
   }
 
+  private async canScoreEmployee(actor: AuthUser, employee: User) {
+    return canScoreEmployee(employee, await this.getScoringScope(actor));
+  }
+
+  async batchScore(actor: AuthUser, input: LeaderBulkScoreInput): Promise<LeaderBulkScoreResult> {
+    const employees = await this.getVisibleEmployees(input.year, input.quarter);
+    const scoringScope = await this.getScoringScope(actor);
+    const employeeIdFilter = new Set(input.employeeIds ?? []);
+    const goalIdFilter = new Set(input.goalIds ?? []);
+    const keyResultIdFilter = new Set(input.keyResultIds ?? []);
+
+    const filteredEmployees = employees.filter((employee) => {
+      if (input.sectionId && employee.sectionId !== input.sectionId) {
+        return false;
+      }
+
+      if (input.reviewGroupId && employee.reviewGroupId !== input.reviewGroupId) {
+        return false;
+      }
+
+      if (employeeIdFilter.size > 0 && !employeeIdFilter.has(employee.id)) {
+        return false;
+      }
+
+      return true;
+    });
+
+    const candidates = filteredEmployees.flatMap((employee) =>
+      employee.ownedGoals
+        .filter((goal) => {
+          if (goalIdFilter.size > 0 && !goalIdFilter.has(goal.id)) {
+            return false;
+          }
+
+          if (input.excludeTemplateGoals && goal.importedTemplates.length > 0) {
+            return false;
+          }
+
+          return true;
+        })
+        .flatMap((goal) =>
+          goal.keyResults
+            .filter((keyResult) => keyResultIdFilter.size === 0 || keyResultIdFilter.has(keyResult.id))
+            .map((keyResult) => ({
+              employee,
+              goal,
+              keyResult
+            }))
+        )
+    );
+
+    const uniqueCandidates = Array.from(new Map(candidates.map((entry) => [entry.keyResult.id, entry])).values());
+    const skipped: LeaderBulkScoreResult['skipped'] = [];
+    const updatable = uniqueCandidates.filter((entry) => {
+      if (!canScoreEmployee(entry.employee, scoringScope)) {
+        skipped.push({
+          keyResultId: entry.keyResult.id,
+          reason: 'out-of-scope'
+        });
+        return false;
+      }
+
+      if (!input.overwriteExisting && entry.keyResult.reviewScore !== null) {
+        skipped.push({
+          keyResultId: entry.keyResult.id,
+          reason: 'already-scored'
+        });
+        return false;
+      }
+
+      return true;
+    });
+
+    if (updatable.length > 0) {
+      await this.prisma.$transaction(
+        updatable.map((entry) =>
+          this.prisma.keyResult.update({
+            where: { id: entry.keyResult.id },
+            data: {
+              reviewScore: input.score,
+              reviewComment: input.comment,
+              reviewedAt: new Date(),
+              reviewedByUserId: actor.id
+            }
+          })
+        )
+      );
+    }
+
+    return {
+      updatedCount: updatable.length,
+      skippedCount: skipped.length,
+      skipped
+    };
+  }
+
   async getRanking(
     actor: AuthUser,
     year: number,
@@ -137,8 +238,8 @@ export class PrismaLeaderRepository implements LeaderRepository {
     reviewGroupId?: string | null,
     employeeId?: string | null
   ): Promise<LeaderRankingRecord> {
-    const employees = await this.getVisibleEmployees(actor, year, quarter);
-    const reviewGroups = this.listVisibleReviewGroups(actor, employees);
+    const employees = await this.getVisibleEmployees(year, quarter);
+    const reviewGroups = await this.listVisibleReviewGroups();
     const selectedReviewGroup = this.pickReviewGroup(reviewGroups, reviewGroupId);
 
     if (!selectedReviewGroup) {
@@ -187,11 +288,17 @@ export class PrismaLeaderRepository implements LeaderRepository {
     };
   }
 
-  private async getVisibleEmployees(actor: AuthUser, year: number, quarter: number): Promise<EmployeeWithQuarterData[]> {
-    const where = await this.buildVisibleEmployeeWhere(actor);
-
+  private async getVisibleEmployees(year: number, quarter: number): Promise<EmployeeWithQuarterData[]> {
     return this.prisma.user.findMany({
-      where,
+      where: {
+        isActive: true,
+        roleAssignments: {
+          some: {
+            roleCode: 'employee',
+            isEnabled: true
+          }
+        }
+      },
       orderBy: {
         createdAt: 'asc'
       },
@@ -203,10 +310,8 @@ export class PrismaLeaderRepository implements LeaderRepository {
             year,
             quarter
           },
-          orderBy: {
-            createdAt: 'asc'
-          },
           include: {
+            importedTemplates: true,
             keyResults: {
               orderBy: {
                 code: 'asc'
@@ -222,66 +327,12 @@ export class PrismaLeaderRepository implements LeaderRepository {
           }
         }
       }
-    });
-  }
-
-  private async buildVisibleEmployeeWhere(actor: AuthUser): Promise<Prisma.UserWhereInput> {
-    if (actor.role === 'section-leader') {
-      const bindings = await this.prisma.sectionLeaderBinding.findMany({
-        where: {
-          leaderUserId: actor.id
-        },
-        select: {
-          sectionId: true
-        }
-      });
-
-      return {
-        isActive: true,
-        roleAssignments: {
-          some: {
-            roleCode: 'employee',
-            isEnabled: true
-          }
-        },
-        sectionId: {
-          in: bindings.map((binding) => binding.sectionId)
-        }
-      };
-    }
-
-    const bindings = await this.prisma.groupLeaderBinding.findMany({
-      where: {
-        leaderUserId: actor.id
-      },
-      select: {
-        reviewGroupId: true
-      }
-    });
-
-    return {
-      isActive: true,
-      roleAssignments: {
-        some: {
-          roleCode: 'employee',
-          isEnabled: true
-        }
-      },
-      reviewGroupId: {
-        in: bindings.map((binding) => binding.reviewGroupId)
-      }
-    };
-  }
-
-  private async canAccessEmployee(actor: AuthUser, employee: User): Promise<boolean> {
-    const where = await this.buildVisibleEmployeeWhere(actor);
-    const count = await this.prisma.user.count({
-      where: {
-        ...where,
-        id: employee.id
-      }
-    });
-    return count > 0;
+    }).then((employees) =>
+      employees.map((employee) => ({
+        ...employee,
+        ownedGoals: employee.ownedGoals.slice().sort((left, right) => compareGoalCode(left.code, right.code))
+      }))
+    );
   }
 
   private pickEmployee(employees: EmployeeWithQuarterData[], employeeId?: string | null) {
@@ -314,30 +365,20 @@ export class PrismaLeaderRepository implements LeaderRepository {
     return goals[0];
   }
 
-  private listVisibleReviewGroups(actor: AuthUser, employees: EmployeeWithQuarterData[]): LeaderReviewGroupRecord[] {
-    if (actor.role === 'group-leader') {
-      const groups = new Map<string, LeaderReviewGroupRecord>();
-      for (const employee of employees) {
-        if (employee.reviewGroupId && employee.reviewGroup) {
-          groups.set(employee.reviewGroupId, {
-            id: employee.reviewGroupId,
-            name: employee.reviewGroup.name
-          });
-        }
+  private async listVisibleReviewGroups(): Promise<LeaderReviewGroupRecord[]> {
+    const reviewGroups = await this.prisma.reviewGroup.findMany({
+      where: {
+        isActive: true
+      },
+      orderBy: {
+        name: 'asc'
       }
-      return [...groups.values()].sort((left, right) => left.name.localeCompare(right.name));
-    }
+    });
 
-    const groups = new Map<string, LeaderReviewGroupRecord>();
-    for (const employee of employees) {
-      if (employee.reviewGroupId && employee.reviewGroup) {
-        groups.set(employee.reviewGroupId, {
-          id: employee.reviewGroupId,
-          name: employee.reviewGroup.name
-        });
-      }
-    }
-    return [...groups.values()].sort((left, right) => left.name.localeCompare(right.name));
+    return reviewGroups.map((reviewGroup) => ({
+      id: reviewGroup.id,
+      name: reviewGroup.name
+    }));
   }
 
   private pickReviewGroup(reviewGroups: LeaderReviewGroupRecord[], reviewGroupId?: string | null) {
@@ -386,16 +427,18 @@ export class PrismaLeaderRepository implements LeaderRepository {
     };
   }
 
-  private toEmployeeSummary(employee: EmployeeWithQuarterData): LeaderEmployeeSummaryRecord {
+  private toEmployeeSummary(employee: EmployeeWithQuarterData, canScore: boolean): LeaderEmployeeSummaryRecord {
     const keyResults = employee.ownedGoals.flatMap((goal) => goal.keyResults);
     const scoredKeyResults = keyResults.filter((keyResult) => keyResult.reviewScore !== null);
 
     return {
       id: employee.id,
       name: employee.name,
+      sectionId: employee.sectionId ?? null,
       sectionName: employee.section?.name ?? null,
       reviewGroupId: employee.reviewGroupId ?? null,
       reviewGroupName: employee.reviewGroup?.name ?? null,
+      canScore,
       goalCount: employee.ownedGoals.length,
       keyResultCount: keyResults.length,
       scoredKeyResultCount: scoredKeyResults.length,
@@ -405,7 +448,7 @@ export class PrismaLeaderRepository implements LeaderRepository {
     };
   }
 
-  private toGoalSummary(goal: GoalWithQuarterData): LeaderGoalSummaryRecord {
+  private toGoalSummary(goal: GoalWithQuarterData, canScore: boolean): LeaderGoalSummaryRecord {
     const keyResults = goal.keyResults;
     const scoredKeyResultCount = keyResults.filter((keyResult) => keyResult.reviewScore !== null).length;
 
@@ -416,6 +459,8 @@ export class PrismaLeaderRepository implements LeaderRepository {
       description: goal.description,
       status: goal.status,
       totalPoints: goal.totalPoints,
+      canScore,
+      isTemplateGoal: goal.importedTemplates.length > 0,
       keyResultCount: keyResults.length,
       scoredKeyResultCount,
       proofCount: keyResults.reduce((sum, keyResult) => sum + keyResult.proofs.length, 0),
@@ -423,16 +468,17 @@ export class PrismaLeaderRepository implements LeaderRepository {
     };
   }
 
-  private toGoalDetail(goal: GoalWithQuarterData): LeaderGoalDetailRecord {
-    const summary = this.toGoalSummary(goal);
+  private toGoalDetail(goal: GoalWithQuarterData, canScore: boolean): LeaderGoalDetailRecord {
+    const summary = this.toGoalSummary(goal, canScore);
     return {
       ...summary,
-      keyResults: goal.keyResults.map((keyResult) => this.toKeyResultRecord(keyResult))
+      keyResults: goal.keyResults.map((keyResult) => this.toKeyResultRecord(keyResult, canScore))
     };
   }
 
   private toKeyResultRecord(
-    keyResult: KeyResultWithProofs
+    keyResult: KeyResultWithProofs,
+    canScore = true
   ): LeaderKeyResultRecord {
     return {
       id: keyResult.id,
@@ -440,6 +486,7 @@ export class PrismaLeaderRepository implements LeaderRepository {
       name: keyResult.name,
       description: keyResult.description,
       points: keyResult.points,
+      canScore,
       completionState: keyResult.completionState,
       reviewScore: keyResult.reviewScore,
       reviewComment: keyResult.reviewComment,
@@ -462,7 +509,7 @@ export class PrismaLeaderRepository implements LeaderRepository {
   }
 
   private toRankingEntry(employee: EmployeeWithQuarterData): LeaderRankingEntryRecord {
-    const summary = this.toEmployeeSummary(employee);
+    const summary = this.toEmployeeSummary(employee, false);
     return {
       employeeId: summary.id,
       employeeName: summary.name,
@@ -514,6 +561,32 @@ export class PrismaLeaderRepository implements LeaderRepository {
 
     return ranking;
   }
+
+  private async getScoringScope(actor: AuthUser) {
+    const [sectionBindings, groupBindings] = await Promise.all([
+      this.prisma.sectionLeaderBinding.findMany({
+        where: {
+          leaderUserId: actor.id
+        },
+        select: {
+          sectionId: true
+        }
+      }),
+      this.prisma.groupLeaderBinding.findMany({
+        where: {
+          leaderUserId: actor.id
+        },
+        select: {
+          reviewGroupId: true
+        }
+      })
+    ]);
+
+    return {
+      sectionIds: new Set(sectionBindings.map((binding) => binding.sectionId)),
+      reviewGroupIds: new Set(groupBindings.map((binding) => binding.reviewGroupId))
+    };
+  }
 }
 
 function scoreFromKeyResults(
@@ -560,4 +633,23 @@ function buildSeatSummary(
     seatCount: quotas.find((entry) => entry.gradeCode === gradeCode)?.seatCount ?? 0,
     occupiedCount: ranking.filter((entry) => entry.currentGrade === gradeCode).length
   }));
+}
+
+function canScoreEmployee(
+  employee: Pick<User, 'sectionId' | 'reviewGroupId'>,
+  scope: { sectionIds: Set<string>; reviewGroupIds: Set<string> }
+) {
+  return (
+    (employee.sectionId ? scope.sectionIds.has(employee.sectionId) : false) ||
+    (employee.reviewGroupId ? scope.reviewGroupIds.has(employee.reviewGroupId) : false)
+  );
+}
+
+function compareGoalCode(left: string, right: string) {
+  return extractGoalCodeIndex(left) - extractGoalCodeIndex(right) || left.localeCompare(right);
+}
+
+function extractGoalCodeIndex(code: string) {
+  const match = /^O(\d+)$/i.exec(code.trim());
+  return match ? Number(match[1]) : Number.MAX_SAFE_INTEGER;
 }

@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  buildNavigationSections,
-  canAccessRoute,
-  resolveTargetRoleForPath,
-  selectedMenuKeyForPath
-} from '../src/modules/layout/routing';
+import { buildNavigationSections, canAccessRoute, menuItemsForUser, resolveTargetRoleForPath, selectedMenuKeyForPath } from '../src/modules/layout/routing';
 import type { SessionUser } from '../src/shared/types/session';
 
 const employeeUser: SessionUser = {
@@ -40,7 +35,7 @@ const dualRoleUser: SessionUser = {
 };
 
 describe('multi-role routing', () => {
-  it('builds a single employee menu section for employee-only users', () => {
+  it('builds a single employee section for employee-only users', () => {
     const sections = buildNavigationSections(employeeUser);
 
     expect(sections).toEqual([
@@ -58,13 +53,14 @@ describe('multi-role routing', () => {
     ]);
   });
 
-  it('builds grouped leader and employee sections for dual-role users', () => {
+  it('merges leader capabilities into one section and keeps employee menu for dual-role users', () => {
     const sections = buildNavigationSections(dualRoleUser);
+    const items = menuItemsForUser(dualRoleUser);
 
     expect(sections).toEqual([
       {
         role: 'group-leader',
-        title: '小组负责人',
+        title: '科室负责人/小组负责人',
         items: [
           {
             key: '/leader/workbench',
@@ -90,6 +86,10 @@ describe('multi-role routing', () => {
         ]
       }
     ]);
+
+    expect(items).toHaveLength(2);
+    const totalChildren = items.reduce((sum, item) => sum + ((item as { children?: unknown[] }).children?.length ?? 1), 0);
+    expect(totalChildren).toBe(3);
   });
 
   it('resolves target active role from the destination path', () => {

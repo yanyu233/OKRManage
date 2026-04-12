@@ -1,4 +1,10 @@
-import type { LeaderRankingResponse, LeaderWorkbenchResponse, UpdateLeaderKrScoreInput } from '../types/leader';
+import type {
+  BulkLeaderKrScoreInput,
+  BulkLeaderKrScoreResponse,
+  LeaderRankingResponse,
+  LeaderWorkbenchResponse,
+  UpdateLeaderKrScoreInput
+} from '../types/leader';
 import { apiRequest } from './http';
 
 type WorkbenchQuery = {
@@ -24,6 +30,13 @@ export function getLeaderWorkbench(query: WorkbenchQuery) {
 export function updateLeaderKrScore(krId: string, payload: UpdateLeaderKrScoreInput) {
   return apiRequest(`/leader/key-results/${krId}/score`, {
     method: 'PUT',
+    body: JSON.stringify(payload)
+  });
+}
+
+export function bulkLeaderKrScore(payload: BulkLeaderKrScoreInput) {
+  return apiRequest<BulkLeaderKrScoreResponse>('/leader/bulk-score', {
+    method: 'POST',
     body: JSON.stringify(payload)
   });
 }

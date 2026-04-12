@@ -1,6 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { AuditService } from '../audit/audit.service';
-import { LEADER_REPOSITORY, LeaderRepository } from '../../infrastructure/repositories/leader/leader.repository';
+import {
+  LEADER_REPOSITORY,
+  LeaderBulkScoreInput,
+  LeaderRepository
+} from '../../infrastructure/repositories/leader/leader.repository';
 import { AuthUser } from '../../shared/types/auth-user';
 import { DomainValidationError } from '../../shared/errors/domain-validation.error';
 
@@ -31,6 +35,31 @@ export class LeaderService {
       }
     });
     return result.after;
+  }
+
+  async batchScore(actor: AuthUser, input: LeaderBulkScoreInput) {
+    this.validateQuarter(input.year, input.quarter);
+
+    const result = await this.leaderRepository.batchScore(actor, {
+      ...input,
+      comment: input.comment?.trim() || null
+    });
+
+    await this.auditService.write({
+      actorUserId: actor.id,
+      actorRoleCode: actor.role,
+      action: 'leader.kr.bulk-score.update',
+      entityType: 'key-result',
+      entityId: null,
+      afterJson: {
+        year: input.year,
+        quarter: input.quarter,
+        updatedCount: result.updatedCount,
+        skippedCount: result.skippedCount
+      }
+    });
+
+    return result;
   }
 
   getRanking(actor: AuthUser, year: number, quarter: number, reviewGroupId?: string, employeeId?: string) {

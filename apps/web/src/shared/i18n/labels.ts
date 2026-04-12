@@ -5,13 +5,23 @@ export function getRoleLabel(role: UserRole) {
     case 'system-admin':
       return '\u7cfb\u7edf\u7ba1\u7406\u5458';
     case 'section-leader':
-      return '\u79d1\u5ba4\u9886\u5bfc';
+      return '\u79d1\u5ba4\u8d1f\u8d23\u4eba';
     case 'group-leader':
       return '\u5c0f\u7ec4\u8d1f\u8d23\u4eba';
     case 'employee':
     default:
       return '\u5458\u5de5';
   }
+}
+
+export function formatAssignedRoleSummary(roles: UserRole[]) {
+  const displayOrder: UserRole[] = ['employee', 'section-leader', 'group-leader', 'system-admin'];
+  const uniqueRoles = Array.from(new Set(roles));
+
+  return displayOrder
+    .filter((role) => uniqueRoles.includes(role))
+    .map((role) => getRoleLabel(role))
+    .join('/');
 }
 
 export function getGoalStatusLabel(status: string) {

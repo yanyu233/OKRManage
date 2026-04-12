@@ -15,7 +15,7 @@ describe('Leader ranking', () => {
     await closeTestDatabase();
   });
 
-  it('returns ranked employees and fixed-seat grade allocation for a review group', async () => {
+  it('returns all review groups to every section or group leader', async () => {
     const agent = await loginAsSectionLeader(app);
     const response = await agent.get('/api/leader/ranking?year=2026&quarter=1').expect(200);
 
@@ -23,6 +23,9 @@ describe('Leader ranking', () => {
       expect.arrayContaining([
         expect.objectContaining({
           name: '信息化组'
+        }),
+        expect.objectContaining({
+          name: '运营组'
         })
       ])
     );

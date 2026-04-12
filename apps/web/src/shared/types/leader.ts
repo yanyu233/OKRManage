@@ -13,6 +13,7 @@ export type LeaderKeyResult = {
   name: string;
   description: string | null;
   points: number;
+  canScore: boolean;
   completionState: string;
   reviewScore: number | null;
   reviewComment: string | null;
@@ -27,6 +28,8 @@ export type LeaderGoalSummary = {
   description: string | null;
   status: string;
   totalPoints: number;
+  canScore: boolean;
+  isTemplateGoal: boolean;
   keyResultCount: number;
   scoredKeyResultCount: number;
   proofCount: number;
@@ -40,9 +43,11 @@ export type LeaderGoalDetail = LeaderGoalSummary & {
 export type LeaderEmployeeSummary = {
   id: string;
   name: string;
+  sectionId: string | null;
   sectionName: string | null;
   reviewGroupId: string | null;
   reviewGroupName: string | null;
+  canScore: boolean;
   goalCount: number;
   keyResultCount: number;
   scoredKeyResultCount: number;
@@ -63,6 +68,29 @@ export type LeaderWorkbenchResponse = {
 export type UpdateLeaderKrScoreInput = {
   score: number;
   comment?: string;
+};
+
+export type BulkLeaderKrScoreInput = {
+  year: number;
+  quarter: number;
+  sectionId?: string | null;
+  reviewGroupId?: string | null;
+  employeeIds?: string[];
+  goalIds?: string[];
+  keyResultIds?: string[];
+  score: number;
+  comment?: string;
+  overwriteExisting?: boolean;
+  excludeTemplateGoals?: boolean;
+};
+
+export type BulkLeaderKrScoreResponse = {
+  updatedCount: number;
+  skippedCount: number;
+  skipped: Array<{
+    keyResultId: string;
+    reason: 'out-of-scope' | 'already-scored';
+  }>;
 };
 
 export type LeaderReviewGroup = {

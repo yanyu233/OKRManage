@@ -4,7 +4,7 @@ import { App, Avatar, Button, Dropdown, Layout, Menu, Skeleton, Space, Tag, Typo
 import { useEffect, useMemo } from 'react';
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { getCurrentSession, logout, switchActiveRole } from '../../shared/api/auth';
-import { getRoleLabel } from '../../shared/i18n/labels';
+import { formatAssignedRoleSummary, getRoleLabel } from '../../shared/i18n/labels';
 import { useSessionStore } from '../../shared/store/session-store';
 import { canAccessRoute, menuItemsForUser, resolveTargetRoleForPath, selectedMenuKeyForPath } from './routing';
 
@@ -71,6 +71,13 @@ export function AppShell() {
   }, [activeRoleMutation, currentUser, requiredRole]);
 
   const menuItems = useMemo(() => (currentUser ? menuItemsForUser(currentUser) : []), [currentUser]);
+  const assignedRoleSummary = useMemo(() => {
+    if (!currentUser) {
+      return '';
+    }
+
+    return formatAssignedRoleSummary(currentUser.roles.map((item) => item.role));
+  }, [currentUser]);
 
   if (sessionQuery.isLoading) {
     return (
@@ -155,13 +162,13 @@ export function AppShell() {
               </Typography.Title>
               <Typography.Text type="secondary">
                 {'\u5f53\u524d\u89d2\u8272\uff1a'}
-                {getRoleLabel(currentUser.activeRole)}
+                {assignedRoleSummary}
               </Typography.Text>
             </div>
           </Space>
 
           <Space align="center" size={16}>
-            <Tag color="blue">{getRoleLabel(currentUser.activeRole)}</Tag>
+            <Tag color="blue">{assignedRoleSummary || getRoleLabel(currentUser.activeRole)}</Tag>
             <Dropdown menu={menu} trigger={['click']}>
               <Button type="text" size="large">
                 <Space>
