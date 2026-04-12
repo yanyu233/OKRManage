@@ -3,11 +3,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, Card, Col, Empty, Input, Row, Select, Space, Statistic, Tag, Typography } from 'antd';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getEmployeeGoalTemplates, getEmployeeOkr, importEmployeeGoalTemplates } from '../../shared/api/employee';
+import { createEmployeeGoal, getEmployeeGoalTemplates, getEmployeeOkr, importEmployeeGoalTemplates } from '../../shared/api/employee';
 import { ApiError } from '../../shared/api/http';
 import { formatQuarterLabel, formatNullableScore, getGoalStatusLabel } from '../../shared/i18n/labels';
 import { buildQuarterOptions, buildToolbarYearOptions } from '../../shared/ui/toolbar-options';
 import { buildYearOptions, filterEmployeeGoals } from './employee.helpers';
+import { EmployeeCreateGoalDialog } from './EmployeeCreateGoalDialog';
 import { EmployeeTemplateImportDialog } from './EmployeeTemplateImportDialog';
 import './employee.css';
 
@@ -28,6 +29,8 @@ const TEXT = {
   completedKeyResultCount: '\u5df2\u5b8c\u6210\u5173\u952e\u7ed3\u679c',
   proofCount: '\u8bc1\u660e\u6750\u6599',
   quarterScore: '\u5f53\u524d\u5b63\u5ea6\u5f97\u5206',
+  createGoal: '\u65b0\u5efa\u76ee\u6807',
+  createSuccess: '\u76ee\u6807\u521b\u5efa\u6210\u529f\u3002',
   importTemplates: '\u5bfc\u5165\u6a21\u677f\u76ee\u6807',
   importSuccess: '\u6a21\u677f\u76ee\u6807\u5bfc\u5165\u6210\u529f\u3002',
   goalsTitle: '\u672c\u5b63\u5ea6\u76ee\u6807',
@@ -50,6 +53,7 @@ export function EmployeeOkrPage() {
   const [quarter, setQuarter] = useState(DEFAULT_QUARTER);
   const [keyword, setKeyword] = useState('');
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   const okrQuery = useQuery({
     queryKey: ['employee-okr', year, quarter],
@@ -114,6 +118,19 @@ export function EmployeeOkrPage() {
     }
   });
 
+  const createGoalMutation = useMutation({
+    mutationFn: createEmployeeGoal,
+    onSuccess: async () => {
+      message.success(TEXT.createSuccess);
+      setCreateDialogOpen(false);
+      await queryClient.invalidateQueries({ queryKey: ['employee-okr'] });
+    },
+    onError: (error) => {
+      const description = error instanceof ApiError ? error.message : TEXT.loadFailedDescription;
+      message.error(description);
+    }
+  });
+
   if (okrQuery.isLoading) {
     return <Card className="employee-toolbar-card">{TEXT.loading}</Card>;
   }
@@ -165,6 +182,7 @@ export function EmployeeOkrPage() {
               onChange={(value) => setQuarter(value)}
               style={{ minWidth: 140 }}
             />
+            <Button onClick={() => setCreateDialogOpen(true)}>{TEXT.createGoal}</Button>
             <Button type="primary" onClick={() => setImportDialogOpen(true)}>
               {TEXT.importTemplates}
             </Button>
@@ -247,6 +265,15 @@ export function EmployeeOkrPage() {
         templates={templatesQuery.data?.templates ?? []}
         onCancel={() => setImportDialogOpen(false)}
         onConfirm={(templateIds) => importMutation.mutate(templateIds)}
+      />
+
+      <EmployeeCreateGoalDialog
+        open={createDialogOpen}
+        year={year}
+        quarter={quarter}
+        confirmLoading={createGoalMutation.isPending}
+        onCancel={() => setCreateDialogOpen(false)}
+        onConfirm={(payload) => createGoalMutation.mutate(payload)}
       />
     </Space>
   );

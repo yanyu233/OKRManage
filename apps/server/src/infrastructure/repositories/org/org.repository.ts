@@ -1,6 +1,7 @@
 import { ReviewGradeCode } from '../../../shared/constants/review-grade-codes';
 
 export const ORG_REPOSITORY = Symbol('ORG_REPOSITORY');
+export type ScoreTypeRecord = 'objective' | 'subjective';
 
 export type AdminDepartmentRecord = {
   id: string;
@@ -78,6 +79,7 @@ export type AdminGoalTemplateKeyResultRecord = {
   name: string;
   description: string | null;
   points: number;
+  scoreType: ScoreTypeRecord;
 };
 
 export type AdminGoalTemplateRecord = {

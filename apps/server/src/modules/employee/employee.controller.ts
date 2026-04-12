@@ -22,6 +22,7 @@ import { SessionService } from '../session/session.service';
 import { AuthUser } from '../../shared/types/auth-user';
 import { DomainValidationError } from '../../shared/errors/domain-validation.error';
 import { EmployeeService } from './employee.service';
+import { CreateGoalDto } from './dto/create-goal.dto';
 import { ImportGoalTemplatesDto } from './dto/import-goal-templates.dto';
 import { UpdateKrCompletionDto } from './dto/update-kr-completion.dto';
 import { UploadProofDto } from './dto/upload-proof.dto';
@@ -69,6 +70,29 @@ export class EmployeeController {
 
     try {
       return await this.employeeService.importGoalTemplates(actor, payload.year, payload.quarter, payload.templateIds);
+    } catch (error) {
+      this.rethrowDomainError(error);
+    }
+  }
+
+  @Post('goals')
+  async createGoal(@Req() request: Request, @Body() payload: CreateGoalDto) {
+    const actor = await this.requireEmployee(request);
+
+    try {
+      return await this.employeeService.createGoal(actor, {
+        year: payload.year,
+        quarter: payload.quarter,
+        name: payload.name,
+        description: payload.description ?? null,
+        keyResults: payload.keyResults.map((keyResult) => ({
+          code: keyResult.code,
+          name: keyResult.name,
+          description: keyResult.description ?? null,
+          points: keyResult.points,
+          scoreType: keyResult.scoreType
+        }))
+      });
     } catch (error) {
       this.rethrowDomainError(error);
     }

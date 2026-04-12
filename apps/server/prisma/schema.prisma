@@ -7,6 +7,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum ScoreType {
+  objective
+  subjective
+}
+
 model User {
   id                 String                 @id @default(cuid())
   employeeNo         String?                @unique
@@ -207,6 +212,7 @@ model GoalTemplateKeyResult {
   name           String
   description    String?
   points         Int
+  scoreType      ScoreType    @default(subjective)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   goalTemplate   GoalTemplate @relation(fields: [goalTemplateId], references: [id], onDelete: Cascade)
@@ -236,6 +242,7 @@ model KeyResult {
   name             String
   description      String?
   points           Int
+  scoreType        ScoreType @default(objective)
   completionState  String
   reviewScore      Float?
   reviewComment    String?

@@ -33,6 +33,9 @@ const TEXT = {
   keyResultDescription: '\u8bf4\u660e',
   keyResultDescriptionPlaceholder: '\u8f93\u5165\u5173\u952e\u7ed3\u679c\u8bf4\u660e',
   keyResultPoints: '\u5206\u503c',
+  keyResultScoreType: '\u8bc4\u5206\u7c7b\u578b',
+  scoreTypeObjective: '\u5ba2\u89c2\u8bc4\u5206\u9879',
+  scoreTypeSubjective: '\u4e3b\u89c2\u8bc4\u5206\u9879',
   totalPoints: '\u603b\u5206\u503c',
   remove: '\u5220\u9664'
 } as const;
@@ -231,6 +234,18 @@ export function AdminGoalTemplateSection({
                                   onChange={(value) =>
                                     updateTemplateKeyResult(template.id, keyResult.id, { points: Number(value ?? 0) })
                                   }
+                                />
+                              </div>
+                              <div>
+                                <Typography.Text strong>{TEXT.keyResultScoreType}</Typography.Text>
+                                <Select
+                                  value={keyResult.scoreType}
+                                  style={{ width: '100%', marginTop: 8 }}
+                                  options={[
+                                    { label: TEXT.scoreTypeObjective, value: 'objective' },
+                                    { label: TEXT.scoreTypeSubjective, value: 'subjective' }
+                                  ]}
+                                  onChange={(value) => updateTemplateKeyResult(template.id, keyResult.id, { scoreType: value })}
                                 />
                               </div>
                             </div>

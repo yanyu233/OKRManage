@@ -1,3 +1,5 @@
+import type { ScoreType } from './admin-config';
+
 export type EmployeeProof = {
   id: string;
   fileName: string;
@@ -13,6 +15,7 @@ export type EmployeeKeyResult = {
   name: string;
   description: string | null;
   points: number;
+  scoreType: ScoreType;
   completionState: string;
   reviewScore: number | null;
   reviewComment: string | null;
@@ -39,6 +42,7 @@ export type EmployeeGoalTemplateKeyResult = {
   name: string;
   description: string | null;
   points: number;
+  scoreType: ScoreType;
 };
 
 export type EmployeeGoalTemplate = {
@@ -85,6 +89,20 @@ export type EmployeeGoalDetail = EmployeeGoalSummary & {
   year: number;
   quarter: number;
   keyResults: EmployeeKeyResult[];
+};
+
+export type CreateEmployeeGoalInput = {
+  year: number;
+  quarter: number;
+  name: string;
+  description?: string | null;
+  keyResults: Array<{
+    code: string;
+    name: string;
+    description?: string | null;
+    points: number;
+    scoreType?: ScoreType;
+  }>;
 };
 
 export type UpdateKrCompletionInput = {

@@ -188,6 +188,10 @@ class GoalTemplateKeyResultSnapshotDto {
 
   @Type(() => Number)
   points!: number;
+
+  @IsOptional()
+  @IsIn(['objective', 'subjective'])
+  scoreType?: 'objective' | 'subjective';
 }
 
 class GoalTemplateSnapshotDto {

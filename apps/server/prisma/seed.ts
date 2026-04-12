@@ -48,13 +48,15 @@ async function main(): Promise<void> {
       code: 'KR1',
       name: '\u5b8c\u6210\u5b63\u5ea6\u9996\u4e2a\u7248\u672c\u4ea4\u4ed8',
       description: '\u8ddf\u8e2a\u76ee\u6807\u7248\u672c\u8ba1\u5212\u548c\u4ea4\u4ed8\u7ed3\u8bba',
-      points: 30
+      points: 30,
+      scoreType: 'objective'
     },
     {
       code: 'KR2',
       name: '\u8f93\u51fa\u4e0a\u624b\u6587\u6863\u4e0e FAQ',
       description: '\u6c89\u6dc0\u4ea4\u4ed8\u8def\u5f84\u548c\u73af\u5883\u4f7f\u7528\u8bf4\u660e',
-      points: 20
+      points: 20,
+      scoreType: 'subjective'
     }
   ]);
 
@@ -63,13 +65,15 @@ async function main(): Promise<void> {
       code: 'KR1',
       name: '\u5b8c\u6210\u670d\u52a1\u4ea4\u63a5\u8ddf\u8e2a',
       description: '\u53ef\u89c6\u5316\u8bb0\u5f55\u6bcf\u5468\u4ea4\u63a5\u548c\u95ed\u73af',
-      points: 25
+      points: 25,
+      scoreType: 'objective'
     },
     {
       code: 'KR2',
       name: '\u6c89\u6dc0\u8fd0\u8425\u652f\u6491\u6848\u4f8b',
       description: '\u8f93\u51fa\u53ef\u590d\u7528\u7684\u573a\u666f\u89e3\u51b3\u65b9\u6848',
-      points: 25
+      points: 25,
+      scoreType: 'subjective'
     }
   ]);
 
@@ -326,7 +330,7 @@ async function upsertGoalTemplate(
   departmentId: string,
   name: string,
   description: string,
-  keyResults: Array<{ code: string; name: string; description: string; points: number }>
+  keyResults: Array<{ code: string; name: string; description: string; points: number; scoreType?: 'objective' | 'subjective' }>
 ) {
   const template = await prisma.goalTemplate.upsert({
     where: {
@@ -360,7 +364,8 @@ async function upsertGoalTemplate(
         code: keyResult.code,
         name: keyResult.name,
         description: keyResult.description,
-        points: keyResult.points
+        points: keyResult.points,
+        scoreType: keyResult.scoreType ?? 'subjective'
       }))
     });
   }
@@ -675,6 +680,7 @@ async function upsertKeyResult(input: {
   name: string;
   description: string;
   points: number;
+  scoreType?: 'objective' | 'subjective';
   completionState: string;
   reviewScore: number | null;
   reviewComment: string | null;
@@ -691,6 +697,7 @@ async function upsertKeyResult(input: {
       name: input.name,
       description: input.description,
       points: input.points,
+      scoreType: input.scoreType ?? 'objective',
       completionState: input.completionState,
       reviewScore: input.reviewScore,
       reviewComment: input.reviewComment,
@@ -703,6 +710,7 @@ async function upsertKeyResult(input: {
       name: input.name,
       description: input.description,
       points: input.points,
+      scoreType: input.scoreType ?? 'objective',
       completionState: input.completionState,
       reviewScore: input.reviewScore,
       reviewComment: input.reviewComment,

@@ -205,6 +205,14 @@ export class PrismaLeaderRepository implements LeaderRepository {
         return false;
       }
 
+      if (entry.keyResult.scoreType === 'subjective') {
+        skipped.push({
+          keyResultId: entry.keyResult.id,
+          reason: 'subjective-only'
+        });
+        return false;
+      }
+
       return true;
     });
 
@@ -486,6 +494,7 @@ export class PrismaLeaderRepository implements LeaderRepository {
       name: keyResult.name,
       description: keyResult.description,
       points: keyResult.points,
+      scoreType: keyResult.scoreType,
       canScore,
       completionState: keyResult.completionState,
       reviewScore: keyResult.reviewScore,

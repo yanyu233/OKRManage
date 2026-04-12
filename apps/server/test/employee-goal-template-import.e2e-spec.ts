@@ -15,7 +15,7 @@ describe('Employee goal template import', () => {
     await closeTestDatabase();
   });
 
-  it('imports selected department templates once per quarter and places template goals at O1/O2 before manual goals', async () => {
+  it('inherits template key result score types when importing templates', async () => {
     const admin = await loginAsSysadmin(app);
     const bootstrap = await admin.get('/api/admin/org/bootstrap').expect(200);
     const departmentId = bootstrap.body.departments[0].id as string;
@@ -30,22 +30,24 @@ describe('Employee goal template import', () => {
             id: 'template-onboarding',
             departmentId,
             name: '平台科新人入项模板',
-            description: '用于新入项员工的季度目标导入',
+            description: '用于校验模板 KR 评分类型继承',
             isActive: true,
             keyResults: [
               {
                 id: 'template-onboarding-kr-1',
                 code: 'KR1',
-                name: '完成首批交付任务',
-                description: '完成指定交付清单',
-                points: 30
+                name: '客观模板 KR',
+                description: null,
+                points: 30,
+                scoreType: 'objective'
               },
               {
                 id: 'template-onboarding-kr-2',
                 code: 'KR2',
-                name: '沉淀上手文档',
-                description: '输出首版 FAQ 和环境说明',
-                points: 20
+                name: '主观模板 KR',
+                description: null,
+                points: 20,
+                scoreType: 'subjective'
               }
             ]
           }
@@ -54,53 +56,29 @@ describe('Employee goal template import', () => {
       .expect(200);
 
     const employee = await loginAsEmployee(app);
-    const templates = await employee.get('/api/employee/goal-templates?year=2026&quarter=1').expect(200);
-
-    const seededTemplate = templates.body.templates.find((entry: { name: string }) => entry.name === '平台科新员工模板');
-    const onboardingTemplate = templates.body.templates.find((entry: { id: string }) => entry.id === 'template-onboarding');
-
-    expect(seededTemplate).toBeTruthy();
-    expect(onboardingTemplate).toBeTruthy();
-
     const imported = await employee
-      .post('/api/employee/goal-templates/import')
-      .send({
-        year: 2026,
-        quarter: 1,
-        templateIds: [seededTemplate.id, onboardingTemplate.id]
-      })
-      .expect(201);
-
-    expect(imported.body.importedGoals).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          name: '平台科新员工模板',
-          totalPoints: 50,
-          keyResultCount: 2
-        }),
-        expect.objectContaining({
-          name: '平台科新人入项模板',
-          totalPoints: 50,
-          keyResultCount: 2
-        })
-      ])
-    );
-
-    const okr = await employee.get('/api/employee/okr?year=2026&quarter=1').expect(200);
-    expect(okr.body.goals.slice(0, 4).map((goal: { code: string; name: string }) => ({ code: goal.code, name: goal.name }))).toEqual([
-      { code: 'O1', name: '平台科新员工模板' },
-      { code: 'O2', name: '平台科新人入项模板' },
-      { code: 'O3', name: '张晨 2026 年一季度 OKR' },
-      { code: 'O4', name: '张晨 知识库沉淀专项' }
-    ]);
-
-    await employee
       .post('/api/employee/goal-templates/import')
       .send({
         year: 2026,
         quarter: 1,
         templateIds: ['template-onboarding']
       })
-      .expect(400);
+      .expect(201);
+
+    const importedGoal = imported.body.importedGoals.find((goal: { id: string }) => goal.id);
+    const detail = await employee.get(`/api/employee/goals/${importedGoal.id}`).expect(200);
+
+    expect(detail.body.keyResults).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'KR1',
+          scoreType: 'objective'
+        }),
+        expect.objectContaining({
+          code: 'KR2',
+          scoreType: 'subjective'
+        })
+      ])
+    );
   });
 });

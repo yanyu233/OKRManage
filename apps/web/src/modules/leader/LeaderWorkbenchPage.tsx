@@ -22,7 +22,14 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 import { ApiError, resolveApiUrl } from '../../shared/api/http';
 import { bulkLeaderKrScore, getLeaderWorkbench, updateLeaderKrScore } from '../../shared/api/leader';
-import { formatNullableScore, formatQuarterLabel, getCompletionStateLabel, getGoalStatusLabel, getLeaderEmployeeStatusLabel } from '../../shared/i18n/labels';
+import {
+  formatNullableScore,
+  formatQuarterLabel,
+  getCompletionStateLabel,
+  getGoalStatusLabel,
+  getLeaderEmployeeStatusLabel,
+  getScoreTypeLabel
+} from '../../shared/i18n/labels';
 import { buildQuarterOptions, buildToolbarYearOptions } from '../../shared/ui/toolbar-options';
 import type { LeaderKeyResult } from '../../shared/types/leader';
 import {
@@ -68,21 +75,23 @@ const TEXT = {
   proofCount: '\u8bc1\u660e\u6750\u6599',
   quarterScorePrefix: '\u5b63\u5ea6\u603b\u5206',
   readonlyScopeMessage: '\u5f53\u524d\u5458\u5de5\u4e0d\u5728\u4f60\u7684\u8bc4\u5206\u8303\u56f4\u5185\uff0c\u53ef\u67e5\u770b\u76ee\u6807\u3001\u5173\u952e\u7ed3\u679c\u4e0e\u6750\u6599\uff0c\u4f46\u4e0d\u53ef\u4fee\u6539\u8bc4\u5206\u3002',
-  batchScore: '\u6279\u91cf\u8bc4\u5206',
+  batchScore: '\u5ba2\u89c2\u9879\u6279\u91cf\u8bc4\u5206',
   batchScoreIntro:
-    '\u5148\u6309\u79d1\u5ba4\u3001\u5c0f\u7ec4\u548c\u5458\u5de5\u8fc7\u6ee4\u8bc4\u5206\u5bf9\u8c61\uff0c\u518d\u7528\u5feb\u6377\u6309\u94ae\u5feb\u901f\u9009\u4e2d\u76ee\u6807\u6216\u5173\u952e\u7ed3\u679c\u3002',
+    '\u5148\u6309\u79d1\u5ba4\u3001\u5c0f\u7ec4\u548c\u5458\u5de5\u8fc7\u6ee4\u8bc4\u5206\u5bf9\u8c61\uff0c\u518d\u7528\u5feb\u6377\u6309\u94ae\u5feb\u901f\u9009\u4e2d\u9700\u8981\u6279\u91cf\u5904\u7406\u7684\u5ba2\u89c2\u8bc4\u5206\u9879\u3002',
   bulkSectionFilter: '\u6309\u79d1\u5ba4\u7b5b\u9009',
   bulkReviewGroupFilter: '\u6309\u5c0f\u7ec4\u7b5b\u9009',
   bulkEmployeeFilter: '\u9009\u62e9\u5458\u5de5',
   bulkEmployeePlaceholder: '\u53ef\u591a\u9009\u8981\u6279\u91cf\u8bc4\u5206\u7684\u5458\u5de5',
   selectAllEmployees: '\u5168\u9009\u5458\u5de5',
   selectAllGoals: '\u5168\u9009\u76ee\u6807',
-  selectAllKeyResults: '\u5168\u9009\u5173\u952e\u7ed3\u679c',
+  selectAllKeyResults: '\u5168\u9009\u5ba2\u89c2\u9879\u5173\u952e\u7ed3\u679c',
   selectAllExcludeTemplates: '\u5168\u9009\uff08\u53bb\u9664\u6a21\u677f\u76ee\u6807\uff09',
   batchScopeSummaryEmployeePrefix: '\u5df2\u9009\u5458\u5de5',
   batchScopeSummaryGoalPrefix: '\u5df2\u9009\u76ee\u6807',
   batchScopeSummaryKrPrefix: '\u5df2\u9009\u5173\u952e\u7ed3\u679c',
   batchScopeHint: '\u201c\u5168\u9009\u76ee\u6807/\u5173\u952e\u7ed3\u679c\u201d\u57fa\u4e8e\u5f53\u524d\u6b63\u5728\u67e5\u770b\u7684\u5458\u5de5\u548c\u76ee\u6807\u3002',
+  batchObjectiveAlert:
+    '\u6279\u91cf\u8bc4\u5206\u4ec5\u5904\u7406\u5ba2\u89c2\u8bc4\u5206\u9879\uff0c\u4e3b\u89c2\u8bc4\u5206\u9879\u4f1a\u4fdd\u7559\u5728\u5de5\u4f5c\u53f0\u4e2d\u9010\u6761\u8bc4\u5206\u3002',
   batchNoScopedEmployees: '\u5f53\u524d\u7b5b\u9009\u8303\u56f4\u5185\u6ca1\u6709\u5339\u914d\u5458\u5de5',
   batchOverwriteExisting: '\u8986\u76d6\u5df2\u6709\u8bc4\u5206',
   batchScorePlaceholder: '\u8f93\u5165\u6279\u91cf\u8bc4\u5206',
@@ -449,6 +458,9 @@ export function LeaderWorkbenchPage() {
                                 </div>
                                 <Space wrap size={[8, 8]}>
                                   <Tag>{`${keyResult.points} \u5206`}</Tag>
+                                  <Tag color={keyResult.scoreType === 'objective' ? 'blue' : 'purple'}>
+                                    {getScoreTypeLabel(keyResult.scoreType)}
+                                  </Tag>
                                   <Tag color={keyResult.completionState === 'completed' ? 'green' : 'red'}>
                                     {getCompletionStateLabel(keyResult.completionState)}
                                   </Tag>
@@ -544,6 +556,7 @@ export function LeaderWorkbenchPage() {
           <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
             {TEXT.batchScoreIntro}
           </Typography.Paragraph>
+          <Alert type="info" showIcon message={TEXT.batchObjectiveAlert} />
 
           <Row gutter={[16, 16]}>
             <Col xs={24} md={12}>
@@ -737,7 +750,11 @@ export function LeaderWorkbenchPage() {
 
     setBulkEmployeeIds([selectedEmployee.id]);
     setBulkGoalIds([selectedGoal.id]);
-    setBulkKeyResultIds(filteredKeyResults.map((keyResult) => keyResult.id));
+    setBulkKeyResultIds(
+      filteredKeyResults
+        .filter((keyResult) => keyResult.scoreType === 'objective')
+        .map((keyResult) => keyResult.id)
+    );
     setBulkExcludeTemplateGoals(false);
   }
 

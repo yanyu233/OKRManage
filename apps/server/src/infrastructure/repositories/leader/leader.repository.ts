@@ -1,6 +1,7 @@
 import { AuthUser } from '../../../shared/types/auth-user';
 
 export const LEADER_REPOSITORY = Symbol('LEADER_REPOSITORY');
+export type LeaderScoreType = 'objective' | 'subjective';
 
 export type LeaderProofRecord = {
   id: string;
@@ -17,6 +18,7 @@ export type LeaderKeyResultRecord = {
   name: string;
   description: string | null;
   points: number;
+  scoreType: LeaderScoreType;
   canScore: boolean;
   completionState: string;
   reviewScore: number | null;
@@ -138,7 +140,7 @@ export type LeaderScoreUpdateResult = {
   after: LeaderKeyResultRecord;
 };
 
-export type LeaderBulkScoreSkipReason = 'out-of-scope' | 'already-scored';
+export type LeaderBulkScoreSkipReason = 'out-of-scope' | 'already-scored' | 'subjective-only';
 
 export type LeaderBulkScoreSkipRecord = {
   keyResultId: string;

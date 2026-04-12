@@ -1,3 +1,5 @@
+import type { ScoreType } from './admin-config';
+
 export type LeaderProof = {
   id: string;
   fileName: string;
@@ -13,6 +15,7 @@ export type LeaderKeyResult = {
   name: string;
   description: string | null;
   points: number;
+  scoreType: ScoreType;
   canScore: boolean;
   completionState: string;
   reviewScore: number | null;
@@ -89,7 +92,7 @@ export type BulkLeaderKrScoreResponse = {
   skippedCount: number;
   skipped: Array<{
     keyResultId: string;
-    reason: 'out-of-scope' | 'already-scored';
+    reason: 'out-of-scope' | 'already-scored' | 'subjective-only';
   }>;
 };
 

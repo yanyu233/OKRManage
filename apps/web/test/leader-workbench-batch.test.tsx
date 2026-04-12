@@ -121,11 +121,26 @@ vi.mock('../src/shared/api/leader', () => ({
           name: '完成 6 个版本交付',
           description: null,
           points: 35,
+          scoreType: 'objective',
           canScore: true,
           completionState: 'completed',
           reviewScore: 92.5,
           reviewComment: '表现稳定',
           proofCount: 2,
+          proofs: []
+        },
+        {
+          id: 'kr-2',
+          code: 'KR2',
+          name: '主观评估项',
+          description: null,
+          points: 20,
+          scoreType: 'subjective',
+          canScore: true,
+          completionState: 'incomplete',
+          reviewScore: null,
+          reviewComment: null,
+          proofCount: 0,
           proofs: []
         }
       ]
@@ -136,7 +151,7 @@ vi.mock('../src/shared/api/leader', () => ({
 }));
 
 describe('LeaderWorkbenchPage batch score modal', () => {
-  it('opens the batch score modal with section/group filters and full-select actions', async () => {
+  it('opens the objective bulk score modal with scoped filters and shortcuts', async () => {
     ensureMatchMedia();
 
     render(
@@ -147,14 +162,15 @@ describe('LeaderWorkbenchPage batch score modal', () => {
       </QueryClientProvider>
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: '批量评分' }));
+    fireEvent.click(await screen.findByRole('button', { name: '客观项批量评分' }));
 
-    expect(await screen.findByRole('dialog', { name: '批量评分' })).toBeTruthy();
+    expect(await screen.findByRole('dialog', { name: '客观项批量评分' })).toBeTruthy();
     expect(screen.getByText('按科室筛选')).toBeTruthy();
     expect(screen.getByText('按小组筛选')).toBeTruthy();
     expect(screen.getByRole('button', { name: '全选员工' })).toBeTruthy();
     expect(screen.getByRole('button', { name: '全选目标' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: '全选关键结果' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '全选客观项关键结果' })).toBeTruthy();
     expect(screen.getByRole('button', { name: '全选（去除模板目标）' })).toBeTruthy();
+    expect(screen.getByText('批量评分仅处理客观评分项，主观评分项会保留在工作台中逐条评分。')).toBeTruthy();
   });
 });

@@ -5,6 +5,8 @@ import { AuthUser } from '../../../shared/types/auth-user';
 import { DomainValidationError } from '../../../shared/errors/domain-validation.error';
 import {
   EmployeeCompletionUpdateResult,
+  EmployeeCreateGoalInput,
+  EmployeeGoalCreateResult,
   EmployeeGoalDetailRecord,
   EmployeeGoalSummaryRecord,
   EmployeeGoalTemplateImportResult,
@@ -135,9 +137,72 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
           code: keyResult.code,
           name: keyResult.name,
           description: keyResult.description,
-          points: keyResult.points
+          points: keyResult.points,
+          scoreType: keyResult.scoreType
         }))
       }))
+    };
+  }
+
+  async createGoal(actor: AuthUser, input: EmployeeCreateGoalInput): Promise<EmployeeGoalCreateResult> {
+    const created = await this.prisma.$transaction(async (transaction) => {
+      const goal = await transaction.goal.create({
+        data: {
+          ownerUserId: actor.id,
+          year: input.year,
+          quarter: input.quarter,
+          code: `TMP-CREATE-${Date.now()}`,
+          name: input.name,
+          description: input.description,
+          status: 'draft',
+          totalPoints: input.keyResults.reduce((sum, keyResult) => sum + keyResult.points, 0)
+        }
+      });
+
+      if (input.keyResults.length > 0) {
+        await transaction.keyResult.createMany({
+          data: input.keyResults.map((keyResult) => ({
+            goalId: goal.id,
+            code: keyResult.code,
+            name: keyResult.name,
+            description: keyResult.description,
+            points: keyResult.points,
+            scoreType: keyResult.scoreType ?? 'objective',
+            completionState: 'incomplete'
+          }))
+        });
+      }
+
+      await this.resequenceQuarterGoals(transaction, actor.id, input.year, input.quarter);
+
+      return transaction.goal.findUniqueOrThrow({
+        where: { id: goal.id },
+        include: {
+          importedTemplates: true,
+          keyResults: {
+            orderBy: {
+              code: 'asc'
+            },
+            include: {
+              proofs: {
+                orderBy: {
+                  uploadedAt: 'desc'
+                }
+              }
+            }
+          },
+          owner: true
+        }
+      });
+    });
+
+    const detail = this.toGoalDetail(created);
+    return {
+      ...detail,
+      owner: {
+        id: created.owner.id,
+        name: created.owner.name
+      }
     };
   }
 
@@ -235,6 +300,7 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
               name: keyResult.name,
               description: keyResult.description,
               points: keyResult.points,
+              scoreType: keyResult.scoreType,
               completionState: 'incomplete'
             }))
           });
@@ -558,6 +624,7 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
       name: keyResult.name,
       description: keyResult.description,
       points: keyResult.points,
+      scoreType: keyResult.scoreType,
       completionState: keyResult.completionState,
       reviewScore: keyResult.reviewScore,
       reviewComment: keyResult.reviewComment,

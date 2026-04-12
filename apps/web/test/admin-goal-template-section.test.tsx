@@ -6,7 +6,7 @@ import type { AdminOrgBootstrapInput } from '../src/shared/types/admin-config';
 describe('AdminGoalTemplateSection', () => {
   it('renders template controls and department binding', () => {
     const draft: AdminOrgBootstrapInput = {
-      departments: [{ id: 'dept-1', name: '\u5de5\u4e1a\u4e92\u8054\u7f51\u4e2d\u5fc3', isActive: true }],
+      departments: [{ id: 'dept-1', name: '工业互联网中心', isActive: true }],
       sections: [],
       users: [],
       localAccounts: [],
@@ -19,8 +19,45 @@ describe('AdminGoalTemplateSection', () => {
 
     render(<AdminGoalTemplateSection draft={draft} updateCollection={vi.fn()} />);
 
-    expect(screen.getByRole('heading', { name: '\u6a21\u677f\u76ee\u6807' })).toBeTruthy();
-    expect(screen.getByText('\u65b0\u589e\u6a21\u677f')).toBeTruthy();
-    expect(screen.getByText('\u5168\u90e8\u90e8\u95e8')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: '模板目标' })).toBeTruthy();
+    expect(screen.getByText('新增模板')).toBeTruthy();
+    expect(screen.getByText('全部部门')).toBeTruthy();
+  });
+
+  it('shows score type control for template key results', () => {
+    const draft: AdminOrgBootstrapInput = {
+      departments: [{ id: 'dept-1', name: '工业互联网中心', isActive: true }],
+      sections: [],
+      users: [],
+      localAccounts: [],
+      roleAssignments: [],
+      sectionLeaderBindings: [],
+      groupLeaderBindings: [],
+      reviewGroups: [],
+      goalTemplates: [
+        {
+          id: 'template-1',
+          departmentId: 'dept-1',
+          name: '平台模板',
+          description: null,
+          isActive: true,
+          keyResults: [
+            {
+              id: 'kr-1',
+              code: 'KR1',
+              name: '模板 KR',
+              description: null,
+              points: 20,
+              scoreType: 'subjective'
+            }
+          ]
+        }
+      ]
+    };
+
+    render(<AdminGoalTemplateSection draft={draft} updateCollection={vi.fn()} />);
+
+    expect(screen.getByText('评分类型')).toBeTruthy();
+    expect(screen.getByText('主观评分项')).toBeTruthy();
   });
 });

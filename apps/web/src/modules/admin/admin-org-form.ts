@@ -136,7 +136,8 @@ export function createGoalTemplateKeyResultRecord(code = 'KR1') {
     code,
     name: '',
     description: null,
-    points: 0
+    points: 0,
+    scoreType: 'subjective' as const
   };
 }
 

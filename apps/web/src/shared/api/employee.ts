@@ -1,4 +1,5 @@
 import type {
+  CreateEmployeeGoalInput,
   EmployeeGoalDetail,
   EmployeeGoalTemplateResponse,
   EmployeeOkrResponse,
@@ -34,6 +35,13 @@ export function getEmployeeGoalTemplates(query: EmployeeQuarterQuery) {
 
 export function importEmployeeGoalTemplates(payload: ImportEmployeeGoalTemplatesInput) {
   return apiRequest<ImportEmployeeGoalTemplatesResponse>('/employee/goal-templates/import', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export function createEmployeeGoal(payload: CreateEmployeeGoalInput) {
+  return apiRequest<EmployeeGoalDetail & { owner: { id: string; name: string } }>('/employee/goals', {
     method: 'POST',
     body: JSON.stringify(payload)
   });

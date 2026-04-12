@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getEmployeeGoalDetail, updateEmployeeKrCompletion, uploadEmployeeProof } from '../../shared/api/employee';
 import { ApiError, resolveApiUrl } from '../../shared/api/http';
-import { formatQuarterLabel, formatNullableScore, getCompletionStateLabel, getGoalStatusLabel } from '../../shared/i18n/labels';
+import { formatQuarterLabel, formatNullableScore, getCompletionStateLabel, getGoalStatusLabel, getScoreTypeLabel } from '../../shared/i18n/labels';
 import type { EmployeeKeyResult } from '../../shared/types/employee';
 import { formatProofSize } from './employee.helpers';
 import './employee.css';
@@ -123,6 +123,9 @@ export function EmployeeGoalPage() {
                 </div>
                 <Space wrap size={[8, 8]}>
                   <Tag>{keyResult.points}{'\u0020\u5206'}</Tag>
+                  <Tag color={keyResult.scoreType === 'objective' ? 'blue' : 'purple'}>
+                    {getScoreTypeLabel(keyResult.scoreType)}
+                  </Tag>
                   <Tag color={keyResult.completionState === 'completed' ? 'green' : 'red'}>
                     {getCompletionStateLabel(keyResult.completionState)}
                   </Tag>

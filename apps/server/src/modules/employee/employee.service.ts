@@ -4,7 +4,11 @@ import { AuditService } from '../audit/audit.service';
 import { AuthUser } from '../../shared/types/auth-user';
 import { DomainValidationError } from '../../shared/errors/domain-validation.error';
 import { LocalProofStorageService } from '../../infrastructure/storage/local-proof-storage.service';
-import { EMPLOYEE_REPOSITORY, EmployeeRepository } from '../../infrastructure/repositories/employee/employee.repository';
+import {
+  EMPLOYEE_REPOSITORY,
+  EmployeeCreateGoalInput,
+  EmployeeRepository
+} from '../../infrastructure/repositories/employee/employee.repository';
 
 @Injectable()
 export class EmployeeService {
@@ -22,6 +26,68 @@ export class EmployeeService {
   getGoalTemplates(actor: AuthUser, year: number, quarter: number) {
     this.validateQuarter(year, quarter);
     return this.employeeRepository.getGoalTemplates(actor, year, quarter);
+  }
+
+  async createGoal(actor: AuthUser, input: EmployeeCreateGoalInput) {
+    this.validateQuarter(input.year, input.quarter);
+
+    const normalizedName = input.name.trim();
+    if (!normalizedName) {
+      throw new DomainValidationError('goal name is required');
+    }
+
+    const uniqueCodes = new Set<string>();
+    for (const keyResult of input.keyResults) {
+      const normalizedCode = keyResult.code.trim();
+      const normalizedName = keyResult.name.trim();
+      if (!normalizedCode) {
+        throw new DomainValidationError('key result code is required');
+      }
+
+      if (!normalizedName) {
+        throw new DomainValidationError('key result name is required');
+      }
+
+      if (uniqueCodes.has(normalizedCode.toLowerCase())) {
+        throw new DomainValidationError('duplicate key result code');
+      }
+
+      uniqueCodes.add(normalizedCode.toLowerCase());
+    }
+
+    const result = await this.employeeRepository.createGoal(actor, {
+      ...input,
+      name: normalizedName,
+      description: input.description?.trim() || null,
+      keyResults: input.keyResults.map((keyResult) => ({
+        code: keyResult.code.trim(),
+        name: keyResult.name.trim(),
+        description: keyResult.description?.trim() || null,
+        points: keyResult.points,
+        scoreType: keyResult.scoreType ?? 'objective'
+      }))
+    });
+
+    await this.auditService.write({
+      actorUserId: actor.id,
+      actorRoleCode: actor.role,
+      action: 'employee.goal.create',
+      entityType: 'goal',
+      entityId: result.id,
+      afterJson: {
+        year: result.year,
+        quarter: result.quarter,
+        code: result.code,
+        name: result.name,
+        keyResults: result.keyResults.map((keyResult) => ({
+          id: keyResult.id,
+          code: keyResult.code,
+          scoreType: keyResult.scoreType
+        }))
+      }
+    });
+
+    return result;
   }
 
   async importGoalTemplates(actor: AuthUser, year: number, quarter: number, templateIds: string[]) {

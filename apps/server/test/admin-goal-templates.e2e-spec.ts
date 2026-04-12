@@ -15,7 +15,7 @@ describe('Admin goal templates in bootstrap', () => {
     await closeTestDatabase();
   });
 
-  it('persists department-bound goal templates through admin bootstrap save', async () => {
+  it('persists template key result score types through admin bootstrap save', async () => {
     const agent = await loginAsSysadmin(app);
     const bootstrap = await agent.get('/api/admin/org/bootstrap').expect(200);
     const departmentId = bootstrap.body.departments[0].id as string;
@@ -27,25 +27,27 @@ describe('Admin goal templates in bootstrap', () => {
         goalTemplates: [
           ...bootstrap.body.goalTemplates,
           {
-            id: 'template-okr-platform-standard',
+            id: 'template-score-types',
             departmentId,
-            name: '平台科标准交付模板',
-            description: '平台产品科季度标准目标',
+            name: '模板评分类型校验',
+            description: '验证模板 KR 的评分类型会被保存',
             isActive: true,
             keyResults: [
               {
-                id: 'template-kr-1',
+                id: 'template-score-types-kr-1',
                 code: 'KR1',
-                name: '完成季度版本交付',
-                description: '按计划完成季度版本交付',
-                points: 30
+                name: '客观项 KR',
+                description: null,
+                points: 30,
+                scoreType: 'objective'
               },
               {
-                id: 'template-kr-2',
+                id: 'template-score-types-kr-2',
                 code: 'KR2',
-                name: '沉淀季度知识库案例',
-                description: '沉淀可复用案例',
-                points: 20
+                name: '主观项 KR',
+                description: null,
+                points: 20,
+                scoreType: 'subjective'
               }
             ]
           }
@@ -54,26 +56,21 @@ describe('Admin goal templates in bootstrap', () => {
       .expect(200);
 
     const refreshed = await agent.get('/api/admin/org/bootstrap').expect(200);
+    const savedTemplate = refreshed.body.goalTemplates.find((entry: { id: string }) => entry.id === 'template-score-types');
 
-    expect(refreshed.body.goalTemplates).toEqual(
-      expect.arrayContaining([
+    expect(savedTemplate).toMatchObject({
+      id: 'template-score-types',
+      departmentId,
+      keyResults: [
         expect.objectContaining({
-          name: '平台科标准交付模板',
-          departmentId,
-          keyResults: [
-            expect.objectContaining({
-              code: 'KR1',
-              name: '完成季度版本交付',
-              points: 30
-            }),
-            expect.objectContaining({
-              code: 'KR2',
-              name: '沉淀季度知识库案例',
-              points: 20
-            })
-          ]
+          code: 'KR1',
+          scoreType: 'objective'
+        }),
+        expect.objectContaining({
+          code: 'KR2',
+          scoreType: 'subjective'
         })
-      ])
-    );
+      ]
+    });
   });
 });

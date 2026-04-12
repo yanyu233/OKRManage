@@ -170,7 +170,8 @@ export class PrismaOrgRepository implements OrgRepository {
           code: keyResult.code,
           name: keyResult.name,
           description: keyResult.description,
-          points: keyResult.points
+          points: keyResult.points,
+          scoreType: keyResult.scoreType
         }))
       }))
     };
@@ -305,7 +306,8 @@ export class PrismaOrgRepository implements OrgRepository {
               code: keyResult.code,
               name: keyResult.name,
               description: keyResult.description,
-              points: keyResult.points
+              points: keyResult.points,
+              scoreType: keyResult.scoreType ?? 'subjective'
             }))
           });
         }

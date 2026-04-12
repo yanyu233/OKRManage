@@ -73,3 +73,14 @@ export function formatQuarterLabel(year: number, quarter: number) {
 export function formatNullableScore(value: number | null) {
   return value === null ? '-' : value.toFixed(1);
 }
+
+export function getScoreTypeLabel(scoreType: string) {
+  switch (scoreType) {
+    case 'objective':
+      return '\u5ba2\u89c2\u8bc4\u5206\u9879';
+    case 'subjective':
+      return '\u4e3b\u89c2\u8bc4\u5206\u9879';
+    default:
+      return scoreType;
+  }
+}
