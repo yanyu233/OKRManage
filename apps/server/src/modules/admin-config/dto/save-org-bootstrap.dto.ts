@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  Allow,
   ArrayMinSize,
   IsArray,
   IsBoolean,
@@ -148,6 +149,7 @@ class ReviewGroupQuotaSnapshotDto {
   gradeCode!: ReviewGradeCode;
 
   @Type(() => Number)
+  @Allow()
   seatCount!: number;
 }
 
@@ -187,6 +189,7 @@ class GoalTemplateKeyResultSnapshotDto {
   description?: string | null;
 
   @Type(() => Number)
+  @Allow()
   points!: number;
 
   @IsOptional()

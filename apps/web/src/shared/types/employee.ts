@@ -97,6 +97,20 @@ export type CreateEmployeeGoalInput = {
   name: string;
   description?: string | null;
   keyResults: Array<{
+    id?: string;
+    code: string;
+    name: string;
+    description?: string | null;
+    points: number;
+    scoreType?: ScoreType;
+  }>;
+};
+
+export type UpdateEmployeeGoalInput = {
+  name: string;
+  description?: string | null;
+  keyResults: Array<{
+    id?: string;
     code: string;
     name: string;
     description?: string | null;

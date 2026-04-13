@@ -1,6 +1,8 @@
 import type { LeaderGoalDetail, LeaderWorkbenchResponse } from '../../shared/types/leader';
 import { normalizeKeyword } from '../../shared/ui/toolbar-options';
 
+export const ALL_FILTER_VALUE = '__all__';
+
 export type ScoreDraft = {
   score: number | null;
   comment: string;
@@ -70,6 +72,7 @@ export function filterWorkbenchKeyResults(keyResults: LeaderGoalDetail['keyResul
 }
 
 export function buildWorkbenchFilterOptions(employees: LeaderWorkbenchResponse['employees']) {
+  const allOption = { value: ALL_FILTER_VALUE, label: '\u5168\u90e8' };
   const sections = uniqueBy(
     employees
       .filter((employee) => employee.sectionId && employee.sectionName)
@@ -91,8 +94,8 @@ export function buildWorkbenchFilterOptions(employees: LeaderWorkbenchResponse['
   );
 
   return {
-    sections,
-    reviewGroups
+    sections: [allOption, ...sections],
+    reviewGroups: [allOption, ...reviewGroups]
   };
 }
 
@@ -118,6 +121,160 @@ export function selectAllBulkEmployeeIds(
   filters: { sectionId?: string | null; reviewGroupId?: string | null }
 ) {
   return filterBulkScoreEmployees(employees, filters).map((employee) => employee.id);
+}
+
+export function resolveObjectiveBulkEmployeeIds(selectedEmployeeIds: string[], scorableEmployeeIds: string[]) {
+  if (!scorableEmployeeIds.length) {
+    return [];
+  }
+
+  const selectedScorableEmployeeIds = selectedEmployeeIds.filter((employeeId) => scorableEmployeeIds.includes(employeeId));
+  return selectedScorableEmployeeIds.length === scorableEmployeeIds.length ? scorableEmployeeIds : scorableEmployeeIds;
+}
+
+export type BulkPreviewRow = {
+  employeeId: string;
+  employeeName: string;
+  sectionName: string | null;
+  reviewGroupName: string | null;
+  goalId: string;
+  goalCode: string;
+  goalName: string;
+  isTemplateGoal: boolean;
+  keyResultId: string;
+  keyResultCode: string;
+  keyResultName: string;
+  points: number;
+  scoreType: 'objective' | 'subjective';
+  reviewScore: number | null;
+  canScore: boolean;
+};
+
+export function buildBulkScorePreview(
+  catalog: LeaderWorkbenchResponse['bulkCatalog'],
+  selection: {
+    sectionId?: string | null;
+    reviewGroupId?: string | null;
+    employeeIds: string[];
+    goalIds: string[];
+    keyResultIds: string[];
+    excludeTemplateGoals: boolean;
+  }
+) {
+  const selectedEmployeeIds = new Set(selection.employeeIds);
+  const selectedGoalIds = new Set(selection.goalIds);
+  const selectedKeyResultIds = new Set(selection.keyResultIds);
+
+  const selectedEmployees = filterBulkCatalogEmployees(catalog, {
+    sectionId: selection.sectionId,
+    reviewGroupId: selection.reviewGroupId
+  }).filter((employee) => selectedEmployeeIds.has(employee.id)).filter((employee) => employee.canScore);
+
+  const previewRows = selectedEmployees.flatMap((employee) =>
+    employee.goals
+      .filter((goal) => {
+        if (selection.excludeTemplateGoals && goal.isTemplateGoal) {
+          return false;
+        }
+
+        if (selectedGoalIds.size > 0 && !selectedGoalIds.has(goal.id)) {
+          return false;
+        }
+
+        return true;
+      })
+      .flatMap((goal) =>
+        goal.keyResults
+          .filter((keyResult) => keyResult.scoreType === 'objective')
+          .filter((keyResult) => selectedKeyResultIds.size === 0 || selectedKeyResultIds.has(keyResult.id))
+          .map((keyResult) => ({
+            employeeId: employee.id,
+            employeeName: employee.name,
+            sectionName: employee.sectionName,
+            reviewGroupName: employee.reviewGroupName,
+            goalId: goal.id,
+            goalCode: goal.code,
+            goalName: goal.name,
+            isTemplateGoal: goal.isTemplateGoal,
+            keyResultId: keyResult.id,
+            keyResultCode: keyResult.code,
+            keyResultName: keyResult.name,
+            points: keyResult.points,
+            scoreType: keyResult.scoreType,
+            reviewScore: keyResult.reviewScore,
+            canScore: employee.canScore
+          }))
+      )
+  );
+
+  const previewGoalIds = new Set(previewRows.map((entry) => entry.goalId));
+  return {
+    employees: selectedEmployees,
+    goals: uniqueBy(
+      selectedEmployees.flatMap((employee) =>
+        employee.goals
+          .filter((goal) => previewGoalIds.has(goal.id))
+          .map((goal) => ({
+            employeeId: employee.id,
+            employeeName: employee.name,
+            goalId: goal.id,
+            goalCode: goal.code,
+            goalName: goal.name,
+            isTemplateGoal: goal.isTemplateGoal
+          }))
+      ),
+      (entry) => `${entry.employeeId}:${entry.goalId}`
+    ),
+    keyResults: uniqueBy(previewRows, (entry) => entry.keyResultId),
+    rows: previewRows,
+    readonlyRows: previewRows.filter((entry) => !entry.canScore).length
+  };
+}
+
+export function selectAllObjectiveKeyResultIds(
+  catalog: LeaderWorkbenchResponse['bulkCatalog'],
+  selection: {
+    sectionId?: string | null;
+    reviewGroupId?: string | null;
+    employeeIds: string[];
+    goalIds: string[];
+    excludeTemplateGoals: boolean;
+  }
+) {
+  const selectedEmployeeIds = new Set(selection.employeeIds);
+  const selectedGoalIds = new Set(selection.goalIds);
+
+  return uniqueBy(
+    filterBulkCatalogEmployees(catalog, {
+      sectionId: selection.sectionId,
+      reviewGroupId: selection.reviewGroupId
+    })
+      .filter((employee) => selectedEmployeeIds.has(employee.id))
+      .flatMap((employee) =>
+        employee.goals
+          .filter((goal) => !(selection.excludeTemplateGoals && goal.isTemplateGoal))
+          .filter((goal) => selectedGoalIds.size === 0 || selectedGoalIds.has(goal.id))
+          .flatMap((goal) => goal.keyResults.filter((keyResult) => keyResult.scoreType === 'objective').map((keyResult) => keyResult.id))
+      ),
+    (entry) => entry
+  );
+}
+
+function filterBulkCatalogEmployees(
+  employees: LeaderWorkbenchResponse['bulkCatalog'],
+  filters: { sectionId?: string | null; reviewGroupId?: string | null }
+) {
+  return employees.filter((employee) => {
+    if (filters.sectionId && employee.sectionId !== filters.sectionId) {
+      return false;
+    }
+
+    if (filters.reviewGroupId && employee.reviewGroupId !== filters.reviewGroupId) {
+      return false;
+    }
+
+    return true;
+  });
 }
 
 function uniqueBy<T>(items: T[], getKey: (item: T) => string) {

@@ -40,3 +40,36 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
 
   return body as T;
 }
+
+export async function apiRequestBlob(path: string, init?: RequestInit) {
+  const headers = new Headers(init?.headers ?? {});
+  if (!(init?.body instanceof FormData) && !headers.has('Content-Type') && init?.body) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  const response = await fetch(resolveApiUrl(path), {
+    credentials: 'include',
+    headers,
+    ...init
+  });
+
+  if (!response.ok) {
+    let message = `Request failed: ${response.status}`;
+
+    try {
+      const body = await response.json();
+      if (body && typeof body.message === 'string') {
+        message = body.message;
+      }
+    } catch {
+      // ignore non-json bodies
+    }
+
+    throw new ApiError(message, response.status);
+  }
+
+  return {
+    blob: await response.blob(),
+    headers: response.headers
+  };
+}

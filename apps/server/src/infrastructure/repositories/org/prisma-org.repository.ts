@@ -4,6 +4,9 @@ import bcrypt from 'bcryptjs';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import {
+  type AdminGoalStatusControlQuery,
+  type AdminGoalStatusControlRecord,
+  type AdminGoalStatusTransitionInput,
   type AdminLocalAccountInput,
   type AdminOrgBootstrap,
   type AdminOrgBootstrapInput,
@@ -25,6 +28,72 @@ export class PrismaOrgRepository implements OrgRepository {
         isActive: true
       }
     });
+  }
+
+  async listGoalStatusControls(input: AdminGoalStatusControlQuery): Promise<AdminGoalStatusControlRecord[]> {
+    const goals = await this.prisma.goal.findMany({
+      where: {
+        year: input.year,
+        quarter: input.quarter,
+        ownerUserId: input.userId ?? undefined,
+        owner: {
+          isActive: true,
+          roleAssignments: {
+            some: {
+              roleCode: 'employee',
+              isEnabled: true
+            }
+          }
+        }
+      },
+      orderBy: [{ owner: { createdAt: 'asc' } }, { code: 'asc' }],
+      include: {
+        owner: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
+    });
+
+    return goals.map((goal) => ({
+      goalId: goal.id,
+      ownerUserId: goal.owner.id,
+      ownerName: goal.owner.name,
+      year: goal.year,
+      quarter: goal.quarter,
+      code: goal.code,
+      name: goal.name,
+      status: goal.status
+    }));
+  }
+
+  async transitionGoalStatuses(input: AdminGoalStatusTransitionInput): Promise<number> {
+    const currentStatus = input.targetStatus === 'confirmed' ? 'draft' : 'confirmed';
+
+    const result = await this.prisma.goal.updateMany({
+      where: {
+        year: input.year,
+        quarter: input.quarter,
+        ownerUserId: input.userId ?? undefined,
+        status: currentStatus,
+        owner: {
+          isActive: true,
+          roleAssignments: {
+            some: {
+              roleCode: 'employee',
+              isEnabled: true
+            }
+          }
+        }
+      },
+      data: {
+        status: input.targetStatus
+      }
+    });
+
+    return result.count;
   }
 
   async getAdminBootstrap(): Promise<AdminOrgBootstrap> {
@@ -95,6 +164,7 @@ export class PrismaOrgRepository implements OrgRepository {
           }
         }),
         this.prisma.goalTemplate.findMany({
+          where: { isActive: true },
           orderBy: { createdAt: 'asc' },
           include: {
             keyResults: {

@@ -1,4 +1,10 @@
-import { ApartmentOutlined, BarChartOutlined, SettingOutlined, TeamOutlined } from '@ant-design/icons';
+import {
+  ApartmentOutlined,
+  BarChartOutlined,
+  FundOutlined,
+  SettingOutlined,
+  TeamOutlined
+} from '@ant-design/icons';
 import type { ReactNode } from 'react';
 import type { ItemType } from 'antd/es/menu/interface';
 import { getRoleLabel } from '../../shared/i18n/labels';
@@ -34,6 +40,11 @@ const LEADER_ITEMS: NavigationLink[] = [
     key: '/leader/ranking',
     label: '评分排名',
     role: 'group-leader'
+  },
+  {
+    key: '/leader/annual-ranking',
+    label: '年度评分排名',
+    role: 'group-leader'
   }
 ];
 
@@ -49,6 +60,7 @@ const MENU_ICONS: Record<string, ReactNode> = {
   '/admin/org': <SettingOutlined />,
   '/leader/workbench': <TeamOutlined />,
   '/leader/ranking': <BarChartOutlined />,
+  '/leader/annual-ranking': <FundOutlined />,
   '/employee/okr': <ApartmentOutlined />
 };
 
@@ -114,6 +126,10 @@ export function menuItemsForUser(user: SessionUser): ItemType[] {
 export function selectedMenuKeyForPath(pathname: string) {
   if (pathname.startsWith('/admin/')) {
     return '/admin/org';
+  }
+
+  if (pathname.startsWith('/leader/annual-ranking')) {
+    return '/leader/annual-ranking';
   }
 
   if (pathname.startsWith('/leader/ranking')) {

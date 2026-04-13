@@ -7,6 +7,7 @@ import { LocalProofStorageService } from '../../infrastructure/storage/local-pro
 import {
   EMPLOYEE_REPOSITORY,
   EmployeeCreateGoalInput,
+  EmployeeGoalUpdateInput,
   EmployeeRepository
 } from '../../infrastructure/repositories/employee/employee.repository';
 
@@ -90,6 +91,30 @@ export class EmployeeService {
     return result;
   }
 
+  async updateGoal(actor: AuthUser, goalId: string, input: EmployeeGoalUpdateInput) {
+    const normalized = this.normalizeGoalInput(input);
+    const result = await this.employeeRepository.updateGoal(actor, goalId, normalized);
+
+    await this.auditService.write({
+      actorUserId: actor.id,
+      actorRoleCode: actor.role,
+      action: 'employee.goal.update',
+      entityType: 'goal',
+      entityId: goalId,
+      afterJson: {
+        name: result.name,
+        status: result.status,
+        keyResults: result.keyResults.map((keyResult) => ({
+          id: keyResult.id,
+          code: keyResult.code,
+          scoreType: keyResult.scoreType
+        }))
+      }
+    });
+
+    return result;
+  }
+
   async importGoalTemplates(actor: AuthUser, year: number, quarter: number, templateIds: string[]) {
     this.validateQuarter(year, quarter);
 
@@ -117,6 +142,23 @@ export class EmployeeService {
 
   getGoalDetail(actor: AuthUser, goalId: string) {
     return this.employeeRepository.getGoalDetail(actor, goalId);
+  }
+
+  async submitGoalForReview(actor: AuthUser, goalId: string) {
+    const result = await this.employeeRepository.submitGoalForReview(actor, goalId);
+
+    await this.auditService.write({
+      actorUserId: actor.id,
+      actorRoleCode: actor.role,
+      action: 'employee.goal.submit-review',
+      entityType: 'goal',
+      entityId: goalId,
+      afterJson: {
+        status: result.status
+      }
+    });
+
+    return result;
   }
 
   async updateKeyResultCompletion(actor: AuthUser, krId: string, completionState: string) {
@@ -193,5 +235,46 @@ export class EmployeeService {
     if (!Number.isInteger(quarter) || quarter < 1 || quarter > 4) {
       throw new DomainValidationError('invalid quarter');
     }
+  }
+
+  private normalizeGoalInput(input: EmployeeCreateGoalInput | EmployeeGoalUpdateInput) {
+    const normalizedName = input.name.trim();
+    if (!normalizedName) {
+      throw new DomainValidationError('goal name is required');
+    }
+
+    const uniqueCodes = new Set<string>();
+    for (const keyResult of input.keyResults) {
+      const normalizedCode = keyResult.code.trim();
+      const normalizedKeyResultName = keyResult.name.trim();
+      if (!normalizedCode) {
+        throw new DomainValidationError('key result code is required');
+      }
+
+      if (!normalizedKeyResultName) {
+        throw new DomainValidationError('key result name is required');
+      }
+
+      if (uniqueCodes.has(normalizedCode.toLowerCase())) {
+        throw new DomainValidationError('duplicate key result code');
+      }
+
+      uniqueCodes.add(normalizedCode.toLowerCase());
+    }
+
+    return {
+      ...input,
+      name: normalizedName,
+      description: input.description?.trim() || null,
+      keyResults: input.keyResults.map((keyResult) => ({
+        ...keyResult,
+        id: keyResult.id?.trim() || undefined,
+        code: keyResult.code.trim(),
+        name: keyResult.name.trim(),
+        description: keyResult.description?.trim() || null,
+        points: keyResult.points,
+        scoreType: keyResult.scoreType ?? 'objective'
+      }))
+    };
   }
 }

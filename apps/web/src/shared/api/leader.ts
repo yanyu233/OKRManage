@@ -1,4 +1,5 @@
 import type {
+  LeaderAnnualRankingResponse,
   BulkLeaderKrScoreInput,
   BulkLeaderKrScoreResponse,
   LeaderRankingResponse,
@@ -18,6 +19,11 @@ type RankingQuery = {
   year: number;
   quarter: number;
   reviewGroupId?: string | null;
+  employeeId?: string | null;
+};
+
+type AnnualRankingQuery = {
+  year: number;
   employeeId?: string | null;
 };
 
@@ -43,6 +49,12 @@ export function bulkLeaderKrScore(payload: BulkLeaderKrScoreInput) {
 
 export function getLeaderRanking(query: RankingQuery) {
   return apiRequest<LeaderRankingResponse>(`/leader/ranking${toQueryString(query)}`, {
+    method: 'GET'
+  });
+}
+
+export function getLeaderAnnualRanking(query: AnnualRankingQuery) {
+  return apiRequest<LeaderAnnualRankingResponse>(`/leader/annual-ranking${toQueryString(query)}`, {
     method: 'GET'
   });
 }

@@ -119,6 +119,20 @@ export type EmployeeCreateGoalInput = {
   name: string;
   description: string | null;
   keyResults: Array<{
+    id?: string;
+    code: string;
+    name: string;
+    description: string | null;
+    points: number;
+    scoreType?: EmployeeScoreType;
+  }>;
+};
+
+export type EmployeeGoalUpdateInput = {
+  name: string;
+  description: string | null;
+  keyResults: Array<{
+    id?: string;
     code: string;
     name: string;
     description: string | null;
@@ -132,6 +146,17 @@ export type EmployeeGoalCreateResult = EmployeeGoalDetailRecord & {
     id: string;
     name: string;
   };
+};
+
+export type EmployeeGoalStatusControlRecord = {
+  goalId: string;
+  ownerUserId: string;
+  ownerName: string;
+  year: number;
+  quarter: number;
+  code: string;
+  name: string;
+  status: string;
 };
 
 export type ProofDownloadRecord = {
@@ -150,7 +175,9 @@ export interface EmployeeRepository {
     templateIds: string[]
   ): Promise<EmployeeGoalTemplateImportResult>;
   createGoal(actor: AuthUser, input: EmployeeCreateGoalInput): Promise<EmployeeGoalCreateResult>;
+  updateGoal(actor: AuthUser, goalId: string, input: EmployeeGoalUpdateInput): Promise<EmployeeGoalDetailRecord>;
   getGoalDetail(actor: AuthUser, goalId: string): Promise<EmployeeGoalDetailRecord>;
+  submitGoalForReview(actor: AuthUser, goalId: string): Promise<EmployeeGoalDetailRecord>;
   updateKeyResultCompletion(actor: AuthUser, krId: string, completionState: string): Promise<EmployeeCompletionUpdateResult>;
   createProof(
     actor: AuthUser,

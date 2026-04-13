@@ -220,6 +220,7 @@ export function ReviewGroupSection({
                           precision={0}
                           value={quota.seatCount}
                           controls={false}
+                          changeOnBlur={false}
                           style={{ width: '100%' }}
                           onChange={(value) =>
                             updateReviewGroup(reviewGroup.id, {

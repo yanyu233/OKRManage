@@ -59,6 +59,34 @@ export type LeaderEmployeeSummary = {
   status: string;
 };
 
+export type LeaderBulkCatalogKeyResult = {
+  id: string;
+  code: string;
+  name: string;
+  points: number;
+  scoreType: ScoreType;
+  reviewScore: number | null;
+};
+
+export type LeaderBulkCatalogGoal = {
+  id: string;
+  code: string;
+  name: string;
+  isTemplateGoal: boolean;
+  keyResults: LeaderBulkCatalogKeyResult[];
+};
+
+export type LeaderBulkCatalogEmployee = {
+  id: string;
+  name: string;
+  sectionId: string | null;
+  sectionName: string | null;
+  reviewGroupId: string | null;
+  reviewGroupName: string | null;
+  canScore: boolean;
+  goals: LeaderBulkCatalogGoal[];
+};
+
 export type LeaderWorkbenchResponse = {
   year: number;
   quarter: number;
@@ -66,6 +94,7 @@ export type LeaderWorkbenchResponse = {
   selectedEmployee: LeaderEmployeeSummary | null;
   goals: LeaderGoalSummary[];
   selectedGoal: LeaderGoalDetail | null;
+  bulkCatalog: LeaderBulkCatalogEmployee[];
 };
 
 export type UpdateLeaderKrScoreInput = {
@@ -81,7 +110,6 @@ export type BulkLeaderKrScoreInput = {
   employeeIds?: string[];
   goalIds?: string[];
   keyResultIds?: string[];
-  score: number;
   comment?: string;
   overwriteExisting?: boolean;
   excludeTemplateGoals?: boolean;
@@ -154,4 +182,26 @@ export type LeaderRankingResponse = {
   seatSummary: LeaderSeatSummary[];
   ranking: LeaderRankingEntry[];
   selectedEmployee: LeaderRankingSelectedEmployee | null;
+};
+
+export type LeaderAnnualQuarterScore = {
+  quarter: number;
+  score: number;
+};
+
+export type LeaderAnnualRankingEntry = {
+  employeeId: string;
+  employeeName: string;
+  sectionName: string | null;
+  reviewGroupName: string | null;
+  annualScore: number;
+  quarterScores: LeaderAnnualQuarterScore[];
+};
+
+export type LeaderAnnualRankingSelectedEmployee = LeaderAnnualRankingEntry;
+
+export type LeaderAnnualRankingResponse = {
+  year: number;
+  ranking: LeaderAnnualRankingEntry[];
+  selectedEmployee: LeaderAnnualRankingSelectedEmployee | null;
 };

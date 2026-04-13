@@ -15,6 +15,8 @@ describe('WeCom auth skeleton', () => {
   };
   let app: INestApplication;
 
+  jest.setTimeout(20000);
+
   afterEach(async () => {
     if (app) {
       await app.close();

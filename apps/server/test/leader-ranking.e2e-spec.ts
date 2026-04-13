@@ -36,7 +36,7 @@ describe('Leader ranking', () => {
           seatCount: 1
         }),
         expect.objectContaining({
-          gradeCode: 'B+',
+          gradeCode: 'B',
           seatCount: 1
         })
       ])
@@ -49,7 +49,7 @@ describe('Leader ranking', () => {
     );
     expect(
       response.body.ranking.some(
-        (entry: { employeeName: string; currentGrade: string }) => entry.employeeName === '张晨' && entry.currentGrade === 'B+'
+        (entry: { employeeName: string; currentGrade: string }) => entry.employeeName === '张晨' && entry.currentGrade === 'B'
       )
     ).toBe(true);
   });

@@ -22,7 +22,10 @@ describe('labels', () => {
   });
 
   it('maps business states to Chinese labels', () => {
+    expect(getGoalStatusLabel('draft')).toBe('草稿');
     expect(getGoalStatusLabel('confirmed')).toBe('已确认');
+    expect(getGoalStatusLabel('pending-review')).toBe('待评分');
+    expect(getGoalStatusLabel('completed')).toBe('已完成');
     expect(getCompletionStateLabel('incomplete')).toBe('待补充');
     expect(getCompletionStateLabel('completed')).toBe('已完成');
     expect(getLeaderEmployeeStatusLabel('pending')).toBe('待开始');

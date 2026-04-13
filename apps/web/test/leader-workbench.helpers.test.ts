@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ALL_FILTER_VALUE,
+  buildBulkScorePreview,
   buildWorkbenchFilterOptions,
   createScoreDrafts,
   filterBulkScoreEmployees,
   filterWorkbenchEmployees,
   filterWorkbenchGoals,
   filterWorkbenchKeyResults,
+  resolveObjectiveBulkEmployeeIds,
   resolveWorkbenchSelection,
   selectAllBulkEmployeeIds
 } from '../src/modules/leader/leader-workbench.helpers';
@@ -72,7 +75,7 @@ describe('leader workbench helpers', () => {
       keyResultCount: 1,
       scoredKeyResultCount: 1,
       proofCount: 0,
-      currentScore: 92.5,
+      currentScore: 30.1,
       keyResults: [
         {
           id: 'kr-1',
@@ -80,9 +83,10 @@ describe('leader workbench helpers', () => {
           name: '完成 6 个版本交付',
           description: null,
           points: 35,
+          scoreType: 'objective',
           canScore: true,
           completionState: 'incomplete',
-          reviewScore: 92.5,
+          reviewScore: 30.1,
           reviewComment: '交付证据充分',
           proofCount: 0,
           proofs: []
@@ -92,7 +96,7 @@ describe('leader workbench helpers', () => {
 
     expect(createScoreDrafts(goal)).toEqual({
       'kr-1': {
-        score: 92.5,
+        score: 30.1,
         comment: '交付证据充分'
       }
     });
@@ -170,9 +174,10 @@ describe('leader workbench helpers', () => {
         name: '完成 6 个版本交付',
         description: '关注季度版本交付节奏',
         points: 35,
+        scoreType: 'objective',
         canScore: true,
         completionState: 'incomplete',
-        reviewScore: 92.5,
+        reviewScore: 30.1,
         reviewComment: '表现稳定',
         proofCount: 2,
         proofs: []
@@ -183,9 +188,10 @@ describe('leader workbench helpers', () => {
         name: '知识库覆盖率达到 80%',
         description: '补齐高频问题文档',
         points: 25,
+        scoreType: 'objective',
         canScore: false,
         completionState: 'incomplete',
-        reviewScore: 90,
+        reviewScore: 19.5,
         reviewComment: '继续推进',
         proofCount: 0,
         proofs: []
@@ -251,10 +257,12 @@ describe('leader workbench helpers', () => {
 
     expect(buildWorkbenchFilterOptions(employees)).toEqual({
       sections: [
+        { value: ALL_FILTER_VALUE, label: '全部' },
         { value: 'sec-1', label: '平台产品科' },
         { value: 'sec-2', label: '解决方案科' }
       ],
       reviewGroups: [
+        { value: ALL_FILTER_VALUE, label: '全部' },
         { value: 'rg-1', label: '信息化组' },
         { value: 'rg-2', label: '运营组' }
       ]
@@ -263,5 +271,85 @@ describe('leader workbench helpers', () => {
     expect(filterBulkScoreEmployees(employees, { sectionId: 'sec-1' })).toEqual([employees[0], employees[2]]);
     expect(filterBulkScoreEmployees(employees, { reviewGroupId: 'rg-2' })).toEqual([employees[1]]);
     expect(selectAllBulkEmployeeIds(employees, { sectionId: 'sec-1' })).toEqual(['u-1', 'u-3']);
+  });
+
+  it('excludes readonly employees from bulk preview rows and goals', () => {
+    const preview = buildBulkScorePreview(
+      [
+        {
+          id: 'u-1',
+          name: '张晨',
+          sectionId: 'sec-1',
+          sectionName: '平台产品科',
+          reviewGroupId: 'rg-1',
+          reviewGroupName: '信息化组',
+          canScore: true,
+          goals: [
+            {
+              id: 'g-1',
+              code: 'O1',
+              name: '张晨 2026 年一季度 OKR',
+              isTemplateGoal: false,
+              keyResults: [
+                {
+                  id: 'kr-1',
+                  code: 'KR1',
+                  name: '完成 6 个版本交付',
+                  points: 35,
+                  scoreType: 'objective',
+                  reviewScore: 30.1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          id: 'u-2',
+          name: '李雷',
+          sectionId: 'sec-2',
+          sectionName: '解决方案科',
+          reviewGroupId: 'rg-2',
+          reviewGroupName: '运营组',
+          canScore: false,
+          goals: [
+            {
+              id: 'g-2',
+              code: 'O3',
+              name: '李雷 运营支持专项',
+              isTemplateGoal: false,
+              keyResults: [
+                {
+                  id: 'kr-2',
+                  code: 'KR1',
+                  name: '运营资料补齐',
+                  points: 20,
+                  scoreType: 'objective',
+                  reviewScore: null
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      {
+        sectionId: null,
+        reviewGroupId: null,
+        employeeIds: ['u-1', 'u-2'],
+        goalIds: [],
+        keyResultIds: [],
+        excludeTemplateGoals: false
+      }
+    );
+
+    expect(preview.employees.map((employee) => employee.id)).toEqual(['u-1']);
+    expect(preview.goals.map((goal) => goal.goalId)).toEqual(['g-1']);
+    expect(preview.rows.map((row) => row.keyResultId)).toEqual(['kr-1']);
+    expect(preview.readonlyRows).toBe(0);
+  });
+
+  it('expands objective bulk scoring to all scorable employees in scope', () => {
+    expect(resolveObjectiveBulkEmployeeIds(['u-1'], ['u-1', 'u-2'])).toEqual(['u-1', 'u-2']);
+    expect(resolveObjectiveBulkEmployeeIds([], ['u-1', 'u-2'])).toEqual(['u-1', 'u-2']);
+    expect(resolveObjectiveBulkEmployeeIds(['u-3'], ['u-1', 'u-2'])).toEqual(['u-1', 'u-2']);
   });
 });

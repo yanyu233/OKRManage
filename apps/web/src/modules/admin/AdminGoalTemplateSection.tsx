@@ -104,7 +104,8 @@ export function AdminGoalTemplateSection({
                 updateCollection('goalTemplates', (items) => [
                   ...items,
                   createGoalTemplateRecord(
-                    departmentFilter !== 'all' ? departmentFilter : draft.departments.at(0)?.id ?? null
+                    departmentFilter !== 'all' ? departmentFilter : draft.departments.at(0)?.id ?? null,
+                    buildNextTemplateName(items)
                   )
                 ])
               }
@@ -304,7 +305,10 @@ export function AdminGoalTemplateSection({
         item.id === templateId
           ? {
               ...item,
-              keyResults: [...item.keyResults, createGoalTemplateKeyResultRecord(`KR${length + 1}`)]
+              keyResults: [
+                ...item.keyResults,
+                createGoalTemplateKeyResultRecord(`KR${length + 1}`, `关键结果${length + 1}`)
+              ]
             }
           : item
       )
@@ -340,5 +344,23 @@ export function AdminGoalTemplateSection({
           : item
       )
     );
+  }
+
+  function buildNextTemplateName(templates: AdminOrgBootstrapInput['goalTemplates']) {
+    const existingNames = new Set(
+      templates
+        .map((template) => template.name.trim())
+        .filter((name) => name.length > 0)
+    );
+
+    let index = templates.length + 1;
+    let candidate = `新模板目标${index}`;
+
+    while (existingNames.has(candidate)) {
+      index += 1;
+      candidate = `新模板目标${index}`;
+    }
+
+    return candidate;
   }
 }

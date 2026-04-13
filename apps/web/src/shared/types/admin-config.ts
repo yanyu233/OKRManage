@@ -1,4 +1,4 @@
-export type ReviewGradeCode = 'A+' | 'A' | 'B+' | 'B' | 'C';
+export type ReviewGradeCode = 'A+' | 'A' | 'B' | 'C' | 'D';
 export type UserRoleCode = 'system-admin' | 'section-leader' | 'group-leader' | 'employee';
 export type RoleScopeType = 'system' | 'department' | 'section' | 'review-group' | 'user';
 export type ScoreType = 'objective' | 'subjective';
@@ -108,4 +108,34 @@ export type AdminOrgBootstrapInput = {
   groupLeaderBindings: GroupLeaderBindingRecord[];
   reviewGroups: Array<Omit<ReviewGroupRecord, 'memberCount'>>;
   goalTemplates: GoalTemplateRecord[];
+};
+
+export type AdminGoalStatusControlRecord = {
+  goalId: string;
+  ownerUserId: string;
+  ownerName: string;
+  year: number;
+  quarter: number;
+  code: string;
+  name: string;
+  status: 'draft' | 'confirmed' | 'pending-review' | 'completed';
+};
+
+export type AdminGoalStatusControlResponse = {
+  year: number;
+  quarter: number;
+  records: AdminGoalStatusControlRecord[];
+};
+
+export type AdminGoalStatusControlQuery = {
+  year: number;
+  quarter: number;
+  userId?: string | null;
+};
+
+export type AdminGoalStatusTransitionInput = {
+  year: number;
+  quarter: number;
+  userId?: string | null;
+  targetStatus: 'draft' | 'confirmed';
 };

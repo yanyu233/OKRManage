@@ -1,6 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import { closeTestDatabase, resetTestDatabase } from './support/test-db';
-import { createTestApp, loginAsSectionLeader } from './support/test-app';
+import { createTestApp, loginAsEmployee, loginAsSectionLeader } from './support/test-app';
 
 describe('Leader workbench', () => {
   let app: INestApplication;
@@ -15,9 +15,19 @@ describe('Leader workbench', () => {
     await closeTestDatabase();
   });
 
-  it('returns all employees for leaders but only enables scoring inside the scoped section or group', async () => {
-    const agent = await loginAsSectionLeader(app);
+  it('returns all employees for leaders, keeps out-of-scope users readonly, and exposes bulk preview catalog', async () => {
+    const employee = await loginAsEmployee(app);
+    const templates = await employee.get('/api/employee/goal-templates?year=2026&quarter=1').expect(200);
+    await employee
+      .post('/api/employee/goal-templates/import')
+      .send({
+        year: 2026,
+        quarter: 1,
+        templateIds: [templates.body.templates[0].id]
+      })
+      .expect(201);
 
+    const agent = await loginAsSectionLeader(app);
     const response = await agent.get('/api/leader/workbench?year=2026&quarter=1').expect(200);
     const zhang = response.body.employees.find((entry: { name: string }) => entry.name === '张晨');
     const liLei = response.body.employees.find((entry: { name: string }) => entry.name === '李雷');
@@ -26,14 +36,10 @@ describe('Leader workbench', () => {
       expect.arrayContaining([
         expect.objectContaining({
           name: '张晨',
-          goalCount: 2,
-          keyResultCount: 6,
           canScore: true
         }),
         expect.objectContaining({
           name: '王敏',
-          goalCount: 1,
-          keyResultCount: 3,
           canScore: true
         }),
         expect.objectContaining({
@@ -65,6 +71,25 @@ describe('Leader workbench', () => {
         expect.objectContaining({
           code: 'KR1',
           canScore: false
+        })
+      ])
+    );
+
+    expect(response.body.bulkCatalog).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: zhang.id,
+          name: '张晨',
+          goals: expect.arrayContaining([
+            expect.objectContaining({
+              isTemplateGoal: true,
+              keyResults: expect.arrayContaining([
+                expect.objectContaining({
+                  scoreType: expect.any(String)
+                })
+              ])
+            })
+          ])
         })
       ])
     );

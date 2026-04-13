@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { buildNavigationSections, canAccessRoute, menuItemsForUser, resolveTargetRoleForPath, selectedMenuKeyForPath } from '../src/modules/layout/routing';
+import {
+  buildNavigationSections,
+  canAccessRoute,
+  menuItemsForUser,
+  resolveTargetRoleForPath,
+  selectedMenuKeyForPath
+} from '../src/modules/layout/routing';
 import type { SessionUser } from '../src/shared/types/session';
 
 const employeeUser: SessionUser = {
@@ -71,6 +77,11 @@ describe('multi-role routing', () => {
             key: '/leader/ranking',
             label: '评分排名',
             role: 'group-leader'
+          },
+          {
+            key: '/leader/annual-ranking',
+            label: '年度评分排名',
+            role: 'group-leader'
           }
         ]
       },
@@ -89,13 +100,14 @@ describe('multi-role routing', () => {
 
     expect(items).toHaveLength(2);
     const totalChildren = items.reduce((sum, item) => sum + ((item as { children?: unknown[] }).children?.length ?? 1), 0);
-    expect(totalChildren).toBe(3);
+    expect(totalChildren).toBe(4);
   });
 
   it('resolves target active role from the destination path', () => {
     expect(resolveTargetRoleForPath(dualRoleUser, '/employee/okr')).toBe('employee');
     expect(resolveTargetRoleForPath(dualRoleUser, '/employee/goal/goal-1')).toBe('employee');
     expect(resolveTargetRoleForPath(dualRoleUser, '/leader/workbench')).toBe('group-leader');
+    expect(resolveTargetRoleForPath(dualRoleUser, '/leader/annual-ranking')).toBe('group-leader');
   });
 
   it('checks route access from assigned roles instead of only the active role', () => {
@@ -107,5 +119,6 @@ describe('multi-role routing', () => {
   it('maps nested employee routes to the employee menu key', () => {
     expect(selectedMenuKeyForPath('/employee/goal/goal-1')).toBe('/employee/okr');
     expect(selectedMenuKeyForPath('/leader/ranking')).toBe('/leader/ranking');
+    expect(selectedMenuKeyForPath('/leader/annual-ranking')).toBe('/leader/annual-ranking');
   });
 });

@@ -4,6 +4,7 @@ import {
   Controller,
   ForbiddenException,
   Get,
+  HttpCode,
   Param,
   ParseIntPipe,
   Post,
@@ -24,6 +25,7 @@ import { DomainValidationError } from '../../shared/errors/domain-validation.err
 import { EmployeeService } from './employee.service';
 import { CreateGoalDto } from './dto/create-goal.dto';
 import { ImportGoalTemplatesDto } from './dto/import-goal-templates.dto';
+import { UpdateGoalDto } from './dto/update-goal.dto';
 import { UpdateKrCompletionDto } from './dto/update-kr-completion.dto';
 import { UploadProofDto } from './dto/upload-proof.dto';
 
@@ -104,6 +106,40 @@ export class EmployeeController {
 
     try {
       return await this.employeeService.getGoalDetail(actor, goalId);
+    } catch (error) {
+      this.rethrowDomainError(error);
+    }
+  }
+
+  @Put('goals/:goalId')
+  async updateGoal(@Req() request: Request, @Param('goalId') goalId: string, @Body() payload: UpdateGoalDto) {
+    const actor = await this.requireEmployee(request);
+
+    try {
+      return await this.employeeService.updateGoal(actor, goalId, {
+        name: payload.name,
+        description: payload.description ?? null,
+        keyResults: payload.keyResults.map((keyResult) => ({
+          id: keyResult.id,
+          code: keyResult.code,
+          name: keyResult.name,
+          description: keyResult.description ?? null,
+          points: keyResult.points,
+          scoreType: keyResult.scoreType
+        }))
+      });
+    } catch (error) {
+      this.rethrowDomainError(error);
+    }
+  }
+
+  @Post('goals/:goalId/submit-review')
+  @HttpCode(200)
+  async submitGoalForReview(@Req() request: Request, @Param('goalId') goalId: string) {
+    const actor = await this.requireEmployee(request);
+
+    try {
+      return await this.employeeService.submitGoalForReview(actor, goalId);
     } catch (error) {
       this.rethrowDomainError(error);
     }

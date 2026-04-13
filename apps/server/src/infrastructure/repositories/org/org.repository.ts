@@ -115,8 +115,34 @@ export type AdminOrgBootstrapInput = {
   goalTemplates: AdminGoalTemplateRecord[];
 };
 
+export type AdminGoalStatusControlRecord = {
+  goalId: string;
+  ownerUserId: string;
+  ownerName: string;
+  year: number;
+  quarter: number;
+  code: string;
+  name: string;
+  status: string;
+};
+
+export type AdminGoalStatusControlQuery = {
+  year: number;
+  quarter: number;
+  userId?: string | null;
+};
+
+export type AdminGoalStatusTransitionInput = {
+  year: number;
+  quarter: number;
+  userId?: string | null;
+  targetStatus: 'draft' | 'confirmed';
+};
+
 export interface OrgRepository {
   countActiveUsersByReviewGroupId(reviewGroupId: string): Promise<number>;
   getAdminBootstrap(): Promise<AdminOrgBootstrap>;
   saveAdminBootstrap(input: AdminOrgBootstrapInput): Promise<void>;
+  listGoalStatusControls(input: AdminGoalStatusControlQuery): Promise<AdminGoalStatusControlRecord[]>;
+  transitionGoalStatuses(input: AdminGoalStatusTransitionInput): Promise<number>;
 }

@@ -67,13 +67,22 @@ export class LeaderService {
     return this.leaderRepository.getRanking(actor, year, quarter, reviewGroupId, employeeId);
   }
 
+  getAnnualRanking(actor: AuthUser, year: number, employeeId?: string) {
+    this.validateYear(year);
+    return this.leaderRepository.getAnnualRanking(actor, year, employeeId);
+  }
+
   private validateQuarter(year: number, quarter: number) {
-    if (!Number.isInteger(year) || year < 2000 || year > 2100) {
-      throw new DomainValidationError('invalid year');
-    }
+    this.validateYear(year);
 
     if (!Number.isInteger(quarter) || quarter < 1 || quarter > 4) {
       throw new DomainValidationError('invalid quarter');
+    }
+  }
+
+  private validateYear(year: number) {
+    if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+      throw new DomainValidationError('invalid year');
     }
   }
 }

@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { closeTestDatabase, resetTestDatabase } from './support/test-db';
 import { createTestApp, loginAsSysadmin } from './support/test-app';
 
-const GRADE_CODES = ['A+', 'A', 'B+', 'B', 'C'] as const;
+const GRADE_CODES = ['A+', 'A', 'B', 'C', 'D'] as const;
 
 describe('Review group admin config', () => {
   let app: INestApplication;
@@ -65,9 +65,9 @@ describe('Review group admin config', () => {
         quotas: [
           { gradeCode: 'A+', seatCount: 6 },
           { gradeCode: 'A', seatCount: 0 },
-          { gradeCode: 'B+', seatCount: 0 },
           { gradeCode: 'B', seatCount: 0 },
-          { gradeCode: 'C', seatCount: 0 }
+          { gradeCode: 'C', seatCount: 0 },
+          { gradeCode: 'D', seatCount: 0 }
         ]
       })
       .expect(400);

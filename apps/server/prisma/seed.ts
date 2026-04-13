@@ -5,7 +5,7 @@ import { join, resolve } from 'node:path';
 
 const prisma = new PrismaClient();
 
-const GRADE_CODES = ['A+', 'A', 'B+', 'B', 'C'] as const;
+const GRADE_CODES = ['A+', 'A', 'B', 'C', 'D'] as const;
 const QUARTER_YEAR = 2026;
 const QUARTER_NUMBER = 1;
 const proofStorageRoot = resolve(process.cwd(), process.env.PROOF_STORAGE_DIR?.trim() || 'storage/proofs');
@@ -22,25 +22,25 @@ async function main(): Promise<void> {
   const digitalGroup = await upsertReviewGroup('\u4fe1\u606f\u5316\u7ec4', {
     'A+': 1,
     A: 0,
-    'B+': 1,
-    B: 0,
-    C: 0
+    B: 1,
+    C: 0,
+    D: 0
   });
   const operationsGroup = await upsertReviewGroup('\u8fd0\u8425\u7ec4', {
     'A+': 0,
     A: 0,
-    'B+': 0,
     B: 0,
-    C: 0
+    C: 0,
+    D: 0
   });
 
   await mkdir(proofStorageRoot, { recursive: true });
   await upsertReviewGroup('\u7efc\u5408\u7ec4', {
     'A+': 0,
     A: 0,
-    'B+': 0,
     B: 0,
-    C: 0
+    C: 0,
+    D: 0
   });
 
   await upsertGoalTemplate(sectionPlatform.departmentId, '\u5e73\u53f0\u79d1\u65b0\u5458\u5de5\u6a21\u677f', '\u7528\u4e8e\u5feb\u901f\u5bfc\u5165\u9996\u4e2a\u5b63\u5ea6\u901a\u7528\u76ee\u6807', [
@@ -435,7 +435,7 @@ async function seedGoalsForZhang(ownerUserId: string, reviewerUserId: string) {
     description: '\u8ddf\u8e2a\u5b63\u5ea6\u8ba1\u5212\u7248\u672c\u7684\u4ea4\u4ed8\u8282\u594f\u3002',
     points: 35,
     completionState: 'incomplete',
-    reviewScore: 86,
+    reviewScore: 30.1,
     reviewComment: '\u7248\u672c\u4ea4\u4ed8\u8282\u594f\u7a33\u6b65\u63d0\u5347\u3002',
     reviewedByUserId: reviewerUserId
   });
@@ -461,7 +461,7 @@ async function seedGoalsForZhang(ownerUserId: string, reviewerUserId: string) {
     description: '\u8865\u9f50\u9ad8\u9891\u95ee\u9898\u548c\u89e3\u51b3\u65b9\u6848\u6587\u6863\u3002',
     points: 25,
     completionState: 'incomplete',
-    reviewScore: 78,
+    reviewScore: 19.5,
     reviewComment: '\u8986\u76d6\u7387\u6301\u7eed\u63d0\u5347\uff0c\u8fd8\u9700\u7ee7\u7eed\u8865\u9f50\u3002',
     reviewedByUserId: reviewerUserId
   });
@@ -473,7 +473,7 @@ async function seedGoalsForZhang(ownerUserId: string, reviewerUserId: string) {
     description: '\u7f29\u77ed\u9ad8\u4f18\u95ee\u9898\u7684\u95ed\u73af\u5468\u671f\u3002',
     points: 20,
     completionState: 'incomplete',
-    reviewScore: 70,
+    reviewScore: 14,
     reviewComment: '\u95ed\u73af\u65f6\u6548\u6539\u5584\u660e\u663e\uff0c\u4f46\u7a33\u5b9a\u6027\u8fd8\u9700\u52a0\u5f3a\u3002',
     reviewedByUserId: reviewerUserId
   });
@@ -513,6 +513,45 @@ async function seedGoalsForZhang(ownerUserId: string, reviewerUserId: string) {
     reviewComment: null,
     reviewedByUserId: null
   });
+
+  const q3Goal = await prisma.goal.upsert({
+    where: {
+      ownerUserId_year_quarter_code: {
+        ownerUserId,
+        year: QUARTER_YEAR,
+        quarter: 3,
+        code: 'O1'
+      }
+    },
+    update: {
+      name: '\u5f20\u6668 2026 \u5e74\u4e09\u5b63\u5ea6\u4ea4\u4ed8\u8d28\u91cf\u8ffd\u8e2a',
+      description: '\u8ddf\u8fdb\u4e09\u5b63\u5ea6\u4ea4\u4ed8\u8d28\u91cf\u4e0e\u77e5\u8bc6\u6c89\u6dc0\u95ed\u73af\u60c5\u51b5\u3002',
+      status: 'confirmed',
+      totalPoints: 79
+    },
+    create: {
+      ownerUserId,
+      year: QUARTER_YEAR,
+      quarter: 3,
+      code: 'O1',
+      name: '\u5f20\u6668 2026 \u5e74\u4e09\u5b63\u5ea6\u4ea4\u4ed8\u8d28\u91cf\u8ffd\u8e2a',
+      description: '\u8ddf\u8fdb\u4e09\u5b63\u5ea6\u4ea4\u4ed8\u8d28\u91cf\u4e0e\u77e5\u8bc6\u6c89\u6dc0\u95ed\u73af\u60c5\u51b5\u3002',
+      status: 'confirmed',
+      totalPoints: 79
+    }
+  });
+
+  await upsertKeyResult({
+    goalId: q3Goal.id,
+    code: 'KR1',
+    name: '\u4e09\u5b63\u5ea6\u7248\u672c\u4ea4\u4ed8\u8d28\u91cf\u7a33\u5b9a',
+    description: '\u786e\u4fdd\u4e09\u5b63\u5ea6\u7248\u672c\u8fed\u4ee3\u548c\u8d28\u91cf\u6307\u6807\u7a33\u5b9a\u3002',
+    points: 79,
+    completionState: 'completed',
+    reviewScore: 79,
+    reviewComment: '\u4e09\u5b63\u5ea6\u4ea4\u4ed8\u6309\u9884\u671f\u8fbe\u6210\u3002',
+    reviewedByUserId: reviewerUserId
+  });
 }
 
 async function seedGoalsForWang(ownerUserId: string, reviewerUserId: string) {
@@ -550,7 +589,7 @@ async function seedGoalsForWang(ownerUserId: string, reviewerUserId: string) {
     description: '\u786e\u4fdd\u5468\u5ea6\u627f\u8bfa\u4ea4\u4ed8\u6309\u8ba1\u5212\u843d\u5730\u3002',
     points: 50,
     completionState: 'completed',
-    reviewScore: 92.5,
+    reviewScore: 46.25,
     reviewComment: '\u4ea4\u4ed8\u8282\u594f\u7a33\u5b9a\uff0c\u8fbe\u6210\u60c5\u51b5\u826f\u597d\u3002',
     reviewedByUserId: reviewerUserId
   });
@@ -562,7 +601,7 @@ async function seedGoalsForWang(ownerUserId: string, reviewerUserId: string) {
     description: '\u63d0\u5347\u91cd\u70b9\u7f3a\u9677\u7684\u5904\u7406\u8d28\u91cf\u3002',
     points: 30,
     completionState: 'completed',
-    reviewScore: 90,
+    reviewScore: 27,
     reviewComment: '\u7f3a\u9677\u5904\u7406\u8d28\u91cf\u76ee\u6807\u57fa\u672c\u8fbe\u6210\u3002',
     reviewedByUserId: reviewerUserId
   });
@@ -574,8 +613,47 @@ async function seedGoalsForWang(ownerUserId: string, reviewerUserId: string) {
     description: '\u964d\u4f4e\u8bc4\u5ba1\u73af\u8282\u4e2d\u53ef\u907f\u514d\u7684\u8fd4\u5de5\u3002',
     points: 20,
     completionState: 'completed',
-    reviewScore: 87,
+    reviewScore: 17.4,
     reviewComment: '\u6574\u4f53\u7a33\u5b9a\uff0c\u5e76\u8fbe\u5230\u9884\u671f\u76ee\u6807\u3002',
+    reviewedByUserId: reviewerUserId
+  });
+
+  const q2Goal = await prisma.goal.upsert({
+    where: {
+      ownerUserId_year_quarter_code: {
+        ownerUserId,
+        year: QUARTER_YEAR,
+        quarter: 2,
+        code: 'O1'
+      }
+    },
+    update: {
+      name: '\u738b\u654f 2026 \u5e74\u4e8c\u5b63\u5ea6\u4ea4\u4ed8\u7a33\u5b9a\u63d0\u5347',
+      description: '\u805a\u7126\u4e8c\u5b63\u5ea6\u4ea4\u4ed8\u7a33\u5b9a\u6027\u548c\u8d28\u91cf\u95ed\u73af\u3002',
+      status: 'confirmed',
+      totalPoints: 66
+    },
+    create: {
+      ownerUserId,
+      year: QUARTER_YEAR,
+      quarter: 2,
+      code: 'O1',
+      name: '\u738b\u654f 2026 \u5e74\u4e8c\u5b63\u5ea6\u4ea4\u4ed8\u7a33\u5b9a\u63d0\u5347',
+      description: '\u805a\u7126\u4e8c\u5b63\u5ea6\u4ea4\u4ed8\u7a33\u5b9a\u6027\u548c\u8d28\u91cf\u95ed\u73af\u3002',
+      status: 'confirmed',
+      totalPoints: 66
+    }
+  });
+
+  await upsertKeyResult({
+    goalId: q2Goal.id,
+    code: 'KR1',
+    name: '\u4e8c\u5b63\u5ea6\u4ea4\u4ed8\u95ed\u73af\u8fbe\u6210',
+    description: '\u786e\u4fdd\u4e8c\u5b63\u5ea6\u4ea4\u4ed8\u76ee\u6807\u5982\u671f\u5b8c\u6210\u3002',
+    points: 66,
+    completionState: 'completed',
+    reviewScore: 66,
+    reviewComment: '\u4e8c\u5b63\u5ea6\u76ee\u6807\u6309\u8ba1\u5212\u8fbe\u6210\u3002',
     reviewedByUserId: reviewerUserId
   });
 }
@@ -615,7 +693,7 @@ async function seedGoalsForLi(ownerUserId: string, reviewerUserId: string) {
     description: '\u786e\u4fdd\u652f\u6301\u4ea4\u63a5\u8fc7\u7a0b\u53ef\u8ffd\u8e2a\u3001\u53ef\u95ed\u73af\u3002',
     points: 30,
     completionState: 'incomplete',
-    reviewScore: 85,
+    reviewScore: 25.5,
     reviewComment: '\u652f\u6491\u4ea4\u63a5\u6267\u884c\u8f83\u7a33\u5b9a\u3002',
     reviewedByUserId: reviewerUserId
   });
@@ -627,7 +705,7 @@ async function seedGoalsForLi(ownerUserId: string, reviewerUserId: string) {
     description: '\u6309\u5468\u66f4\u65b0\u670d\u52a1\u770b\u677f\u5e76\u6301\u7eed\u8ddf\u8fdb\u3002',
     points: 30,
     completionState: 'incomplete',
-    reviewScore: 80,
+    reviewScore: 24,
     reviewComment: '\u770b\u677f\u8986\u76d6\u7387\u8fbe\u5230\u9884\u671f\u3002',
     reviewedByUserId: reviewerUserId
   });

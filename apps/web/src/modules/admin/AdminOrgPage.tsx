@@ -1,13 +1,23 @@
-import { ReloadOutlined, SaveOutlined } from '@ant-design/icons';
+import { DownloadOutlined, ReloadOutlined, SaveOutlined, UploadOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, Card, Col, Row, Space, Statistic, Tabs, Typography } from 'antd';
-import { useEffect, useMemo, useState } from 'react';
-import { getAdminBootstrap, saveAdminBootstrap } from '../../shared/api/admin';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { exportAdminBootstrapExcel, getAdminBootstrap, importAdminBootstrapExcel, saveAdminBootstrap } from '../../shared/api/admin';
 import { ApiError } from '../../shared/api/http';
 import type { AdminOrgBootstrapInput, ReviewGroupRecord } from '../../shared/types/admin-config';
-import { createEmptyBootstrap, summarizeBootstrap, toAdminBootstrapInput } from './admin-org-form';
+import { downloadAdminExcelFile, resolveAdminExcelFilename } from './admin-excel';
+import {
+  buildAdminBootstrapSaveInput,
+  createEmptyBootstrap,
+  rollbackAdminBootstrapDraft,
+  sectionForCollectionKey,
+  summarizeBootstrap,
+  toAdminBootstrapInput,
+  type AdminOrgSectionKey
+} from './admin-org-form';
 import {
   AccessSections,
+  AdminGoalStatusSection,
   AdminGoalTemplateSection,
   LeaderSections,
   ReviewGroupSection,
@@ -22,7 +32,11 @@ const TEXT = {
     '\u7edf\u4e00\u7ef4\u62a4\u90e8\u95e8\u3001\u79d1\u5ba4\u3001\u5458\u5de5\u89d2\u8272\u3001\u672c\u5730\u767b\u5f55\u8d26\u53f7\u3001\u8d1f\u8d23\u4eba\u7ed1\u5b9a\u3001\u8bc4\u4ef7\u7ec4\u4ee5\u53ca\u6a21\u677f\u76ee\u6807\u3002',
   reset: '\u91cd\u7f6e\u8349\u7a3f',
   save: '\u4fdd\u5b58\u53d8\u66f4',
+  exportExcel: '导出 Excel',
+  importExcel: '导入 Excel',
   saveSuccess: '\u7cfb\u7edf\u914d\u7f6e\u5df2\u4fdd\u5b58\u3002',
+  importSuccess: 'Excel 导入成功，系统配置已更新。',
+  exportFailed: 'Excel 导出失败，请稍后重试。',
   saveFailedTitle: '\u4fdd\u5b58\u5931\u8d25',
   saveFailedDescription: '\u4fdd\u5b58\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002',
   departmentCount: '\u90e8\u95e8\u6570',
@@ -35,6 +49,7 @@ const TEXT = {
   structureTab: '\u7ec4\u7ec7\u7ed3\u6784',
   accessTab: '\u5458\u5de5\u4e0e\u89d2\u8272',
   leaderTab: '\u8d1f\u8d23\u4eba\u7ed1\u5b9a',
+  goalStatusTab: '目标状态控制',
   reviewGroupTab: '\u8bc4\u4ef7\u7ec4\u4e0e\u6863\u4f4d\u540d\u989d',
   goalTemplateTab: '\u6a21\u677f\u76ee\u6807'
 } as const;
@@ -49,6 +64,8 @@ export function AdminOrgPage() {
   const [draft, setDraft] = useState<AdminOrgBootstrapInput>(createEmptyBootstrap());
   const [isDirty, setIsDirty] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const dirtySectionsRef = useRef<AdminOrgSectionKey[]>([]);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!bootstrapQuery.data || isDirty) {
@@ -61,14 +78,36 @@ export function AdminOrgPage() {
   const saveMutation = useMutation({
     mutationFn: saveAdminBootstrap,
     onSuccess: async (payload) => {
-      setDraft(toAdminBootstrapInput(payload));
-      setIsDirty(false);
-      setSaveError(null);
-      await queryClient.invalidateQueries({ queryKey: ['admin-org-bootstrap'] });
-      message.success(TEXT.saveSuccess);
+      await applyBootstrapSuccess(payload, TEXT.saveSuccess);
     },
     onError: (error) => {
       const nextError = error instanceof ApiError ? error.message : TEXT.saveFailedDescription;
+      setDraft((current) => rollbackAdminBootstrapDraft(bootstrapQuery.data, current));
+      setIsDirty(false);
+      dirtySectionsRef.current = [];
+      setSaveError(nextError);
+      message.error(nextError);
+    }
+  });
+  const exportMutation = useMutation({
+    mutationFn: exportAdminBootstrapExcel,
+    onSuccess: ({ blob, headers }) => {
+      downloadAdminExcelFile(blob, resolveAdminExcelFilename(headers.get('content-disposition')));
+    },
+    onError: (error) => {
+      message.error(error instanceof ApiError ? error.message : TEXT.exportFailed);
+    }
+  });
+  const importMutation = useMutation({
+    mutationFn: importAdminBootstrapExcel,
+    onSuccess: async (payload) => {
+      await applyBootstrapSuccess(payload, TEXT.importSuccess);
+    },
+    onError: (error) => {
+      const nextError = error instanceof ApiError ? error.message : TEXT.saveFailedDescription;
+      setDraft((current) => rollbackAdminBootstrapDraft(bootstrapQuery.data, current));
+      setIsDirty(false);
+      dirtySectionsRef.current = [];
       setSaveError(nextError);
       message.error(nextError);
     }
@@ -115,6 +154,12 @@ export function AdminOrgPage() {
           </Typography.Paragraph>
         </div>
         <Space>
+          <Button icon={<DownloadOutlined />} size="large" loading={exportMutation.isPending} onClick={() => exportMutation.mutate()}>
+            {TEXT.exportExcel}
+          </Button>
+          <Button icon={<UploadOutlined />} size="large" loading={importMutation.isPending} onClick={() => importInputRef.current?.click()}>
+            {TEXT.importExcel}
+          </Button>
           <Button icon={<ReloadOutlined />} size="large" onClick={() => bootstrapQuery.data && resetDraft()}>
             {TEXT.reset}
           </Button>
@@ -123,7 +168,10 @@ export function AdminOrgPage() {
             icon={<SaveOutlined />}
             size="large"
             loading={saveMutation.isPending}
-            onClick={() => saveMutation.mutate(draft)}
+            onClick={() =>
+              bootstrapQuery.data &&
+              saveMutation.mutate(buildAdminBootstrapSaveInput(bootstrapQuery.data, draft, dirtySectionsRef.current))
+            }
           >
             {TEXT.save}
           </Button>
@@ -157,6 +205,7 @@ export function AdminOrgPage() {
             { key: 'structure', label: TEXT.structureTab, children: <StructureSections draft={draft} updateCollection={updateCollection} /> },
             { key: 'access', label: TEXT.accessTab, children: <AccessSections draft={draft} updateCollection={updateCollection} /> },
             { key: 'leaders', label: TEXT.leaderTab, children: <LeaderSections draft={draft} updateCollection={updateCollection} /> },
+            { key: 'goal-status', label: TEXT.goalStatusTab, children: <AdminGoalStatusSection draft={draft} /> },
             {
               key: 'review-groups',
               label: TEXT.reviewGroupTab,
@@ -177,6 +226,20 @@ export function AdminOrgPage() {
           ]}
         />
       </Card>
+
+      <input
+        ref={importInputRef}
+        type="file"
+        accept=".xlsx"
+        style={{ display: 'none' }}
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) {
+            importMutation.mutate(file);
+          }
+          event.currentTarget.value = '';
+        }}
+      />
     </Space>
   );
 
@@ -184,6 +247,7 @@ export function AdminOrgPage() {
     setDraft(toAdminBootstrapInput(bootstrapQuery.data!));
     setIsDirty(false);
     setSaveError(null);
+    dirtySectionsRef.current = [];
   }
 
   function updateCollection<Key extends keyof AdminOrgBootstrapInput>(
@@ -192,11 +256,28 @@ export function AdminOrgPage() {
   ) {
     setDraft((current) => ({ ...current, [key]: updater(current[key]) }));
     setIsDirty(true);
+    markSectionDirty(sectionForCollectionKey(key));
   }
 
   function updateReviewGroup(reviewGroupId: string, patch: Partial<Omit<ReviewGroupRecord, 'memberCount'>>) {
     updateCollection('reviewGroups', (items) =>
       items.map((item) => (item.id === reviewGroupId ? { ...item, ...patch } : item))
     );
+  }
+
+  function markSectionDirty(section: AdminOrgSectionKey) {
+    if (!dirtySectionsRef.current.includes(section)) {
+      dirtySectionsRef.current = [...dirtySectionsRef.current, section];
+    }
+  }
+
+  async function applyBootstrapSuccess(payload: Parameters<typeof toAdminBootstrapInput>[0], successMessage: string) {
+    setDraft(toAdminBootstrapInput(payload));
+    setIsDirty(false);
+    setSaveError(null);
+    dirtySectionsRef.current = [];
+    queryClient.setQueryData(['admin-org-bootstrap'], payload);
+    await queryClient.invalidateQueries({ queryKey: ['admin-org-bootstrap'] });
+    message.success(successMessage);
   }
 }

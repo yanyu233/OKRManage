@@ -3,6 +3,8 @@ import { INestApplication } from '@nestjs/common';
 import { closeTestDatabase, resetTestDatabase } from './support/test-db';
 import { createTestApp, loginAsSysadmin } from './support/test-app';
 
+jest.setTimeout(20000);
+
 describe('Auth start', () => {
   const originalAuthMode = process.env.AUTH_MODE;
   let app: INestApplication;

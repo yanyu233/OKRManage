@@ -62,6 +62,34 @@ export type LeaderEmployeeSummaryRecord = {
   status: string;
 };
 
+export type LeaderBulkCatalogKeyResultRecord = {
+  id: string;
+  code: string;
+  name: string;
+  points: number;
+  scoreType: LeaderScoreType;
+  reviewScore: number | null;
+};
+
+export type LeaderBulkCatalogGoalRecord = {
+  id: string;
+  code: string;
+  name: string;
+  isTemplateGoal: boolean;
+  keyResults: LeaderBulkCatalogKeyResultRecord[];
+};
+
+export type LeaderBulkCatalogEmployeeRecord = {
+  id: string;
+  name: string;
+  sectionId: string | null;
+  sectionName: string | null;
+  reviewGroupId: string | null;
+  reviewGroupName: string | null;
+  canScore: boolean;
+  goals: LeaderBulkCatalogGoalRecord[];
+};
+
 export type LeaderWorkbenchRecord = {
   year: number;
   quarter: number;
@@ -69,6 +97,7 @@ export type LeaderWorkbenchRecord = {
   selectedEmployee: LeaderEmployeeSummaryRecord | null;
   goals: LeaderGoalSummaryRecord[];
   selectedGoal: LeaderGoalDetailRecord | null;
+  bulkCatalog: LeaderBulkCatalogEmployeeRecord[];
 };
 
 export type LeaderReviewGroupRecord = {
@@ -131,6 +160,28 @@ export type LeaderRankingRecord = {
   selectedEmployee: LeaderRankingSelectedEmployeeRecord | null;
 };
 
+export type LeaderAnnualQuarterScoreRecord = {
+  quarter: number;
+  score: number;
+};
+
+export type LeaderAnnualRankingEntryRecord = {
+  employeeId: string;
+  employeeName: string;
+  sectionName: string | null;
+  reviewGroupName: string | null;
+  annualScore: number;
+  quarterScores: LeaderAnnualQuarterScoreRecord[];
+};
+
+export type LeaderAnnualRankingSelectedEmployeeRecord = LeaderAnnualRankingEntryRecord;
+
+export type LeaderAnnualRankingRecord = {
+  year: number;
+  ranking: LeaderAnnualRankingEntryRecord[];
+  selectedEmployee: LeaderAnnualRankingSelectedEmployeeRecord | null;
+};
+
 export type LeaderScoreUpdateResult = {
   before: {
     id: string;
@@ -140,7 +191,11 @@ export type LeaderScoreUpdateResult = {
   after: LeaderKeyResultRecord;
 };
 
-export type LeaderBulkScoreSkipReason = 'out-of-scope' | 'already-scored' | 'subjective-only';
+export type LeaderBulkScoreSkipReason =
+  | 'out-of-scope'
+  | 'already-scored'
+  | 'subjective-only'
+  | 'goal-status-blocked';
 
 export type LeaderBulkScoreSkipRecord = {
   keyResultId: string;
@@ -155,7 +210,6 @@ export type LeaderBulkScoreInput = {
   employeeIds?: string[];
   goalIds?: string[];
   keyResultIds?: string[];
-  score: number;
   comment: string | null;
   overwriteExisting: boolean;
   excludeTemplateGoals: boolean;
@@ -184,4 +238,5 @@ export interface LeaderRepository {
     reviewGroupId?: string | null,
     employeeId?: string | null
   ): Promise<LeaderRankingRecord>;
+  getAnnualRanking(actor: AuthUser, year: number, employeeId?: string | null): Promise<LeaderAnnualRankingRecord>;
 }

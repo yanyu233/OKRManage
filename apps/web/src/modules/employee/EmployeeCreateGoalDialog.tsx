@@ -1,12 +1,13 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { Button, Card, Input, InputNumber, Modal, Segmented, Space, Typography } from 'antd';
-import { useEffect, useState } from 'react';
-import type { CreateEmployeeGoalInput, EmployeeGoalDetail } from '../../shared/types/employee';
+import { useEffect, useMemo, useState } from 'react';
+import type { CreateEmployeeGoalInput, EmployeeGoalDetail, UpdateEmployeeGoalInput } from '../../shared/types/employee';
 
-const SUBJECTIVE_CONFIRM_TEXT = '员工自定目标一般为客观评分项，由绩效小组核实是否完成后赋分';
+export const SUBJECTIVE_CONFIRM_TEXT = '员工自定目标一般为客观评分项，由绩效小组核实是否完成后赋分';
 
 const TEXT = {
-  title: '新建目标',
+  createTitle: '新建目标',
+  editTitle: '编辑目标',
   goalName: '目标名称',
   goalNamePlaceholder: '请输入目标名称',
   goalDescription: '目标说明',
@@ -20,12 +21,22 @@ const TEXT = {
   objective: '客观评分项',
   subjective: '主观评分项',
   cancel: '取消',
-  confirm: '保存目标',
+  createConfirm: '保存目标',
+  editConfirm: '保存修改',
   remove: '删除',
   keyResultPrefix: '关键结果'
 } as const;
 
-type DraftKeyResult = NonNullable<CreateEmployeeGoalInput['keyResults']>[number];
+type DraftKeyResult = {
+  id?: string;
+  code: string;
+  name: string;
+  description: string | null;
+  points: number;
+  scoreType: 'objective' | 'subjective';
+};
+
+type GoalDialogInitialValue = Pick<EmployeeGoalDetail, 'name' | 'description' | 'keyResults'>;
 
 function createDraftKeyResult(index: number): DraftKeyResult {
   return {
@@ -37,10 +48,38 @@ function createDraftKeyResult(index: number): DraftKeyResult {
   };
 }
 
+function toDraftKeyResults(initialValue?: GoalDialogInitialValue): DraftKeyResult[] {
+  if (!initialValue?.keyResults?.length) {
+    return [createDraftKeyResult(0)];
+  }
+
+  return initialValue.keyResults.map((keyResult, index) => ({
+    id: keyResult.id,
+    code: keyResult.code || `KR${index + 1}`,
+    name: keyResult.name,
+    description: keyResult.description ?? null,
+    points: keyResult.points,
+    scoreType: keyResult.scoreType ?? 'objective'
+  }));
+}
+
+function buildPayloadKeyResults(keyResults: DraftKeyResult[]) {
+  return keyResults.map((keyResult, index) => ({
+    id: keyResult.id,
+    code: keyResult.code || `KR${index + 1}`,
+    name: keyResult.name.trim(),
+    description: keyResult.description?.trim() || null,
+    points: keyResult.points,
+    scoreType: keyResult.scoreType
+  }));
+}
+
 export function EmployeeCreateGoalDialog({
   open,
   year,
   quarter,
+  mode = 'create',
+  initialValue,
   confirmLoading,
   onCancel,
   onConfirm
@@ -48,9 +87,11 @@ export function EmployeeCreateGoalDialog({
   open: boolean;
   year?: number;
   quarter?: number;
+  mode?: 'create' | 'edit';
+  initialValue?: GoalDialogInitialValue | null;
   confirmLoading: boolean;
   onCancel: () => void;
-  onConfirm: (payload: CreateEmployeeGoalInput) => void | Promise<EmployeeGoalDetail | void>;
+  onConfirm: (payload: CreateEmployeeGoalInput | UpdateEmployeeGoalInput) => void | Promise<EmployeeGoalDetail | void>;
 }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -58,43 +99,53 @@ export function EmployeeCreateGoalDialog({
 
   useEffect(() => {
     if (!open) {
-      setName('');
-      setDescription('');
-      setKeyResults([createDraftKeyResult(0)]);
+      return;
     }
-  }, [open]);
 
-  const canSubmit =
-    name.trim().length > 0 &&
-    keyResults.length > 0 &&
-    keyResults.every((keyResult) => keyResult.name.trim().length > 0 && Number.isFinite(keyResult.points));
+    setName(initialValue?.name ?? '');
+    setDescription(initialValue?.description ?? '');
+    setKeyResults(toDraftKeyResults(initialValue ?? undefined));
+  }, [initialValue, open]);
+
+  const canSubmit = useMemo(
+    () =>
+      name.trim().length > 0 &&
+      keyResults.length > 0 &&
+      keyResults.every((keyResult) => keyResult.name.trim().length > 0 && Number.isFinite(keyResult.points)),
+    [keyResults, name]
+  );
+
+  const isEdit = mode === 'edit';
 
   return (
     <Modal
       open={open}
-      title={TEXT.title}
+      title={isEdit ? TEXT.editTitle : TEXT.createTitle}
       width={860}
       destroyOnClose
       confirmLoading={confirmLoading}
-      okText={TEXT.confirm}
+      okText={isEdit ? TEXT.editConfirm : TEXT.createConfirm}
       cancelText={TEXT.cancel}
       okButtonProps={{ disabled: !canSubmit }}
       onCancel={onCancel}
-      onOk={() =>
+      onOk={() => {
+        const payload = {
+          name: name.trim(),
+          description: description.trim() || null,
+          keyResults: buildPayloadKeyResults(keyResults)
+        };
+
+        if (isEdit) {
+          onConfirm(payload);
+          return;
+        }
+
         onConfirm({
           year: year ?? 2026,
           quarter: quarter ?? 1,
-          name: name.trim(),
-          description: description.trim() || null,
-          keyResults: keyResults.map((keyResult, index) => ({
-            code: keyResult.code || `KR${index + 1}`,
-            name: keyResult.name.trim(),
-            description: keyResult.description?.trim() || null,
-            points: keyResult.points,
-            scoreType: keyResult.scoreType ?? 'objective'
-          }))
-        })
-      }
+          ...payload
+        });
+      }}
     >
       <Space direction="vertical" size={20} style={{ width: '100%' }}>
         <div>
@@ -132,7 +183,7 @@ export function EmployeeCreateGoalDialog({
 
         <div className="employee-create-goal__list">
           {keyResults.map((keyResult, index) => (
-            <Card key={`${keyResult.code}-${index}`} size="small" className="employee-create-goal__item">
+            <Card key={keyResult.id ?? `${keyResult.code}-${index}`} size="small" className="employee-create-goal__item">
               <Space direction="vertical" size={14} style={{ width: '100%' }}>
                 <div className="employee-create-goal__item-header">
                   <Typography.Text strong>{`${TEXT.keyResultPrefix} ${index + 1}`}</Typography.Text>
@@ -159,22 +210,14 @@ export function EmployeeCreateGoalDialog({
                 <Input
                   value={keyResult.name}
                   placeholder={TEXT.keyResultNamePlaceholder}
-                  onChange={(event) =>
-                    updateKeyResult(index, {
-                      name: event.target.value
-                    })
-                  }
+                  onChange={(event) => updateKeyResult(index, { name: event.target.value })}
                 />
 
                 <Input.TextArea
                   value={keyResult.description ?? ''}
                   rows={2}
                   placeholder={TEXT.keyResultDescriptionPlaceholder}
-                  onChange={(event) =>
-                    updateKeyResult(index, {
-                      description: event.target.value || null
-                    })
-                  }
+                  onChange={(event) => updateKeyResult(index, { description: event.target.value || null })}
                 />
 
                 <div className="employee-create-goal__meta-grid">
@@ -186,11 +229,7 @@ export function EmployeeCreateGoalDialog({
                       controls={false}
                       value={keyResult.points}
                       style={{ width: '100%', marginTop: 8 }}
-                      onChange={(value) =>
-                        updateKeyResult(index, {
-                          points: Number(value ?? 0)
-                        })
-                      }
+                      onChange={(value) => updateKeyResult(index, { points: Number(value ?? 0) })}
                     />
                   </div>
                   <div>
@@ -237,5 +276,3 @@ export function EmployeeCreateGoalDialog({
     updateKeyResult(index, { scoreType: nextScoreType });
   }
 }
-
-export { SUBJECTIVE_CONFIRM_TEXT };

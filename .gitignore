@@ -19,6 +19,11 @@ mvp/uploads/
 apps/server/storage/
 apps/server/server.out.log
 apps/server/server.err.log
+apps/server/*.log
+apps/server/.runtime-*.log
+apps/web/.runtime-*.log
+.codex-logs/
+.codex-runtime/
 
 # Local browser automation / screenshots
 mvp/.edge-cdp/

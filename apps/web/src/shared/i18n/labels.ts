@@ -1,86 +1,72 @@
-import type { UserRole } from '../types/session';
+import type { ScoreType, UserRoleCode } from '../types/admin-config';
 
-export function getRoleLabel(role: UserRole) {
-  switch (role) {
-    case 'system-admin':
-      return '\u7cfb\u7edf\u7ba1\u7406\u5458';
-    case 'section-leader':
-      return '\u79d1\u5ba4\u8d1f\u8d23\u4eba';
-    case 'group-leader':
-      return '\u5c0f\u7ec4\u8d1f\u8d23\u4eba';
-    case 'employee':
-    default:
-      return '\u5458\u5de5';
-  }
+const ROLE_LABELS: Record<UserRoleCode, string> = {
+  'system-admin': '系统管理员',
+  'section-leader': '科室负责人',
+  'group-leader': '小组负责人',
+  employee: '员工'
+};
+
+const GOAL_STATUS_LABELS: Record<string, string> = {
+  draft: '草稿',
+  confirmed: '已确认',
+  'pending-review': '待评分',
+  completed: '已完成'
+};
+
+const COMPLETION_STATE_LABELS: Record<string, string> = {
+  incomplete: '待补充',
+  completed: '已完成'
+};
+
+const LEADER_EMPLOYEE_STATUS_LABELS: Record<string, string> = {
+  pending: '待开始',
+  'in-progress': '评分中',
+  completed: '已完成'
+};
+
+const SCORE_TYPE_LABELS: Record<ScoreType, string> = {
+  objective: '客观评分项',
+  subjective: '主观评分项'
+};
+
+const ROLE_DISPLAY_ORDER: UserRoleCode[] = ['employee', 'section-leader', 'group-leader', 'system-admin'];
+
+export function getRoleLabel(role: UserRoleCode | string) {
+  return ROLE_LABELS[role as UserRoleCode] ?? role;
 }
 
-export function formatAssignedRoleSummary(roles: UserRole[]) {
-  const displayOrder: UserRole[] = ['employee', 'section-leader', 'group-leader', 'system-admin'];
-  const uniqueRoles = Array.from(new Set(roles));
-
-  return displayOrder
-    .filter((role) => uniqueRoles.includes(role))
+export function formatAssignedRoleSummary(roles: Array<UserRoleCode | string>) {
+  const normalized = Array.from(new Set(roles.filter(Boolean))) as UserRoleCode[];
+  return ROLE_DISPLAY_ORDER.filter((role) => normalized.includes(role))
     .map((role) => getRoleLabel(role))
     .join('/');
 }
 
 export function getGoalStatusLabel(status: string) {
-  switch (status) {
-    case 'draft':
-      return '\u8349\u7a3f';
-    case 'confirmed':
-      return '\u5df2\u786e\u8ba4';
-    case 'pending-submission':
-      return '\u5f85\u63d0\u4ea4';
-    case 'pending-review':
-      return '\u5f85\u8bc4\u5206';
-    case 'completed':
-      return '\u5df2\u5b8c\u6210';
-    default:
-      return status;
-  }
+  return GOAL_STATUS_LABELS[status] ?? status;
 }
 
 export function getCompletionStateLabel(state: string) {
-  switch (state) {
-    case 'completed':
-      return '\u5df2\u5b8c\u6210';
-    case 'incomplete':
-      return '\u5f85\u8865\u5145';
-    default:
-      return state;
-  }
+  return COMPLETION_STATE_LABELS[state] ?? state;
 }
 
 export function getLeaderEmployeeStatusLabel(status: string) {
-  switch (status) {
-    case 'completed':
-      return '\u5df2\u5b8c\u6210';
-    case 'in-progress':
-      return '\u8bc4\u5206\u4e2d';
-    case 'pending':
-      return '\u5f85\u5f00\u59cb';
-    default:
-      return status;
-  }
+  return LEADER_EMPLOYEE_STATUS_LABELS[status] ?? status;
 }
 
 export function formatQuarterLabel(year: number, quarter: number) {
-  const quarterLabels = ['\u4e00\u5b63\u5ea6', '\u4e8c\u5b63\u5ea6', '\u4e09\u5b63\u5ea6', '\u56db\u5b63\u5ea6'];
-  return `${year}\u5e74${quarterLabels[quarter - 1] ?? `${quarter}\u5b63\u5ea6`}`;
+  return `${year}年${['一', '二', '三', '四'][quarter - 1] ?? quarter}季度`;
 }
 
-export function formatNullableScore(value: number | null) {
-  return value === null ? '-' : value.toFixed(1);
-}
-
-export function getScoreTypeLabel(scoreType: string) {
-  switch (scoreType) {
-    case 'objective':
-      return '\u5ba2\u89c2\u8bc4\u5206\u9879';
-    case 'subjective':
-      return '\u4e3b\u89c2\u8bc4\u5206\u9879';
-    default:
-      return scoreType;
+export function formatNullableScore(score: number | null | undefined) {
+  if (score === null || score === undefined) {
+    return '-';
   }
+
+  return Number.isInteger(score) ? `${score}` : score.toFixed(1);
+}
+
+export function getScoreTypeLabel(scoreType: ScoreType) {
+  return SCORE_TYPE_LABELS[scoreType] ?? scoreType;
 }

@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { createEmployeeGoal, getEmployeeGoalTemplates, getEmployeeOkr, importEmployeeGoalTemplates } from '../../shared/api/employee';
 import { ApiError } from '../../shared/api/http';
 import { formatQuarterLabel, formatNullableScore, getGoalStatusLabel } from '../../shared/i18n/labels';
+import type { CreateEmployeeGoalInput } from '../../shared/types/employee';
 import { buildQuarterOptions, buildToolbarYearOptions } from '../../shared/ui/toolbar-options';
 import { buildYearOptions, filterEmployeeGoals } from './employee.helpers';
 import { EmployeeCreateGoalDialog } from './EmployeeCreateGoalDialog';
@@ -232,7 +233,9 @@ export function EmployeeOkrPage() {
                             {goal.description ?? TEXT.goalDescriptionFallback}
                           </Typography.Paragraph>
                         </div>
-                        <Tag color={goal.status === 'confirmed' ? 'green' : 'default'}>{getGoalStatusLabel(goal.status)}</Tag>
+                        {goal.status === 'draft' ? null : (
+                          <Tag color={goal.status === 'completed' ? 'green' : 'blue'}>{getGoalStatusLabel(goal.status)}</Tag>
+                        )}
                       </div>
 
                       <Space wrap size={[8, 8]}>
@@ -273,7 +276,7 @@ export function EmployeeOkrPage() {
         quarter={quarter}
         confirmLoading={createGoalMutation.isPending}
         onCancel={() => setCreateDialogOpen(false)}
-        onConfirm={(payload) => createGoalMutation.mutate(payload)}
+        onConfirm={(payload) => createGoalMutation.mutate(payload as CreateEmployeeGoalInput)}
       />
     </Space>
   );

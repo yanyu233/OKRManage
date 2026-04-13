@@ -3,6 +3,7 @@ import { AuditService } from '../audit/audit.service';
 import { DomainValidationError } from '../../shared/errors/domain-validation.error';
 import { REVIEW_GRADE_CODES } from '../../shared/constants/review-grade-codes';
 import {
+  type AdminGoalStatusTransitionInput,
   type AdminGroupLeaderBindingRecord,
   type AdminLocalAccountInput,
   type AdminOrgBootstrapInput,
@@ -29,6 +30,39 @@ export class AdminConfigService {
 
   async getBootstrap() {
     return this.orgRepository.getAdminBootstrap();
+  }
+
+  async getGoalStatusControls(year: number, quarter: number, userId?: string | null) {
+    return {
+      year,
+      quarter,
+      records: await this.orgRepository.listGoalStatusControls({
+        year,
+        quarter,
+        userId: userId?.trim() || null
+      })
+    };
+  }
+
+  async transitionGoalStatuses(input: AdminGoalStatusTransitionInput, actor: AuthUser) {
+    const normalized = {
+      year: input.year,
+      quarter: input.quarter,
+      userId: input.userId?.trim() || null,
+      targetStatus: input.targetStatus
+    };
+    const affectedGoalCount = await this.orgRepository.transitionGoalStatuses(normalized);
+
+    await this.auditService.write({
+      actorUserId: actor.id,
+      actorRoleCode: actor.role,
+      action: 'admin.goal-status.transition',
+      entityType: 'goal',
+      entityId: normalized.userId ?? null,
+      afterJson: normalized
+    });
+
+    return { affectedGoalCount };
   }
 
   async saveBootstrap(input: AdminOrgBootstrapInput, actor: AuthUser) {
@@ -165,12 +199,9 @@ export class AdminConfigService {
         password: account.password?.trim() || null
       })),
       roleAssignments: input.roleAssignments.map((assignment) => ({
-        ...assignment,
-        id: assignment.id.trim(),
-        userId: assignment.userId.trim(),
-        roleCode: assignment.roleCode.trim(),
-        scopeType: assignment.scopeType.trim(),
-        scopeId: assignment.scopeId.trim()
+        ...this.normalizeRoleAssignment(assignment),
+        isPrimary: assignment.isPrimary,
+        isEnabled: assignment.isEnabled
       })),
       sectionLeaderBindings: input.sectionLeaderBindings.map((binding) => ({
         ...binding,
@@ -190,7 +221,7 @@ export class AdminConfigService {
         name: reviewGroup.name.trim(),
         quotas: reviewGroup.quotas.map((quota) => ({
           gradeCode: quota.gradeCode,
-          seatCount: Number(quota.seatCount)
+          seatCount: this.normalizeNonNegativeInteger(quota.seatCount)
         }))
       })),
       goalTemplates: input.goalTemplates.map((template) => ({
@@ -205,10 +236,50 @@ export class AdminConfigService {
           code: keyResult.code.trim(),
           name: keyResult.name.trim(),
           description: keyResult.description?.trim() || null,
-          points: Number(keyResult.points)
+          points: this.normalizeNonNegativeInteger(keyResult.points)
         }))
       }))
     };
+  }
+
+  private normalizeRoleAssignment(assignment: AdminRoleAssignmentRecord): AdminRoleAssignmentRecord {
+    const id = assignment.id.trim();
+    const userId = assignment.userId.trim();
+    const roleCode = assignment.roleCode.trim();
+    const scope = this.deriveRoleScope(roleCode, userId);
+
+    return {
+      ...assignment,
+      id,
+      userId,
+      roleCode,
+      scopeType: scope.scopeType,
+      scopeId: scope.scopeId
+    };
+  }
+
+  private deriveRoleScope(roleCode: string, userId: string) {
+    switch (roleCode) {
+      case 'system-admin':
+        return { scopeType: 'system', scopeId: 'system' };
+      case 'employee':
+        return { scopeType: 'user', scopeId: userId || 'user:pending' };
+      case 'section-leader':
+        return { scopeType: 'section', scopeId: `managed-section:${userId || 'pending'}` };
+      case 'group-leader':
+        return { scopeType: 'review-group', scopeId: `managed-group:${userId || 'pending'}` };
+      default:
+        return { scopeType: 'user', scopeId: userId || 'user:pending' };
+    }
+  }
+
+  private normalizeNonNegativeInteger(value: unknown) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric) || numeric < 0) {
+      return 0;
+    }
+
+    return Math.trunc(numeric);
   }
 
   private validateBootstrap(input: AdminOrgBootstrapInput, actor: AuthUser) {

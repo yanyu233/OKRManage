@@ -3,6 +3,7 @@ import { AuditModule } from '../audit/audit.module';
 import { SessionModule } from '../session/session.module';
 import { AdminConfigController } from './admin-config.controller';
 import { AdminConfigService } from './admin-config.service';
+import { AdminConfigExcelService } from './admin-config-excel.service';
 import { ORG_REPOSITORY } from '../../infrastructure/repositories/org/org.repository';
 import { PrismaOrgRepository } from '../../infrastructure/repositories/org/prisma-org.repository';
 import {
@@ -15,6 +16,7 @@ import { PrismaReviewGroupsRepository } from '../../infrastructure/repositories/
   controllers: [AdminConfigController],
   providers: [
     AdminConfigService,
+    AdminConfigExcelService,
     PrismaOrgRepository,
     PrismaReviewGroupsRepository,
     {

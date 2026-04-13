@@ -5,8 +5,11 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 const appRoot = join(__dirname, '..', '..');
 const dbResetScript = join(appRoot, 'scripts', 'db-reset.ps1');
+const testProofStorageDir = 'storage/test-proofs';
 
 export async function resetTestDatabase(): Promise<void> {
+  process.env.PROOF_STORAGE_DIR = testProofStorageDir;
+
   execFileSync(
     'powershell',
     ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', dbResetScript],
@@ -15,7 +18,8 @@ export async function resetTestDatabase(): Promise<void> {
       stdio: 'inherit',
       env: {
         ...process.env,
-        OKR_SKIP_PRISMA_GENERATE: '1'
+        OKR_SKIP_PRISMA_GENERATE: '1',
+        PROOF_STORAGE_DIR: testProofStorageDir
       }
     }
   );

@@ -8,6 +8,7 @@ import {
   EmployeeCreateGoalInput,
   EmployeeGoalCreateResult,
   EmployeeGoalDetailRecord,
+  EmployeeGoalUpdateInput,
   EmployeeGoalSummaryRecord,
   EmployeeGoalTemplateImportResult,
   EmployeeGoalTemplateRecord,
@@ -206,6 +207,131 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
     };
   }
 
+  async updateGoal(actor: AuthUser, goalId: string, input: EmployeeGoalUpdateInput): Promise<EmployeeGoalDetailRecord> {
+    return this.prisma.$transaction(async (transaction) => {
+      const goal = await transaction.goal.findUnique({
+        where: { id: goalId },
+        include: {
+          importedTemplates: true,
+          keyResults: {
+            orderBy: {
+              code: 'asc'
+            },
+            include: {
+              proofs: {
+                orderBy: {
+                  uploadedAt: 'desc'
+                }
+              }
+            }
+          }
+        }
+      });
+
+      if (!goal) {
+        throw new NotFoundException('goal not found');
+      }
+
+      if (goal.ownerUserId !== actor.id) {
+        throw new ForbiddenException('employee scope mismatch');
+      }
+
+      if (goal.status !== 'draft') {
+        throw new DomainValidationError('goal can only be edited in draft status');
+      }
+
+      const existingKeyResultsById = new Map(goal.keyResults.map((keyResult) => [keyResult.id, keyResult]));
+      const nextKeyResultIds = new Set(input.keyResults.map((keyResult) => keyResult.id).filter(Boolean) as string[]);
+
+      for (const existingKeyResult of goal.keyResults) {
+        if (nextKeyResultIds.has(existingKeyResult.id)) {
+          continue;
+        }
+
+        if (existingKeyResult.proofs.length > 0) {
+          throw new DomainValidationError(`key result ${existingKeyResult.code} has uploaded proofs and cannot be removed`);
+        }
+      }
+
+      await transaction.goal.update({
+        where: { id: goalId },
+        data: {
+          name: input.name,
+          description: input.description,
+          totalPoints: input.keyResults.reduce((sum, keyResult) => sum + keyResult.points, 0)
+        }
+      });
+
+      const removedKeyResultIds = goal.keyResults
+        .filter((keyResult) => !nextKeyResultIds.has(keyResult.id))
+        .map((keyResult) => keyResult.id);
+      if (removedKeyResultIds.length > 0) {
+        await transaction.keyResult.deleteMany({
+          where: {
+            id: {
+              in: removedKeyResultIds
+            }
+          }
+        });
+      }
+
+      for (const keyResult of input.keyResults) {
+        if (keyResult.id) {
+          const existingKeyResult = existingKeyResultsById.get(keyResult.id);
+          if (!existingKeyResult || existingKeyResult.goalId !== goalId) {
+            throw new DomainValidationError(`key result ${keyResult.code} is invalid for this goal`);
+          }
+
+          await transaction.keyResult.update({
+            where: { id: keyResult.id },
+            data: {
+              code: keyResult.code,
+              name: keyResult.name,
+              description: keyResult.description,
+              points: keyResult.points,
+              scoreType: keyResult.scoreType ?? 'objective'
+            }
+          });
+          continue;
+        }
+
+        await transaction.keyResult.create({
+          data: {
+            goalId,
+            code: keyResult.code,
+            name: keyResult.name,
+            description: keyResult.description,
+            points: keyResult.points,
+            scoreType: keyResult.scoreType ?? 'objective',
+            completionState: 'incomplete'
+          }
+        });
+      }
+
+      const refreshed = await transaction.goal.findUniqueOrThrow({
+        where: { id: goalId },
+        include: {
+          importedTemplates: true,
+          keyResults: {
+            orderBy: {
+              code: 'asc'
+            },
+            include: {
+              proofs: {
+                orderBy: {
+                  uploadedAt: 'desc'
+                }
+              }
+            }
+          },
+          owner: true
+        }
+      });
+
+      return this.toGoalDetail(refreshed);
+    });
+  }
+
   async importGoalTemplates(
     actor: AuthUser,
     year: number,
@@ -386,6 +512,80 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
     return this.toGoalDetail(goal);
   }
 
+  async submitGoalForReview(actor: AuthUser, goalId: string): Promise<EmployeeGoalDetailRecord> {
+    return this.prisma.$transaction(async (transaction) => {
+      const goal = await transaction.goal.findUnique({
+        where: { id: goalId },
+        include: {
+          importedTemplates: true,
+          keyResults: {
+            orderBy: {
+              code: 'asc'
+            },
+            include: {
+              proofs: {
+                orderBy: {
+                  uploadedAt: 'desc'
+                }
+              }
+            }
+          },
+          owner: true
+        }
+      });
+
+      if (!goal) {
+        throw new NotFoundException('goal not found');
+      }
+
+      if (goal.ownerUserId !== actor.id) {
+        throw new ForbiddenException('employee scope mismatch');
+      }
+
+      if (goal.status !== 'confirmed') {
+        throw new DomainValidationError('only confirmed goals can be submitted for review');
+      }
+
+      if (!goal.keyResults.length) {
+        throw new DomainValidationError('goal requires at least one key result before review');
+      }
+
+      const hasIncompleteKeyResult = goal.keyResults.some((keyResult) => keyResult.completionState !== 'completed');
+      if (hasIncompleteKeyResult) {
+        throw new DomainValidationError('all key results must be completed before submitting for review');
+      }
+
+      await transaction.goal.update({
+        where: { id: goalId },
+        data: {
+          status: 'pending-review'
+        }
+      });
+
+      const refreshed = await transaction.goal.findUniqueOrThrow({
+        where: { id: goalId },
+        include: {
+          importedTemplates: true,
+          keyResults: {
+            orderBy: {
+              code: 'asc'
+            },
+            include: {
+              proofs: {
+                orderBy: {
+                  uploadedAt: 'desc'
+                }
+              }
+            }
+          },
+          owner: true
+        }
+      });
+
+      return this.toGoalDetail(refreshed);
+    });
+  }
+
   async updateKeyResultCompletion(
     actor: AuthUser,
     krId: string,
@@ -409,6 +609,10 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
 
     if (keyResult.goal.ownerUserId !== actor.id) {
       throw new ForbiddenException('employee scope mismatch');
+    }
+
+    if (!['draft', 'confirmed'].includes(keyResult.goal.status)) {
+      throw new DomainValidationError('key result completion can only be updated before review starts');
     }
 
     const updated = await this.prisma.keyResult.update({
@@ -701,7 +905,7 @@ function scoreFromKeyResults(
     return null;
   }
 
-  const total = scored.reduce((sum, keyResult) => sum + keyResult.points * ((keyResult.reviewScore ?? 0) / 100), 0);
+  const total = scored.reduce((sum, keyResult) => sum + (keyResult.reviewScore ?? 0), 0);
   return Number(total.toFixed(1));
 }
 

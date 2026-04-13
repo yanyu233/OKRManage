@@ -134,7 +134,7 @@ export function AppShell() {
             {siderCollapsed ? 'OKR' : 'OKR \u7cfb\u7edf'}
           </Typography.Title>
           {!siderCollapsed ? (
-            <Typography.Text className="app-shell__brand-subtitle">Route C / React \u524d\u53f0</Typography.Text>
+            <Typography.Text className="app-shell__brand-subtitle">{'Route C / React 前台'}</Typography.Text>
           ) : null}
         </div>
 

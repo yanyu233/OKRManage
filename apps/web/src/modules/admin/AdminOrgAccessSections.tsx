@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { Alert, Button, Card, Input, Select, Space, Switch, Table, Typography } from 'antd';
-import type { AdminOrgBootstrapInput, RoleScopeType, UserRoleCode } from '../../shared/types/admin-config';
-import { createLocalAccountRecord, createRoleAssignmentRecord } from './admin-org-form';
+import type { AdminOrgBootstrapInput, UserRoleCode } from '../../shared/types/admin-config';
+import { applyDerivedRoleAssignmentScope, createLocalAccountRecord, createRoleAssignmentRecord } from './admin-org-form';
 
 type UpdateCollection = <Key extends keyof AdminOrgBootstrapInput>(
   key: Key,
@@ -25,11 +25,8 @@ const TEXT = {
   addRole: '\u65b0\u589e\u89d2\u8272',
   rolesTipTitle: '\u540c\u4e00\u5458\u5de5\u53ef\u4ee5\u5206\u914d\u591a\u4e2a\u89d2\u8272',
   rolesTipDescription:
-    '\u4f8b\u5982\u540c\u4e00\u4e2a\u4eba\u53ef\u4ee5\u540c\u65f6\u5177\u5907\u201c\u5458\u5de5\u201d\u548c\u201c\u5c0f\u7ec4\u8d1f\u8d23\u4eba\u201d\u4e24\u6761\u89d2\u8272\u8bb0\u5f55\uff0c\u524d\u53f0\u4f1a\u6309\u89d2\u8272\u5206\u7ec4\u5c55\u793a\u529f\u80fd\u83dc\u5355\u3002',
+    '\u4f8b\u5982\u540c\u4e00\u4e2a\u4eba\u53ef\u4ee5\u540c\u65f6\u5177\u5907\u201c\u5458\u5de5\u201d\u548c\u201c\u5c0f\u7ec4\u8d1f\u8d23\u4eba\u201d\u4e24\u6761\u89d2\u8272\u8bb0\u5f55\uff0c\u524d\u53f0\u4f1a\u6309\u89d2\u8272\u5206\u7ec4\u5c55\u793a\u529f\u80fd\u83dc\u5355\u3002\u89d2\u8272\u8303\u56f4\u7531\u7cfb\u7edf\u81ea\u52a8\u63a8\u5bfc\uff0c\u8bc4\u5206\u6743\u9650\u4ee5\u201c\u8d1f\u8d23\u4eba\u7ed1\u5b9a\u201d\u9875\u4e3a\u51c6\u3002',
   role: '\u89d2\u8272',
-  scopeType: '\u8303\u56f4\u7c7b\u578b',
-  scope: '\u8303\u56f4',
-  scopePlaceholder: '\u8bf7\u9009\u62e9\u8303\u56f4',
   primaryRole: '\u4e3b\u89d2\u8272',
   enabled: '\u542f\u7528'
 } as const;
@@ -39,14 +36,6 @@ const ROLE_OPTIONS: Array<{ label: string; value: UserRoleCode }> = [
   { label: '\u79d1\u5ba4\u9886\u5bfc', value: 'section-leader' },
   { label: '\u5c0f\u7ec4\u8d1f\u8d23\u4eba', value: 'group-leader' },
   { label: '\u5458\u5de5', value: 'employee' }
-];
-
-const ROLE_SCOPE_OPTIONS: Array<{ label: string; value: RoleScopeType }> = [
-  { label: '\u7cfb\u7edf', value: 'system' },
-  { label: '\u90e8\u95e8', value: 'department' },
-  { label: '\u79d1\u5ba4', value: 'section' },
-  { label: '\u8bc4\u4ef7\u7ec4', value: 'review-group' },
-  { label: '\u7528\u6237', value: 'user' }
 ];
 
 export function AccessSections({
@@ -176,7 +165,9 @@ export function AccessSections({
                   placeholder={TEXT.selectUser}
                   onChange={(value) =>
                     updateCollection('roleAssignments', (items) =>
-                      items.map((item) => (item.id === record.id ? { ...item, userId: value } : item))
+                      items.map((item) =>
+                        item.id === record.id ? applyDerivedRoleAssignmentScope({ ...item, userId: value }) : item
+                      )
                     )
                   }
                 />
@@ -192,44 +183,12 @@ export function AccessSections({
                     updateCollection('roleAssignments', (items) =>
                       items.map((item) =>
                         item.id === record.id
-                          ? {
+                          ? applyDerivedRoleAssignmentScope({
                               ...item,
-                              roleCode: value,
-                              scopeType: value === 'system-admin' ? 'system' : item.scopeType,
-                              scopeId: value === 'system-admin' ? 'system' : item.scopeId
-                            }
+                              roleCode: value
+                            })
                           : item
                       )
-                    )
-                  }
-                />
-              )
-            },
-            {
-              title: TEXT.scopeType,
-              render: (_value, record) => (
-                <Select
-                  value={record.scopeType}
-                  options={ROLE_SCOPE_OPTIONS}
-                  onChange={(value) =>
-                    updateCollection('roleAssignments', (items) =>
-                      items.map((item) => (item.id === record.id ? { ...item, scopeType: value } : item))
-                    )
-                  }
-                />
-              )
-            },
-            {
-              title: TEXT.scope,
-              render: (_value, record) => (
-                <Select
-                  value={record.scopeId || undefined}
-                  options={scopeOptions(record.scopeType, draft)}
-                  showSearch
-                  placeholder={TEXT.scopePlaceholder}
-                  onChange={(value) =>
-                    updateCollection('roleAssignments', (items) =>
-                      items.map((item) => (item.id === record.id ? { ...item, scopeId: value } : item))
                     )
                   }
                 />
@@ -312,21 +271,4 @@ function SectionCard({
       </Space>
     </Card>
   );
-}
-
-function scopeOptions(scopeType: RoleScopeType, draft: AdminOrgBootstrapInput) {
-  switch (scopeType) {
-    case 'system':
-      return [{ label: '\u7cfb\u7edf', value: 'system' }];
-    case 'department':
-      return draft.departments.map((department) => ({ label: department.name || department.id, value: department.id }));
-    case 'section':
-      return draft.sections.map((section) => ({ label: section.name || section.id, value: section.id }));
-    case 'review-group':
-      return draft.reviewGroups.map((group) => ({ label: group.name || group.id, value: group.id }));
-    case 'user':
-      return draft.users.map((user) => ({ label: user.name || user.id, value: user.id }));
-    default:
-      return [];
-  }
 }

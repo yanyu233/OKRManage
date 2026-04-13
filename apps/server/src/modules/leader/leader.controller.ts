@@ -74,7 +74,6 @@ export class LeaderController {
         employeeIds: payload.employeeIds ?? [],
         goalIds: payload.goalIds ?? [],
         keyResultIds: payload.keyResultIds ?? [],
-        score: payload.score,
         comment: payload.comment ?? null,
         overwriteExisting: payload.overwriteExisting ?? false,
         excludeTemplateGoals: payload.excludeTemplateGoals ?? false
@@ -96,6 +95,21 @@ export class LeaderController {
 
     try {
       return await this.leaderService.getRanking(actor, year, quarter, reviewGroupId, employeeId);
+    } catch (error) {
+      this.rethrowDomainError(error);
+    }
+  }
+
+  @Get('annual-ranking')
+  async getAnnualRanking(
+    @Req() request: Request,
+    @Query('year', ParseIntPipe) year: number,
+    @Query('employeeId') employeeId?: string
+  ) {
+    const actor = await this.requireLeader(request);
+
+    try {
+      return await this.leaderService.getAnnualRanking(actor, year, employeeId);
     } catch (error) {
       this.rethrowDomainError(error);
     }

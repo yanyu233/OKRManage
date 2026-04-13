@@ -85,7 +85,7 @@ describe('leader ranking helpers', () => {
             code: 'KR1',
             name: '完成 6 个版本交付',
             points: 35,
-            reviewScore: 92.5
+            reviewScore: 30.1
           }
         ]
       },

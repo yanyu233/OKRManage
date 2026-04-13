@@ -6,6 +6,7 @@ import type {
   EmployeeProof,
   ImportEmployeeGoalTemplatesInput,
   ImportEmployeeGoalTemplatesResponse,
+  UpdateEmployeeGoalInput,
   UpdateKrCompletionInput
 } from '../types/employee';
 import { apiRequest } from './http';
@@ -44,6 +45,19 @@ export function createEmployeeGoal(payload: CreateEmployeeGoalInput) {
   return apiRequest<EmployeeGoalDetail & { owner: { id: string; name: string } }>('/employee/goals', {
     method: 'POST',
     body: JSON.stringify(payload)
+  });
+}
+
+export function updateEmployeeGoal(goalId: string, payload: UpdateEmployeeGoalInput) {
+  return apiRequest<EmployeeGoalDetail>(`/employee/goals/${goalId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  });
+}
+
+export function submitEmployeeGoalReview(goalId: string) {
+  return apiRequest<EmployeeGoalDetail>(`/employee/goals/${goalId}/submit-review`, {
+    method: 'POST'
   });
 }
 

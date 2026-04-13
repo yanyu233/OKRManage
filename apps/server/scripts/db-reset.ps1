@@ -47,7 +47,13 @@ try {
   Push-Location $appRoot
 
   if (Test-Path -LiteralPath $proofStoragePath) {
-    Remove-Item -LiteralPath $proofStoragePath -Recurse -Force
+    try {
+      Remove-Item -LiteralPath $proofStoragePath -Recurse -Force -ErrorAction Stop
+    } catch [System.IO.DirectoryNotFoundException] {
+      # Another process may have removed the folder between the existence check and deletion.
+    } catch [System.IO.FileNotFoundException] {
+      # Another process may have removed the folder between the existence check and deletion.
+    }
   }
 
   if ($env:OKR_SKIP_PRISMA_GENERATE -ne '1') {
