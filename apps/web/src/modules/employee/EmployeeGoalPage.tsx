@@ -40,7 +40,8 @@ const TEXT = {
   notePlaceholder: '选填，上传时会一并记录',
   uploadProof: '上传证明材料',
   noProofs: '当前还没有上传证明材料',
-  openFile: '打开文件',
+  previewFile: '预览',
+  downloadFile: '下载',
   noNote: '无补充说明',
   editSuccess: '目标修改已保存。',
   editFailed: '目标修改失败，请稍后重试。',
@@ -306,7 +307,9 @@ export function EmployeeGoalPage() {
                       <Card key={proof.id} size="small">
                         <div className="employee-proof-row">
                           <div className="employee-proof-meta">
-                            <Typography.Text strong>{proof.fileName}</Typography.Text>
+                            <Typography.Link href={resolveProofPreviewUrl(proof)} target="_blank" rel="noreferrer" style={{ fontWeight: 600 }}>
+                              {proof.fileName}
+                            </Typography.Link>
                             <Typography.Text type="secondary">
                               {proof.note?.trim() ? proof.note : TEXT.noNote}
                             </Typography.Text>
@@ -314,9 +317,14 @@ export function EmployeeGoalPage() {
                               {new Date(proof.uploadedAt).toLocaleString()} · {formatProofSize(proof.fileSize)}
                             </Typography.Text>
                           </div>
-                          <a href={resolveApiUrl(proof.fileUrl)} target="_blank" rel="noreferrer">
-                            {TEXT.openFile}
-                          </a>
+                          <Space size={8} className="employee-proof-actions">
+                            <Button type="link" size="small" href={resolveProofPreviewUrl(proof)} target="_blank" rel="noreferrer">
+                              {TEXT.previewFile}
+                            </Button>
+                            <Button type="link" size="small" href={resolveProofDownloadUrl(proof)} target="_blank" rel="noreferrer">
+                              {TEXT.downloadFile}
+                            </Button>
+                          </Space>
                         </div>
                       </Card>
                     ))
@@ -359,5 +367,13 @@ export function EmployeeGoalPage() {
         }
       }
     );
+  }
+
+  function resolveProofPreviewUrl(proof: EmployeeKeyResult['proofs'][number]) {
+    return resolveApiUrl(proof.previewUrl ?? proof.fileUrl);
+  }
+
+  function resolveProofDownloadUrl(proof: EmployeeKeyResult['proofs'][number]) {
+    return resolveApiUrl(proof.downloadUrl ?? proof.fileUrl);
   }
 }

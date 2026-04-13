@@ -59,6 +59,11 @@
   gap: 4px;
 }
 
+.leader-proof-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .leader-ranking-entry {
   display: flex;
   align-items: flex-start;
@@ -135,6 +140,10 @@
   .leader-ranking-entry {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .leader-proof-actions {
+    justify-content: flex-start;
   }
 
   .leader-bulk-preview-grid,

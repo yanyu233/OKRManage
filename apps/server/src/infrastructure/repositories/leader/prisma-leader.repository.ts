@@ -4,6 +4,8 @@ import { PrismaService } from '../../database/prisma.service';
 import { REVIEW_GRADE_CODES } from '../../../shared/constants/review-grade-codes';
 import { DomainValidationError } from '../../../shared/errors/domain-validation.error';
 import { AuthUser } from '../../../shared/types/auth-user';
+import { RuntimeConfigService } from '../../../modules/config/runtime-config.service';
+import { buildProofDownloadUrl, buildProofPreviewUrl } from '../../../shared/proof/proof-links';
 import {
   LeaderAnnualQuarterScoreRecord,
   LeaderAnnualRankingEntryRecord,
@@ -48,7 +50,10 @@ type KeyResultWithProofs = GoalWithQuarterData['keyResults'][number];
 
 @Injectable()
 export class PrismaLeaderRepository implements LeaderRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly runtimeConfig: RuntimeConfigService
+  ) {}
 
   async getWorkbench(
     actor: AuthUser,
@@ -683,10 +688,20 @@ export class PrismaLeaderRepository implements LeaderRepository {
   private toProofRecord(
     proof: KeyResultWithProofs['proofs'][number]
   ): LeaderProofRecord {
+    const downloadUrl = buildProofDownloadUrl(proof.id);
+
     return {
       id: proof.id,
       fileName: proof.fileName,
-      fileUrl: `/api/employee/proofs/${proof.id}/download`,
+      previewUrl: buildProofPreviewUrl({
+        proofId: proof.id,
+        fileName: proof.fileName,
+        sourceBaseUrl: this.runtimeConfig.kkFileViewSourceBaseUrl,
+        previewBaseUrl: this.runtimeConfig.kkFileViewPublicBaseUrl,
+        previewToken: this.runtimeConfig.kkFileViewPreviewToken
+      }),
+      downloadUrl,
+      fileUrl: downloadUrl,
       fileSize: proof.fileSize,
       note: proof.note,
       uploadedAt: proof.uploadedAt.toISOString()

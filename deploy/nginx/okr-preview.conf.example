@@ -1,0 +1,29 @@
+server {
+    listen 80;
+    server_name okr.example.internal;
+
+    # Static frontend should be served here after the Vite build is published.
+    root /srv/okr/web;
+    index index.html;
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:3000/api/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /preview/ {
+        rewrite ^/preview/(.*)$ /$1 break;
+        proxy_pass http://127.0.0.1:8012/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

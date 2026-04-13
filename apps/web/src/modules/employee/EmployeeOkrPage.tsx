@@ -1,12 +1,19 @@
-import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
+import { EditOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, Card, Col, Empty, Input, Row, Select, Space, Statistic, Tag, Typography } from 'antd';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createEmployeeGoal, getEmployeeGoalTemplates, getEmployeeOkr, importEmployeeGoalTemplates } from '../../shared/api/employee';
+import {
+  createEmployeeGoal,
+  getEmployeeGoalDetail,
+  getEmployeeGoalTemplates,
+  getEmployeeOkr,
+  importEmployeeGoalTemplates,
+  updateEmployeeGoal
+} from '../../shared/api/employee';
 import { ApiError } from '../../shared/api/http';
 import { formatQuarterLabel, formatNullableScore, getGoalStatusLabel } from '../../shared/i18n/labels';
-import type { CreateEmployeeGoalInput } from '../../shared/types/employee';
+import type { CreateEmployeeGoalInput, EmployeeGoalDetail, UpdateEmployeeGoalInput } from '../../shared/types/employee';
 import { buildQuarterOptions, buildToolbarYearOptions } from '../../shared/ui/toolbar-options';
 import { buildYearOptions, filterEmployeeGoals } from './employee.helpers';
 import { EmployeeCreateGoalDialog } from './EmployeeCreateGoalDialog';
@@ -42,9 +49,17 @@ const TEXT = {
   completedTag: '\u6761\u5df2\u5b8c\u6210',
   proofTag: '\u4efd\u6750\u6599',
   currentScoreTagPrefix: '\u5f53\u524d\u5f97\u5206',
+  editGoal: '\u7f16\u8f91\u76ee\u6807',
+  editLoadFailed: '\u76ee\u6807\u8be6\u60c5\u52a0\u8f7d\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002',
+  editSuccess: '\u76ee\u6807\u4fee\u6539\u5df2\u4fdd\u5b58\u3002',
+  editFailed: '\u76ee\u6807\u4fee\u6539\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002',
   viewGoalDetail: '\u67e5\u770b\u76ee\u6807\u8be6\u60c5',
   emptyGoals: '\u5f53\u524d\u7b5b\u9009\u6761\u4ef6\u4e0b\u6ca1\u6709\u5339\u914d\u76ee\u6807'
 } as const;
+
+function canEditGoal(status: string) {
+  return status === 'draft';
+}
 
 export function EmployeeOkrPage() {
   const { message } = App.useApp();
@@ -55,6 +70,9 @@ export function EmployeeOkrPage() {
   const [keyword, setKeyword] = useState('');
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
+  const [editingGoal, setEditingGoal] = useState<EmployeeGoalDetail | null>(null);
 
   const okrQuery = useQuery({
     queryKey: ['employee-okr', year, quarter],
@@ -131,6 +149,41 @@ export function EmployeeOkrPage() {
       message.error(description);
     }
   });
+
+  const updateGoalMutation = useMutation({
+    mutationFn: ({ goalId, payload }: { goalId: string; payload: UpdateEmployeeGoalInput }) => updateEmployeeGoal(goalId, payload),
+    onSuccess: async (goal) => {
+      setEditDialogOpen(false);
+      setEditingGoal(goal);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['employee-okr'] }),
+        queryClient.invalidateQueries({ queryKey: ['employee-goal', goal.id] })
+      ]);
+      message.success(TEXT.editSuccess);
+    },
+    onError: (error) => {
+      const description = error instanceof ApiError ? error.message : TEXT.editFailed;
+      message.error(description);
+    }
+  });
+
+  async function openEditDialog(goalId: string) {
+    setEditingGoalId(goalId);
+
+    try {
+      const goal = await queryClient.fetchQuery({
+        queryKey: ['employee-goal', goalId],
+        queryFn: () => getEmployeeGoalDetail(goalId)
+      });
+      setEditingGoal(goal);
+      setEditDialogOpen(true);
+    } catch (error) {
+      const description = error instanceof ApiError ? error.message : TEXT.editLoadFailed;
+      message.error(description);
+    } finally {
+      setEditingGoalId((current) => (current === goalId ? null : current));
+    }
+  }
 
   if (okrQuery.isLoading) {
     return <Card className="employee-toolbar-card">{TEXT.loading}</Card>;
@@ -220,39 +273,64 @@ export function EmployeeOkrPage() {
 
           {filteredGoals.length ? (
             <Row gutter={[20, 20]}>
-              {filteredGoals.map((goal) => (
-                <Col xs={24} xl={12} key={goal.id}>
-                  <Card className="employee-goal-card" variant="borderless" onClick={() => navigate(`/employee/goal/${goal.id}`)}>
-                    <Space direction="vertical" size={16} style={{ width: '100%' }}>
-                      <div className="employee-goal-row">
-                        <div>
-                          <Typography.Title level={4} style={{ marginBottom: 8 }}>
-                            {goal.code} {goal.name}
-                          </Typography.Title>
-                          <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-                            {goal.description ?? TEXT.goalDescriptionFallback}
-                          </Typography.Paragraph>
+              {filteredGoals.map((goal) => {
+                const goalEditable = canEditGoal(goal.status);
+
+                return (
+                  <Col xs={24} xl={12} key={goal.id}>
+                    <Card className="employee-goal-card" variant="borderless" onClick={() => navigate(`/employee/goal/${goal.id}`)}>
+                      <Space direction="vertical" size={16} style={{ width: '100%' }}>
+                        <div className="employee-goal-card__header">
+                          <div className="employee-goal-card__content">
+                            <Typography.Title level={4} style={{ marginBottom: 8 }}>
+                              {goal.code} {goal.name}
+                            </Typography.Title>
+                            <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
+                              {goal.description ?? TEXT.goalDescriptionFallback}
+                            </Typography.Paragraph>
+                          </div>
+                          <div className="employee-goal-card__actions" onClick={(event) => event.stopPropagation()}>
+                            <Button
+                              aria-label={TEXT.editGoal}
+                              size="small"
+                              icon={<EditOutlined aria-hidden />}
+                              className={[
+                                'employee-goal-card__edit-button',
+                                goalEditable
+                                  ? 'employee-goal-card__edit-button--editable'
+                                  : 'employee-goal-card__edit-button--readonly'
+                              ].join(' ')}
+                              disabled={!goalEditable}
+                              loading={editingGoalId === goal.id}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                void openEditDialog(goal.id);
+                              }}
+                            >
+                              {TEXT.editGoal}
+                            </Button>
+                            {goal.status === 'draft' ? null : (
+                              <Tag color={goal.status === 'completed' ? 'green' : 'blue'}>{getGoalStatusLabel(goal.status)}</Tag>
+                            )}
+                          </div>
                         </div>
-                        {goal.status === 'draft' ? null : (
-                          <Tag color={goal.status === 'completed' ? 'green' : 'blue'}>{getGoalStatusLabel(goal.status)}</Tag>
-                        )}
-                      </div>
 
-                      <Space wrap size={[8, 8]}>
-                        <Tag>{`${goal.totalPoints} \u5206`}</Tag>
-                        <Tag>{`${goal.keyResultCount} ${TEXT.keyResultCountTag}`}</Tag>
-                        <Tag>{`${goal.completedKeyResultCount} ${TEXT.completedTag}`}</Tag>
-                        <Tag>{`${goal.proofCount} ${TEXT.proofTag}`}</Tag>
-                        <Tag>{`${TEXT.currentScoreTagPrefix} ${formatNullableScore(goal.currentScore)}`}</Tag>
+                        <Space wrap size={[8, 8]}>
+                          <Tag>{`${goal.totalPoints} \u5206`}</Tag>
+                          <Tag>{`${goal.keyResultCount} ${TEXT.keyResultCountTag}`}</Tag>
+                          <Tag>{`${goal.completedKeyResultCount} ${TEXT.completedTag}`}</Tag>
+                          <Tag>{`${goal.proofCount} ${TEXT.proofTag}`}</Tag>
+                          <Tag>{`${TEXT.currentScoreTagPrefix} ${formatNullableScore(goal.currentScore)}`}</Tag>
+                        </Space>
+
+                        <Button type="link" style={{ paddingInline: 0 }}>
+                          {TEXT.viewGoalDetail}
+                        </Button>
                       </Space>
-
-                      <Button type="link" style={{ paddingInline: 0 }}>
-                        {TEXT.viewGoalDetail}
-                      </Button>
-                    </Space>
-                  </Card>
-                </Col>
-              ))}
+                    </Card>
+                  </Col>
+                );
+              })}
             </Row>
           ) : (
             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={TEXT.emptyGoals} />
@@ -277,6 +355,27 @@ export function EmployeeOkrPage() {
         confirmLoading={createGoalMutation.isPending}
         onCancel={() => setCreateDialogOpen(false)}
         onConfirm={(payload) => createGoalMutation.mutate(payload as CreateEmployeeGoalInput)}
+      />
+
+      <EmployeeCreateGoalDialog
+        open={editDialogOpen}
+        mode="edit"
+        initialValue={editingGoal}
+        confirmLoading={updateGoalMutation.isPending}
+        onCancel={() => {
+          setEditDialogOpen(false);
+          setEditingGoal(null);
+        }}
+        onConfirm={(payload) => {
+          if (!editingGoal) {
+            return;
+          }
+
+          updateGoalMutation.mutate({
+            goalId: editingGoal.id,
+            payload: payload as UpdateEmployeeGoalInput
+          });
+        }}
       />
     </Space>
   );

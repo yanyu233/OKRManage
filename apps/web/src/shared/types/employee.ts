@@ -3,6 +3,8 @@ import type { ScoreType } from './admin-config';
 export type EmployeeProof = {
   id: string;
   fileName: string;
+  previewUrl?: string;
+  downloadUrl?: string;
   fileUrl: string;
   fileSize: number;
   note: string | null;

@@ -6,6 +6,8 @@ export type LeaderScoreType = 'objective' | 'subjective';
 export type LeaderProofRecord = {
   id: string;
   fileName: string;
+  previewUrl: string;
+  downloadUrl: string;
   fileUrl: string;
   fileSize: number;
   note: string | null;

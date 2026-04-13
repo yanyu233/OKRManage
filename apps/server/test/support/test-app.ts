@@ -4,6 +4,12 @@ import { Test } from '@nestjs/testing';
 import { AppModule } from '../../src/app.module';
 
 export async function createTestApp(): Promise<INestApplication> {
+  process.env.APP_BASE_URL ??= 'http://127.0.0.1:3000';
+  process.env.WEB_BASE_URL ??= 'http://127.0.0.1:5173';
+  process.env.KKFILEVIEW_PUBLIC_BASE_URL ??= 'http://127.0.0.1:3000/preview';
+  process.env.KKFILEVIEW_SOURCE_BASE_URL ??= 'http://127.0.0.1:3000';
+  process.env.KKFILEVIEW_PREVIEW_TOKEN ??= 'local-preview-token';
+
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule]
   }).compile();

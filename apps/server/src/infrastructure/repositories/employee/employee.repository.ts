@@ -6,6 +6,8 @@ export type EmployeeScoreType = 'objective' | 'subjective';
 export type EmployeeProofRecord = {
   id: string;
   fileName: string;
+  previewUrl: string;
+  downloadUrl: string;
   fileUrl: string;
   fileSize: number;
   note: string | null;
@@ -165,6 +167,12 @@ export type ProofDownloadRecord = {
   storageKey: string;
 };
 
+export type ProofStorageRecord = {
+  proofId: string;
+  fileName: string;
+  storageKey: string;
+};
+
 export interface EmployeeRepository {
   getQuarterOverview(actor: AuthUser, year: number, quarter: number): Promise<EmployeeQuarterRecord>;
   getGoalTemplates(actor: AuthUser, year: number, quarter: number): Promise<EmployeeGoalTemplateRecord>;
@@ -185,4 +193,5 @@ export interface EmployeeRepository {
     input: { fileName: string; storageKey: string; fileSize: number; note: string | null }
   ): Promise<EmployeeProofUploadResult>;
   getProofDownload(actor: AuthUser, proofId: string): Promise<ProofDownloadRecord>;
+  getProofStorage(proofId: string): Promise<ProofStorageRecord>;
 }

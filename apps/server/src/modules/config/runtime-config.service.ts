@@ -35,6 +35,33 @@ export class RuntimeConfigService {
     return this.getRequiredString('WEB_BASE_URL');
   }
 
+  get kkFileViewPublicBaseUrl(): string {
+    const configured = this.getOptionalString('KKFILEVIEW_PUBLIC_BASE_URL');
+    if (configured) {
+      return configured;
+    }
+
+    return new URL('/preview', this.webBaseUrl).toString();
+  }
+
+  get kkFileViewSourceBaseUrl(): string {
+    const configured = this.getOptionalString('KKFILEVIEW_SOURCE_BASE_URL');
+    if (configured) {
+      return configured;
+    }
+
+    return `http://127.0.0.1:${this.port}`;
+  }
+
+  get kkFileViewPreviewToken(): string {
+    const configured = this.getOptionalString('KKFILEVIEW_PREVIEW_TOKEN');
+    if (configured) {
+      return configured;
+    }
+
+    return 'okr-kkfileview-preview-token';
+  }
+
   get debugSysadminLogin(): string {
     return this.getRequiredString('DEBUG_SYSADMIN_LOGIN');
   }

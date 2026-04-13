@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { App as AntApp } from 'antd';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmployeeGoalPage } from '../src/modules/employee/EmployeeGoalPage';
 
@@ -25,6 +25,59 @@ vi.mock('react-router-dom', async () => {
     useNavigate: () => mockNavigate,
     useParams: () => ({ goalId: 'goal-1' })
   };
+  it('prefers proof preview and keeps download as a separate action', async () => {
+    mockGetEmployeeGoalDetail.mockResolvedValueOnce({
+      id: 'goal-1',
+      code: 'O2',
+      name: 'proof flow goal',
+      description: 'proof flow goal desc',
+      status: 'confirmed',
+      totalPoints: 10,
+      keyResultCount: 1,
+      completedKeyResultCount: 1,
+      proofCount: 1,
+      currentScore: null,
+      year: 2026,
+      quarter: 1,
+      keyResults: [
+        {
+          id: 'kr-1',
+          code: 'KR1',
+          name: 'proof flow kr',
+          description: null,
+          points: 10,
+          scoreType: 'objective',
+          completionState: 'completed',
+          reviewScore: null,
+          reviewComment: null,
+          proofCount: 1,
+          proofs: [
+            {
+              id: 'proof-1',
+              fileName: 'quarter-proof.txt',
+              previewUrl: 'http://127.0.0.1:3000/preview/onlinePreview?url=preview-token',
+              downloadUrl: '/employee/proofs/proof-1/download',
+              fileUrl: '/employee/proofs/proof-1/download',
+              fileSize: 256,
+              note: 'note',
+              uploadedAt: '2026-04-13T08:00:00.000Z'
+            }
+          ]
+        }
+      ]
+    });
+
+    renderWithProviders(<EmployeeGoalPage />);
+
+    const previewLink = await screen.findByRole('link', { name: 'quarter-proof.txt' });
+    const previewAction = screen.getByRole('link', { name: '\u9884\u89c8' });
+    const downloadAction = screen.getByRole('link', { name: '\u4e0b\u8f7d' });
+
+    expect(previewLink).toHaveAttribute('href', 'http://127.0.0.1:3000/preview/onlinePreview?url=preview-token');
+    expect(previewAction).toHaveAttribute('href', 'http://127.0.0.1:3000/preview/onlinePreview?url=preview-token');
+    expect(downloadAction).toHaveAttribute('href', 'http://127.0.0.1:3000/api/employee/proofs/proof-1/download');
+    expect(within(previewAction.closest('.employee-proof-actions') as HTMLElement).getAllByRole('link')).toHaveLength(2);
+  });
 });
 
 describe('EmployeeGoalPage', () => {

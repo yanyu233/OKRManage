@@ -227,6 +227,16 @@ export class EmployeeService {
     };
   }
 
+  async getProofPreviewSource(proofId: string) {
+    const proof = await this.employeeRepository.getProofStorage(proofId);
+    const stream = await this.proofStorage.open(proof.storageKey);
+
+    return {
+      fileName: proof.fileName,
+      file: new StreamableFile(stream)
+    };
+  }
+
   private validateQuarter(year: number, quarter: number) {
     if (!Number.isInteger(year) || year < 2000 || year > 2100) {
       throw new DomainValidationError('invalid year');

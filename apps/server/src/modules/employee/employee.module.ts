@@ -5,11 +5,12 @@ import { LocalProofStorageService } from '../../infrastructure/storage/local-pro
 import { AuditModule } from '../audit/audit.module';
 import { SessionModule } from '../session/session.module';
 import { EmployeeController } from './employee.controller';
+import { EmployeePreviewController } from './employee-preview.controller';
 import { EmployeeService } from './employee.service';
 
 @Module({
   imports: [SessionModule, AuditModule],
-  controllers: [EmployeeController],
+  controllers: [EmployeeController, EmployeePreviewController],
   providers: [
     EmployeeService,
     PrismaEmployeeRepository,

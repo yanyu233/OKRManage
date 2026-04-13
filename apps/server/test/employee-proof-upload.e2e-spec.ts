@@ -1,3 +1,4 @@
+import * as request from 'supertest';
 import { INestApplication } from '@nestjs/common';
 import { closeTestDatabase, resetTestDatabase } from './support/test-db';
 import { createTestApp, loginAsEmployee, loginAsSectionLeader } from './support/test-app';
@@ -33,6 +34,9 @@ describe('Employee proof upload', () => {
     const uploadedProof = refreshedKeyResult.proofs.find((entry: { fileName: string }) => entry.fileName === 'quarter-proof.txt');
 
     expect(uploadedProof).toBeDefined();
+    expect(uploadedProof.previewUrl).toContain('/preview/onlinePreview?url=');
+    expect(uploadedProof.downloadUrl).toBe(`/employee/proofs/${uploadedProof.id}/download`);
+    expect(uploadedProof.fileUrl).toBe(uploadedProof.downloadUrl);
 
     const employeeDownload = await employeeAgent
       .get(`/api/employee/proofs/${uploadedProof.id}/download`)
@@ -44,6 +48,18 @@ describe('Employee proof upload', () => {
 
     const leaderAgent = await loginAsSectionLeader(app);
     await leaderAgent.get(`/api/employee/proofs/${uploadedProof.id}/download`).buffer(true).parse(binaryParser).expect(200);
+
+    const previewSource = await request(app.getHttpServer())
+      .get(`/api/internal/proofs/${uploadedProof.id}/source`)
+      .query({
+        accessToken: 'local-preview-token',
+        fullfilename: 'quarter-proof.txt'
+      })
+      .buffer(true)
+      .parse(binaryParser)
+      .expect(200);
+
+    expect(previewSource.body.toString('utf8')).toContain('quarter-proof-content');
   });
 });
 

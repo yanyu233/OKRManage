@@ -3,6 +3,8 @@ import { Prisma, User } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { AuthUser } from '../../../shared/types/auth-user';
 import { DomainValidationError } from '../../../shared/errors/domain-validation.error';
+import { RuntimeConfigService } from '../../../modules/config/runtime-config.service';
+import { buildProofDownloadUrl, buildProofPreviewUrl } from '../../../shared/proof/proof-links';
 import {
   EmployeeCompletionUpdateResult,
   EmployeeCreateGoalInput,
@@ -18,7 +20,8 @@ import {
   EmployeeQuarterRecord,
   EmployeeQuarterSummaryRecord,
   EmployeeRepository,
-  ProofDownloadRecord
+  ProofDownloadRecord,
+  ProofStorageRecord
 } from './employee.repository';
 
 type EmployeeWithQuarterData = Prisma.UserGetPayload<{
@@ -55,7 +58,10 @@ type ProofWithOwner = Prisma.ProofGetPayload<{
 
 @Injectable()
 export class PrismaEmployeeRepository implements EmployeeRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly runtimeConfig: RuntimeConfigService
+  ) {}
 
   async getQuarterOverview(actor: AuthUser, year: number, quarter: number): Promise<EmployeeQuarterRecord> {
     const employee = await this.requireEmployeeQuarter(actor.id, year, quarter);
@@ -713,6 +719,22 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
     };
   }
 
+  async getProofStorage(proofId: string): Promise<ProofStorageRecord> {
+    const proof = await this.prisma.proof.findUnique({
+      where: { id: proofId }
+    });
+
+    if (!proof) {
+      throw new NotFoundException('proof not found');
+    }
+
+    return {
+      proofId: proof.id,
+      fileName: proof.fileName,
+      storageKey: proof.fileUrl
+    };
+  }
+
   private async requireEmployeeQuarter(actorUserId: string, year: number, quarter: number): Promise<EmployeeWithQuarterData> {
     const employee = await this.prisma.user.findUnique({
       where: { id: actorUserId },
@@ -838,10 +860,20 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
   }
 
   private toProofRecord(proof: KeyResultWithProofs['proofs'][number]): EmployeeProofRecord {
+    const downloadUrl = buildProofDownloadUrl(proof.id);
+
     return {
       id: proof.id,
       fileName: proof.fileName,
-      fileUrl: `/api/employee/proofs/${proof.id}/download`,
+      previewUrl: buildProofPreviewUrl({
+        proofId: proof.id,
+        fileName: proof.fileName,
+        sourceBaseUrl: this.runtimeConfig.kkFileViewSourceBaseUrl,
+        previewBaseUrl: this.runtimeConfig.kkFileViewPublicBaseUrl,
+        previewToken: this.runtimeConfig.kkFileViewPreviewToken
+      }),
+      downloadUrl,
+      fileUrl: downloadUrl,
       fileSize: proof.fileSize,
       note: proof.note,
       uploadedAt: proof.uploadedAt.toISOString()
