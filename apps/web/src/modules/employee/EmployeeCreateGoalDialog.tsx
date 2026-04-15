@@ -1,9 +1,10 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
-import { Button, Card, Input, InputNumber, Modal, Segmented, Space, Typography } from 'antd';
+import { Alert, Button, Card, Input, InputNumber, Modal, Segmented, Space, Tag, Typography } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import type { CreateEmployeeGoalInput, EmployeeGoalDetail, UpdateEmployeeGoalInput } from '../../shared/types/employee';
 
-export const SUBJECTIVE_CONFIRM_TEXT = '员工自定目标一般为客观评分项，由绩效小组核实是否完成后赋分';
+export const SUBJECTIVE_CONFIRM_TEXT =
+  '员工自定目标及关键结果项通常建议使用客观评分项，主观评分项指的是目标任务综合评价、工作态度表现等由科室负责人主观打分的关键结果项。';
 
 const TEXT = {
   createTitle: '新建目标',
@@ -24,7 +25,11 @@ const TEXT = {
   createConfirm: '保存目标',
   editConfirm: '保存修改',
   remove: '删除',
-  keyResultPrefix: '关键结果'
+  keyResultPrefix: '关键结果',
+  currentQuarterPoints: '当前季度已分配',
+  currentGoalPoints: '本目标分值',
+  remainingPoints: '剩余可分配',
+  pointLimitExceeded: '当前季度所有目标的关键结果分值合计不能超过 100 分。'
 } as const;
 
 type DraftKeyResult = {
@@ -80,6 +85,8 @@ export function EmployeeCreateGoalDialog({
   quarter,
   mode = 'create',
   initialValue,
+  quarterAllocatedPoints,
+  maxQuarterPoints = 100,
   confirmLoading,
   onCancel,
   onConfirm
@@ -89,6 +96,8 @@ export function EmployeeCreateGoalDialog({
   quarter?: number;
   mode?: 'create' | 'edit';
   initialValue?: GoalDialogInitialValue | null;
+  quarterAllocatedPoints?: number;
+  maxQuarterPoints?: number;
   confirmLoading: boolean;
   onCancel: () => void;
   onConfirm: (payload: CreateEmployeeGoalInput | UpdateEmployeeGoalInput) => void | Promise<EmployeeGoalDetail | void>;
@@ -114,6 +123,11 @@ export function EmployeeCreateGoalDialog({
       keyResults.every((keyResult) => keyResult.name.trim().length > 0 && Number.isFinite(keyResult.points)),
     [keyResults, name]
   );
+  const draftTotalPoints = useMemo(() => keyResults.reduce((sum, keyResult) => sum + keyResult.points, 0), [keyResults]);
+  const nextQuarterPoints =
+    typeof quarterAllocatedPoints === 'number' ? quarterAllocatedPoints + draftTotalPoints : null;
+  const quarterPointLimitExceeded = nextQuarterPoints !== null && nextQuarterPoints > maxQuarterPoints;
+  const remainingPoints = nextQuarterPoints === null ? null : Math.max(maxQuarterPoints - nextQuarterPoints, 0);
 
   const isEdit = mode === 'edit';
 
@@ -126,9 +140,13 @@ export function EmployeeCreateGoalDialog({
       confirmLoading={confirmLoading}
       okText={isEdit ? TEXT.editConfirm : TEXT.createConfirm}
       cancelText={TEXT.cancel}
-      okButtonProps={{ disabled: !canSubmit }}
+      okButtonProps={{ disabled: !canSubmit || quarterPointLimitExceeded }}
       onCancel={onCancel}
       onOk={() => {
+        if (quarterPointLimitExceeded) {
+          return;
+        }
+
         const payload = {
           name: name.trim(),
           description: description.trim() || null,
@@ -169,14 +187,22 @@ export function EmployeeCreateGoalDialog({
           />
         </div>
 
+        {typeof quarterAllocatedPoints === 'number' ? (
+          <Space direction="vertical" size={10} style={{ width: '100%' }}>
+            <Space wrap size={[8, 8]}>
+              <Tag>{`${TEXT.currentQuarterPoints} ${quarterAllocatedPoints} 分`}</Tag>
+              <Tag color="blue">{`${TEXT.currentGoalPoints} ${draftTotalPoints} 分`}</Tag>
+              <Tag color={quarterPointLimitExceeded ? 'red' : 'green'}>{`${TEXT.remainingPoints} ${remainingPoints ?? 0} 分`}</Tag>
+            </Space>
+            {quarterPointLimitExceeded ? <Alert type="error" showIcon message={TEXT.pointLimitExceeded} /> : null}
+          </Space>
+        ) : null}
+
         <div className="employee-create-goal__header">
           <Typography.Title level={4} style={{ marginBottom: 0 }}>
             {TEXT.keyResults}
           </Typography.Title>
-          <Button
-            icon={<PlusOutlined />}
-            onClick={() => setKeyResults((current) => [...current, createDraftKeyResult(current.length)])}
-          >
+          <Button icon={<PlusOutlined />} onClick={() => setKeyResults((current) => [...current, createDraftKeyResult(current.length)])}>
             {TEXT.addKeyResult}
           </Button>
         </div>

@@ -442,6 +442,8 @@ export class AdminConfigExcelService {
         ? 'user'
         : assignment.roleCode === 'system-admin'
           ? 'system'
+          : assignment.roleCode === 'department-head'
+            ? 'department'
           : assignment.roleCode === 'section-leader'
             ? 'section'
             : 'review-group';
@@ -449,6 +451,8 @@ export class AdminConfigExcelService {
         ? nextUserId
         : assignment.roleCode === 'system-admin'
           ? 'system'
+          : assignment.roleCode === 'department-head'
+            ? `managed-department:${nextUserId}`
           : assignment.roleCode === 'section-leader'
             ? `managed-section:${nextUserId}`
             : `managed-group:${nextUserId}`;
@@ -852,6 +856,9 @@ export class AdminConfigExcelService {
       case 'system-admin':
       case '系统管理员':
         return 'system-admin';
+      case 'department-head':
+      case '部门负责人':
+        return 'department-head';
       case 'section-leader':
       case '科室负责人':
         return 'section-leader';
@@ -888,6 +895,8 @@ export class AdminConfigExcelService {
     switch (roleCode) {
       case 'system-admin':
         return '系统管理员';
+      case 'department-head':
+        return '部门负责人';
       case 'section-leader':
         return '科室负责人';
       case 'group-leader':

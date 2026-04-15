@@ -264,6 +264,7 @@ model Proof {
   fileUrl     String
   fileSize    Int
   note        String?
+  isKnowledge Boolean   @default(false)
   uploadedAt  DateTime  @default(now())
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

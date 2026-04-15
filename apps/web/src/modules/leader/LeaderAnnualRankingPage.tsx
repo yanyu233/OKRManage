@@ -1,14 +1,14 @@
 import { FundOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Button, Card, Col, Empty, Input, Row, Select, Space, Statistic, Tag, Typography } from 'antd';
+import { Alert, Button, Card, Col, Empty, Input, Row, Space, Statistic, Tag, Typography } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { getLeaderAnnualRanking } from '../../shared/api/leader';
-import { buildToolbarYearOptions } from '../../shared/ui/toolbar-options';
+import { YearPickerPopover } from '../../shared/ui/PeriodPickerPopover';
+import { buildCurrentAndFutureYearOptions } from '../../shared/ui/toolbar-options';
 import { filterAnnualRankingEntries, formatAnnualScore, resolveAnnualRankingSelection } from './leader-annual-ranking.helpers';
 import './leader.css';
 
 const START_YEAR = 2026;
-const DEFAULT_YEAR = 2026;
 const TEXT = {
   title: '年度评分排名',
   description: '查看指定年度内员工四个季度实际得分的汇总排名，缺失季度按 0 计入年度总分。',
@@ -25,12 +25,12 @@ const TEXT = {
 } as const;
 
 export function LeaderAnnualRankingPage() {
-  const [year, setYear] = useState(DEFAULT_YEAR);
+  const [year, setYear] = useState(() => Math.max(START_YEAR, new Date().getFullYear()));
   const [keyword, setKeyword] = useState('');
   const [employeeId, setEmployeeId] = useState<string | null>(null);
 
   const yearOptions = useMemo(
-    () => buildToolbarYearOptions(START_YEAR, Math.max(START_YEAR, new Date().getFullYear() + 4)),
+    () => buildCurrentAndFutureYearOptions(Math.max(START_YEAR, new Date().getFullYear()), 8),
     []
   );
 
@@ -90,14 +90,13 @@ export function LeaderAnnualRankingPage() {
               value={keyword}
               onChange={(event) => setKeyword(event.target.value)}
             />
-            <Select
-              value={year}
-              options={yearOptions}
-              onChange={(value) => {
-                setYear(value);
+            <YearPickerPopover
+              year={year}
+              yearOptions={yearOptions}
+              onChange={(nextYear) => {
+                setYear(nextYear);
                 setEmployeeId(null);
               }}
-              style={{ minWidth: 140 }}
             />
             <Button icon={<ReloadOutlined />} onClick={() => annualRankingQuery.refetch()}>
               {TEXT.refresh}

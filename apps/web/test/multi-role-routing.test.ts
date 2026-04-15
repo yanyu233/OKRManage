@@ -40,6 +40,20 @@ const dualRoleUser: SessionUser = {
   loginName: 'group.leader'
 };
 
+const departmentHeadUser: SessionUser = {
+  id: 'u-dept',
+  name: '赵部长',
+  role: 'department-head',
+  activeRole: 'department-head',
+  roles: [
+    {
+      role: 'department-head',
+      isPrimary: true
+    }
+  ],
+  loginName: 'department.head'
+};
+
 describe('multi-role routing', () => {
   it('builds a single employee section for employee-only users', () => {
     const sections = buildNavigationSections(employeeUser);
@@ -98,9 +112,48 @@ describe('multi-role routing', () => {
       }
     ]);
 
-    expect(items).toHaveLength(2);
+    expect(items).toHaveLength(3);
+    expect((items[0] as { key?: string }).key).toBe('/knowledge-base');
     const totalChildren = items.reduce((sum, item) => sum + ((item as { children?: unknown[] }).children?.length ?? 1), 0);
-    expect(totalChildren).toBe(4);
+    expect(totalChildren).toBe(5);
+  });
+
+  it('shows all non-admin menus for department head', () => {
+    const sections = buildNavigationSections(departmentHeadUser);
+    const items = menuItemsForUser(departmentHeadUser);
+
+    expect(sections).toEqual([
+      {
+        role: 'department-head',
+        title: '部门负责人',
+        items: [
+          {
+            key: '/leader/workbench',
+            label: '评分工作台',
+            role: 'department-head'
+          },
+          {
+            key: '/leader/ranking',
+            label: '评分排名',
+            role: 'department-head'
+          },
+          {
+            key: '/leader/annual-ranking',
+            label: '年度评分排名',
+            role: 'department-head'
+          },
+          {
+            key: '/employee/okr',
+            label: '我的 OKR',
+            role: 'department-head'
+          }
+        ]
+      }
+    ]);
+
+    expect(items).toHaveLength(5);
+    expect((items[0] as { key?: string }).key).toBe('/knowledge-base');
+    expect((items[4] as { key?: string }).key).toBe('/employee/okr');
   });
 
   it('resolves target active role from the destination path', () => {
@@ -108,17 +161,25 @@ describe('multi-role routing', () => {
     expect(resolveTargetRoleForPath(dualRoleUser, '/employee/goal/goal-1')).toBe('employee');
     expect(resolveTargetRoleForPath(dualRoleUser, '/leader/workbench')).toBe('group-leader');
     expect(resolveTargetRoleForPath(dualRoleUser, '/leader/annual-ranking')).toBe('group-leader');
+    expect(resolveTargetRoleForPath(dualRoleUser, '/leader/knowledge-base')).toBe('group-leader');
+    expect(resolveTargetRoleForPath(dualRoleUser, '/knowledge-base')).toBe('group-leader');
+
+    expect(resolveTargetRoleForPath(departmentHeadUser, '/employee/okr')).toBe('department-head');
+    expect(resolveTargetRoleForPath(departmentHeadUser, '/leader/workbench')).toBe('department-head');
   });
 
   it('checks route access from assigned roles instead of only the active role', () => {
     expect(canAccessRoute(dualRoleUser, ['employee'])).toBe(true);
     expect(canAccessRoute(dualRoleUser, ['group-leader'])).toBe(true);
     expect(canAccessRoute(dualRoleUser, ['system-admin'])).toBe(false);
+    expect(canAccessRoute(departmentHeadUser, ['department-head'])).toBe(true);
   });
 
   it('maps nested employee routes to the employee menu key', () => {
     expect(selectedMenuKeyForPath('/employee/goal/goal-1')).toBe('/employee/okr');
     expect(selectedMenuKeyForPath('/leader/ranking')).toBe('/leader/ranking');
     expect(selectedMenuKeyForPath('/leader/annual-ranking')).toBe('/leader/annual-ranking');
+    expect(selectedMenuKeyForPath('/leader/knowledge-base')).toBe('/knowledge-base');
+    expect(selectedMenuKeyForPath('/knowledge-base')).toBe('/knowledge-base');
   });
 });

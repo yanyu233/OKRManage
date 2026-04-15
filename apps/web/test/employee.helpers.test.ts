@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { buildYearOptions, filterEmployeeGoals, formatProofSize, resolveEmployeeGoalSelection } from '../src/modules/employee/employee.helpers';
+import {
+  buildYearOptions,
+  filterEmployeeGoals,
+  formatProofSize,
+  resolveEmployeeGoalSelection
+} from '../src/modules/employee/employee.helpers';
 import type { EmployeeOkrResponse } from '../src/shared/types/employee';
 
 describe('employee helpers', () => {
@@ -51,8 +56,8 @@ describe('employee helpers', () => {
       {
         id: 'g-1',
         code: 'O1',
-        name: '张晨 2026 年一季度 OKR',
-        description: '围绕平台交付效率推进季度工作',
+        name: 'Platform delivery',
+        description: 'Quarterly delivery efficiency improvement',
         status: 'confirmed',
         totalPoints: 80,
         keyResultCount: 3,
@@ -63,8 +68,8 @@ describe('employee helpers', () => {
       {
         id: 'g-2',
         code: 'O4',
-        name: '张晨 知识库沉淀专项',
-        description: '沉淀平台常见问题和交付案例',
+        name: 'Knowledge base improvement',
+        description: 'Archive reusable issue resolutions and delivery cases',
         status: 'confirmed',
         totalPoints: 40,
         keyResultCount: 3,
@@ -74,9 +79,9 @@ describe('employee helpers', () => {
       }
     ];
 
-    expect(filterEmployeeGoals(goals, '知识库')).toEqual([goals[1]]);
+    expect(filterEmployeeGoals(goals, 'knowledge')).toEqual([goals[1]]);
     expect(filterEmployeeGoals(goals, 'o1')).toEqual([goals[0]]);
-    expect(filterEmployeeGoals(goals, '交付效率')).toEqual([goals[0]]);
+    expect(filterEmployeeGoals(goals, 'delivery efficiency')).toEqual([goals[0]]);
     expect(filterEmployeeGoals(goals, '')).toEqual(goals);
   });
 

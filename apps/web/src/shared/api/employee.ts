@@ -9,6 +9,7 @@ import type {
   UpdateEmployeeGoalInput,
   UpdateKrCompletionInput
 } from '../types/employee';
+import type { ProofArchiveManifest, ProofPreviewMeta } from '../types/proof-preview';
 import { apiRequest } from './http';
 
 type EmployeeQuarterQuery = {
@@ -79,6 +80,18 @@ export function uploadEmployeeProof(krId: string, file: File, note?: string) {
   return apiRequest<EmployeeProof>(`/employee/key-results/${krId}/proofs`, {
     method: 'POST',
     body: formData
+  });
+}
+
+export function getProofArchiveManifest(proofId: string) {
+  return apiRequest<ProofArchiveManifest>(`/employee/proofs/${proofId}/archive`, {
+    method: 'GET'
+  });
+}
+
+export function getProofPreviewMeta(proofId: string, entryPath?: string | null) {
+  return apiRequest<ProofPreviewMeta>(`/employee/proofs/${proofId}/preview-meta${toQueryString({ entryPath })}`, {
+    method: 'GET'
   });
 }
 

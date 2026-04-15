@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, User } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { REVIEW_GRADE_CODES } from '../../../shared/constants/review-grade-codes';
@@ -15,8 +15,14 @@ import {
   LeaderBulkScoreResult,
   LeaderEmployeeSummaryRecord,
   LeaderGoalDetailRecord,
+  LeaderKnowledgeBaseRecord,
+  LeaderKnowledgeProofDownloadRecord,
+  LeaderKnowledgeEntryRecord,
+  LeaderKnowledgeProofUpdateInput,
+  LeaderKnowledgeProofUpdateResult,
   LeaderGoalSummaryRecord,
   LeaderKeyResultRecord,
+  LeaderProofKnowledgeToggleResult,
   LeaderProofRecord,
   LeaderRankingEntryRecord,
   LeaderRankingGoalBreakdownRecord,
@@ -47,6 +53,24 @@ type EmployeeWithQuarterData = Prisma.UserGetPayload<{
 }>;
 type GoalWithQuarterData = EmployeeWithQuarterData['ownedGoals'][number];
 type KeyResultWithProofs = GoalWithQuarterData['keyResults'][number];
+type ProofWithRelations = Prisma.ProofGetPayload<{
+  include: {
+    keyResult: {
+      include: {
+        goal: {
+          include: {
+            owner: {
+              include: {
+                section: true;
+                reviewGroup: true;
+              };
+            };
+          };
+        };
+      };
+    };
+  };
+}>;
 
 @Injectable()
 export class PrismaLeaderRepository implements LeaderRepository {
@@ -313,6 +337,158 @@ export class PrismaLeaderRepository implements LeaderRepository {
       skippedCount: skipped.length,
       skipped
     };
+  }
+
+  async updateProofKnowledge(
+    actor: AuthUser,
+    proofId: string,
+    isKnowledge: boolean
+  ): Promise<LeaderProofKnowledgeToggleResult> {
+    void actor;
+    const proof = await this.requireProofWithRelations(proofId);
+
+    const updated = await this.prisma.proof.update({
+      where: { id: proofId },
+      data: {
+        isKnowledge
+      }
+    });
+
+    return {
+      before: {
+        id: proof.id,
+        isKnowledge: proof.isKnowledge
+      },
+      after: this.toProofRecord(updated)
+    };
+  }
+
+  async getKnowledgeBase(actor: AuthUser): Promise<LeaderKnowledgeBaseRecord> {
+    void actor;
+    const proofs = await this.prisma.proof.findMany({
+      where: {
+        isKnowledge: true
+      },
+      orderBy: [{ updatedAt: 'desc' }, { uploadedAt: 'desc' }],
+      include: {
+        keyResult: {
+          include: {
+            goal: {
+              include: {
+                owner: {
+                  include: {
+                    section: true,
+                    reviewGroup: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    return {
+      entries: proofs.map((proof) => this.toKnowledgeEntryRecord(proof))
+    };
+  }
+
+  async updateKnowledgeProof(
+    actor: AuthUser,
+    proofId: string,
+    input: LeaderKnowledgeProofUpdateInput
+  ): Promise<LeaderKnowledgeProofUpdateResult> {
+    void actor;
+    const proof = await this.requireProofWithRelations(proofId);
+
+    if (!proof.isKnowledge) {
+      throw new DomainValidationError('only knowledge proofs can be updated here');
+    }
+
+    const nextFileName = input.fileName ?? proof.fileName;
+    const nextStorageKey = input.storageKey ?? proof.fileUrl;
+    const nextFileSize = input.fileSize ?? proof.fileSize;
+
+    const updated = await this.prisma.proof.update({
+      where: { id: proofId },
+      data: {
+        fileName: nextFileName,
+        fileUrl: nextStorageKey,
+        fileSize: nextFileSize,
+        note: input.note
+      },
+      include: {
+        keyResult: {
+          include: {
+            goal: {
+              include: {
+                owner: {
+                  include: {
+                    section: true,
+                    reviewGroup: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    return {
+      before: {
+        id: proof.id,
+        fileName: proof.fileName,
+        note: proof.note,
+        storageKey: proof.fileUrl
+      },
+      after: this.toKnowledgeEntryRecord(updated),
+      previousStorageKey: input.storageKey ? proof.fileUrl : null
+    };
+  }
+
+  async getKnowledgeProofDownloads(actor: AuthUser, proofIds: string[]): Promise<LeaderKnowledgeProofDownloadRecord[]> {
+    void actor;
+    const normalizedIds = Array.from(new Set(proofIds.map((proofId) => proofId.trim()).filter((proofId) => proofId.length > 0)));
+    if (!normalizedIds.length) {
+      return [];
+    }
+
+    const proofs = await this.prisma.proof.findMany({
+      where: {
+        id: {
+          in: normalizedIds
+        },
+        isKnowledge: true
+      },
+      include: {
+        keyResult: {
+          include: {
+            goal: {
+              include: {
+                owner: {
+                  include: {
+                    section: true,
+                    reviewGroup: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    const proofById = new Map(proofs.map((proof) => [proof.id, proof]));
+
+    return normalizedIds.map((proofId) => {
+      const proof = proofById.get(proofId);
+      if (!proof) {
+        throw new NotFoundException('knowledge proof not found');
+      }
+
+      return this.toKnowledgeDownloadRecord(proof);
+    });
   }
 
   async getRanking(
@@ -696,6 +872,7 @@ export class PrismaLeaderRepository implements LeaderRepository {
       previewUrl: buildProofPreviewUrl({
         proofId: proof.id,
         fileName: proof.fileName,
+        webBaseUrl: this.runtimeConfig.webBaseUrl,
         sourceBaseUrl: this.runtimeConfig.kkFileViewSourceBaseUrl,
         previewBaseUrl: this.runtimeConfig.kkFileViewPublicBaseUrl,
         previewToken: this.runtimeConfig.kkFileViewPreviewToken
@@ -704,7 +881,41 @@ export class PrismaLeaderRepository implements LeaderRepository {
       fileUrl: downloadUrl,
       fileSize: proof.fileSize,
       note: proof.note,
-      uploadedAt: proof.uploadedAt.toISOString()
+      isKnowledge: proof.isKnowledge,
+      uploadedAt: proof.uploadedAt.toISOString(),
+      updatedAt: proof.updatedAt.toISOString()
+    };
+  }
+
+  private toKnowledgeEntryRecord(proof: ProofWithRelations): LeaderKnowledgeEntryRecord {
+    const owner = proof.keyResult.goal.owner;
+    const base = this.toProofRecord(proof);
+
+    return {
+      ...base,
+      employeeId: owner.id,
+      employeeName: owner.name,
+      sectionName: owner.section?.name ?? null,
+      reviewGroupName: owner.reviewGroup?.name ?? null,
+      goalId: proof.keyResult.goal.id,
+      goalCode: proof.keyResult.goal.code,
+      goalName: proof.keyResult.goal.name,
+      keyResultId: proof.keyResult.id,
+      keyResultCode: proof.keyResult.code,
+      keyResultName: proof.keyResult.name
+    };
+  }
+
+  private toKnowledgeDownloadRecord(proof: ProofWithRelations): LeaderKnowledgeProofDownloadRecord {
+    return {
+      id: proof.id,
+      fileName: proof.fileName,
+      storageKey: proof.fileUrl,
+      employeeName: proof.keyResult.goal.owner.name,
+      goalCode: proof.keyResult.goal.code,
+      goalName: proof.keyResult.goal.name,
+      keyResultCode: proof.keyResult.code,
+      keyResultName: proof.keyResult.name
     };
   }
 
@@ -777,6 +988,14 @@ export class PrismaLeaderRepository implements LeaderRepository {
   }
 
   private async getScoringScope(actor: AuthUser) {
+    if (actor.role === 'department-head') {
+      return {
+        allowAll: true,
+        sectionIds: new Set<string>(),
+        reviewGroupIds: new Set<string>()
+      };
+    }
+
     const [sectionBindings, groupBindings] = await Promise.all([
       this.prisma.sectionLeaderBinding.findMany({
         where: {
@@ -797,9 +1016,38 @@ export class PrismaLeaderRepository implements LeaderRepository {
     ]);
 
     return {
+      allowAll: false,
       sectionIds: new Set(sectionBindings.map((binding) => binding.sectionId)),
       reviewGroupIds: new Set(groupBindings.map((binding) => binding.reviewGroupId))
     };
+  }
+
+  private async requireProofWithRelations(proofId: string): Promise<ProofWithRelations> {
+    const proof = await this.prisma.proof.findUnique({
+      where: { id: proofId },
+      include: {
+        keyResult: {
+          include: {
+            goal: {
+              include: {
+                owner: {
+                  include: {
+                    section: true,
+                    reviewGroup: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!proof) {
+      throw new NotFoundException('proof not found');
+    }
+
+    return proof;
   }
 }
 
@@ -871,8 +1119,12 @@ function buildSeatSummary(
 
 function canScoreEmployee(
   employee: Pick<User, 'sectionId' | 'reviewGroupId'>,
-  scope: { sectionIds: Set<string>; reviewGroupIds: Set<string> }
+  scope: { allowAll: boolean; sectionIds: Set<string>; reviewGroupIds: Set<string> }
 ) {
+  if (scope.allowAll) {
+    return true;
+  }
+
   return (
     (employee.sectionId ? scope.sectionIds.has(employee.sectionId) : false) ||
     (employee.reviewGroupId ? scope.reviewGroupIds.has(employee.reviewGroupId) : false)

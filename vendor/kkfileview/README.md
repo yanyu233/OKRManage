@@ -1,24 +1,31 @@
 # kkFileView Vendor Layout
 
-This repository integrates `kkFileView` as a sidecar service and expects the official Linux distribution to be unpacked at:
+This repository integrates `kkFileView` into the project startup flow and expects the runnable preview service to live under:
 
 `vendor/kkfileview/current`
 
-The `current` directory should contain the standard distribution layout with at least:
+Recommended layout for the project-managed runtime:
 
-- `bin/startup.sh`
-- `bin/shutdown.sh`
+- `kkFileView.jar`
 - `config/application.properties`
+- `bin/*.sh` (optional helper scripts copied from upstream source)
 - `log/`
-- `kkFileView-4.4.0.jar`
 
-Why the package is not checked into Git:
+Recommended source checkout location:
 
-- The upstream GitHub release currently exposes source archives publicly, but the ready-to-run Linux distribution package is distributed through the maintainer community instead of GitHub release assets.
-- The project scripts in [`scripts/linux`](../../scripts/linux) are already wired to this expected layout, so once the package is placed under `vendor/kkfileview/current`, the integrated startup flow works without extra project changes.
+`vendor/kkfileview/source/kkFileView`
 
-Recommended placement flow:
+Why the runtime is not checked into Git:
 
-1. Download the official Linux release package for `kkFileView 4.4.0`.
-2. Unpack it into `vendor/kkfileview/current`.
-3. Run `scripts/linux/start-stack.sh`.
+- `kkFileView` build outputs are binary artifacts and should be generated during deployment.
+- The project keeps only the integration scripts and documentation in Git.
+
+Recommended flow:
+
+1. Download or clone the upstream `kkFileView` source code.
+2. Build and stage it into the project with `scripts/linux/build-kkfileview-from-source.sh`.
+3. Start the full stack with `scripts/linux/start-stack.sh`.
+
+Compatibility note:
+
+- `scripts/linux/start-kkfileview.sh` supports both the project-managed source-build layout above and the upstream packaged layout with `bin/startup.sh`.

@@ -3,16 +3,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, Card, Checkbox, Col, Empty, Input, InputNumber, Modal, Row, Select, Space, Statistic, Tag, Tabs, Typography } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { ApiError, resolveApiUrl } from '../../shared/api/http';
-import { bulkLeaderKrScore, getLeaderWorkbench, updateLeaderKrScore } from '../../shared/api/leader';
+import { bulkLeaderKrScore, getLeaderWorkbench, updateLeaderKrScore, updateLeaderProofKnowledge } from '../../shared/api/leader';
 import { formatNullableScore, formatQuarterLabel, getCompletionStateLabel, getGoalStatusLabel, getLeaderEmployeeStatusLabel, getScoreTypeLabel } from '../../shared/i18n/labels';
+import { useSharedQuarterPeriod } from '../../shared/store/quarter-store';
 import type { LeaderKeyResult } from '../../shared/types/leader';
-import { buildQuarterOptions, buildToolbarYearOptions } from '../../shared/ui/toolbar-options';
+import { YearQuarterPickerPopover } from '../../shared/ui/PeriodPickerPopover';
 import { ALL_FILTER_VALUE, buildBulkScorePreview, buildWorkbenchFilterOptions, createScoreDrafts, filterBulkScoreEmployees, filterWorkbenchEmployees, filterWorkbenchGoals, filterWorkbenchKeyResults, resolveObjectiveBulkEmployeeIds, resolveWorkbenchSelection, selectAllBulkEmployeeIds, selectAllObjectiveKeyResultIds, type ScoreDraft } from './leader-workbench.helpers';
 import './leader.css';
 
 const START_YEAR = 2026;
-const DEFAULT_YEAR = 2026;
-const DEFAULT_QUARTER = 1;
 const T = {
   title: '\u8bc4\u5206\u5de5\u4f5c\u53f0',
   desc: '\u6309\u8d23\u4efb\u8303\u56f4\u67e5\u770b\u5458\u5de5\u5b63\u5ea6 OKR\uff0c\u53ef\u5207\u6362\u65f6\u95f4\u3001\u641c\u7d22\u5173\u952e\u5bf9\u8c61\uff0c\u5e76\u9010\u6761\u4e3a\u5173\u952e\u7ed3\u679c\u8bc4\u5206\u3002',
@@ -34,6 +33,10 @@ const T = {
   proofEmpty: '\u5f53\u524d\u8fd8\u6ca1\u6709\u4e0a\u4f20\u8bc1\u660e\u6750\u6599',
   previewFile: '\u9884\u89c8',
   downloadFile: '\u4e0b\u8f7d',
+  markKnowledge: '\u6807\u8bb0\u4e3a\u77e5\u8bc6',
+  knowledgeMarked: '\u5df2\u6536\u5f55\u5230\u77e5\u8bc6\u5e93',
+  knowledgeUnmarked: '\u5df2\u4ece\u77e5\u8bc6\u5e93\u79fb\u9664',
+  knowledgeFailed: '\u77e5\u8bc6\u6807\u8bb0\u66f4\u65b0\u5931\u8d25\u3002',
   goalCount: '\u76ee\u6807\u6570',
   krCount: '\u5173\u952e\u7ed3\u679c\u6570',
   scoredKrCount: '\u5df2\u8bc4\u5206\u5173\u952e\u7ed3\u679c',
@@ -79,9 +82,13 @@ const T = {
 export function LeaderWorkbenchPage() {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
-  const [year, setYear] = useState(DEFAULT_YEAR);
-  const [quarter, setQuarter] = useState(DEFAULT_QUARTER);
+  const { year, quarter, yearOptions, quarterOptions, setPeriod } = useSharedQuarterPeriod({
+    startYear: START_YEAR,
+    futureRange: 8
+  });
   const [keyword, setKeyword] = useState('');
+  const [queueSectionId, setQueueSectionId] = useState<string | null>(null);
+  const [queueReviewGroupId, setQueueReviewGroupId] = useState<string | null>(null);
   const [employeeId, setEmployeeId] = useState<string | null>(null);
   const [goalId, setGoalId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, ScoreDraft>>({});
@@ -94,8 +101,6 @@ export function LeaderWorkbenchPage() {
   const [bulkComment, setBulkComment] = useState('');
   const [bulkOverwrite, setBulkOverwrite] = useState(false);
   const [bulkExcludeTemplates, setBulkExcludeTemplates] = useState(false);
-  const yearOptions = useMemo(() => buildToolbarYearOptions(START_YEAR, Math.max(START_YEAR, new Date().getFullYear() + 4)), []);
-  const quarterOptions = useMemo(() => buildQuarterOptions(), []);
   const workbenchQuery = useQuery({ queryKey: ['leader-workbench', year, quarter, employeeId, goalId], queryFn: () => getLeaderWorkbench({ year, quarter, employeeId, goalId }) });
 
   useEffect(() => {
@@ -126,17 +131,77 @@ export function LeaderWorkbenchPage() {
     },
     onError: (error) => message.error(error instanceof ApiError ? error.message : '\u6279\u91cf\u8bc4\u5206\u4fdd\u5b58\u5931\u8d25\u3002')
   });
+  const knowledgeMutation = useMutation({
+    mutationFn: ({ proofId, isKnowledge }: { proofId: string; isKnowledge: boolean }) =>
+      updateLeaderProofKnowledge(proofId, { isKnowledge }),
+    onSuccess: async (proof) => {
+      await queryClient.invalidateQueries({ queryKey: ['leader-workbench'] });
+      await queryClient.invalidateQueries({ queryKey: ['leader-knowledge-base'] });
+      message.success(proof.isKnowledge ? T.knowledgeMarked : T.knowledgeUnmarked);
+    },
+    onError: (error) => message.error(error instanceof ApiError ? error.message : T.knowledgeFailed)
+  });
 
   const selectedEmployee = workbenchQuery.data?.selectedEmployee ?? null;
   const selectedGoal = workbenchQuery.data?.selectedGoal ?? null;
-  const filteredEmployees = useMemo(() => filterWorkbenchEmployees(workbenchQuery.data?.employees ?? [], keyword), [keyword, workbenchQuery.data?.employees]);
-  const filteredGoals = useMemo(() => filterWorkbenchGoals(workbenchQuery.data?.goals ?? [], keyword), [keyword, workbenchQuery.data?.goals]);
+  const queueSectionOptions = useMemo(
+    () => buildWorkbenchFilterOptions(workbenchQuery.data?.employees ?? []).sections,
+    [workbenchQuery.data?.employees]
+  );
+  const queueReviewGroupOptions = useMemo(
+    () =>
+      buildWorkbenchFilterOptions(
+        filterBulkScoreEmployees(workbenchQuery.data?.employees ?? [], {
+          sectionId: queueSectionId
+        })
+      ).reviewGroups,
+    [queueSectionId, workbenchQuery.data?.employees]
+  );
+  const filteredEmployees = useMemo(
+    () =>
+      filterWorkbenchEmployees(
+        filterBulkScoreEmployees(workbenchQuery.data?.employees ?? [], {
+          sectionId: queueSectionId,
+          reviewGroupId: queueReviewGroupId
+        }),
+        keyword
+      ),
+    [keyword, queueReviewGroupId, queueSectionId, workbenchQuery.data?.employees]
+  );
+  const selectedEmployeeVisible = filteredEmployees.some((employee) => employee.id === selectedEmployee?.id);
+  const displaySelectedEmployee = selectedEmployeeVisible ? selectedEmployee : null;
+  const displaySelectedGoal = selectedEmployeeVisible ? selectedGoal : null;
+  const filteredGoals = useMemo(
+    () => (displaySelectedEmployee ? filterWorkbenchGoals(workbenchQuery.data?.goals ?? [], keyword) : []),
+    [displaySelectedEmployee, keyword, workbenchQuery.data?.goals]
+  );
   const visibleGoals = useMemo(() => {
-    if (!selectedGoal) return filteredGoals;
-    if (!keyword.trim()) return workbenchQuery.data?.goals ?? [];
-    return filteredGoals.some((goal) => goal.id === selectedGoal.id) ? filteredGoals : [selectedGoal, ...filteredGoals];
-  }, [filteredGoals, keyword, selectedGoal, workbenchQuery.data?.goals]);
-  const filteredKeyResults = useMemo(() => filterWorkbenchKeyResults(selectedGoal?.keyResults ?? [], keyword), [keyword, selectedGoal]);
+    if (!displaySelectedGoal) return filteredGoals;
+    if (!keyword.trim()) return displaySelectedEmployee ? workbenchQuery.data?.goals ?? [] : [];
+    return filteredGoals.some((goal) => goal.id === displaySelectedGoal.id)
+      ? filteredGoals
+      : [displaySelectedGoal, ...filteredGoals];
+  }, [displaySelectedEmployee, displaySelectedGoal, filteredGoals, keyword, workbenchQuery.data?.goals]);
+  useEffect(() => {
+    if (queueReviewGroupId && !queueReviewGroupOptions.some((option) => option.value === queueReviewGroupId)) {
+      setQueueReviewGroupId(null);
+    }
+  }, [queueReviewGroupId, queueReviewGroupOptions]);
+
+  useEffect(() => {
+    if (!filteredEmployees.length) {
+      return;
+    }
+
+    if (!selectedEmployeeVisible && employeeId !== filteredEmployees[0]?.id) {
+      setEmployeeId(filteredEmployees[0]?.id ?? null);
+      setGoalId(null);
+    }
+  }, [employeeId, filteredEmployees, selectedEmployeeVisible]);
+  const filteredKeyResults = useMemo(
+    () => filterWorkbenchKeyResults(displaySelectedGoal?.keyResults ?? [], keyword),
+    [displaySelectedGoal, keyword]
+  );
   const goalTabs = useMemo(() => visibleGoals.map((goal) => ({ key: goal.id, label: `${goal.code} ${goal.name}` })), [visibleGoals]);
   const { sections: bulkSectionOptions, reviewGroups: bulkReviewGroupOptions } = useMemo(() => buildWorkbenchFilterOptions(workbenchQuery.data?.employees ?? []), [workbenchQuery.data?.employees]);
   const bulkVisibleEmployees = useMemo(() => filterBulkScoreEmployees(workbenchQuery.data?.employees ?? [], { sectionId: bulkSectionId, reviewGroupId: bulkReviewGroupId }), [bulkReviewGroupId, bulkSectionId, workbenchQuery.data?.employees]);
@@ -144,7 +209,7 @@ export function LeaderWorkbenchPage() {
   const bulkScorableEmployeeIds = useMemo(() => bulkVisibleEmployees.filter((employee) => employee.canScore).map((employee) => employee.id), [bulkVisibleEmployees]);
   const bulkPreview = useMemo(() => buildBulkScorePreview(workbenchQuery.data?.bulkCatalog ?? [], { sectionId: bulkSectionId, reviewGroupId: bulkReviewGroupId, employeeIds: bulkEmployeeIds, goalIds: bulkGoalIds, keyResultIds: bulkKrIds, excludeTemplateGoals: bulkExcludeTemplates }), [bulkEmployeeIds, bulkExcludeTemplates, bulkGoalIds, bulkKrIds, bulkReviewGroupId, bulkSectionId, workbenchQuery.data?.bulkCatalog]);
   const canScoreCount = useMemo(() => bulkPreview.employees.filter((employee) => employee.canScore).length, [bulkPreview.employees]);
-  const isReadonlyEmployee = Boolean(selectedEmployee && !selectedEmployee.canScore);
+  const isReadonlyEmployee = Boolean(displaySelectedEmployee && !displaySelectedEmployee.canScore);
   const selectedEmployeeCount = bulkPreview.employees.length;
 
   if (workbenchQuery.isLoading) return <Card className="leader-detail-card">{T.loading}</Card>;
@@ -152,15 +217,82 @@ export function LeaderWorkbenchPage() {
 
   return (
     <Space direction="vertical" size={24} className="leader-page">
-      <Card className="leader-toolbar-card" variant="borderless"><div className="page-toolbar"><div><Typography.Title level={1} style={{ marginBottom: 8 }}>{T.title}</Typography.Title><Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>{T.desc}</Typography.Paragraph></div><div className="page-toolbar__controls"><Input allowClear prefix={<SearchOutlined />} className="page-toolbar__search" placeholder={T.search} value={keyword} onChange={(event) => setKeyword(event.target.value)} /><Select value={year} options={yearOptions} onChange={(value) => { setYear(value); setEmployeeId(null); setGoalId(null); }} style={{ minWidth: 140 }} /><Select value={quarter} options={quarterOptions} onChange={(value) => { setQuarter(value); setEmployeeId(null); setGoalId(null); }} style={{ minWidth: 140 }} /><Button icon={<ReloadOutlined />} onClick={() => workbenchQuery.refetch()}>{T.refresh}</Button></div></div></Card>
+      <Card className="leader-toolbar-card" variant="borderless"><div className="page-toolbar"><div><Typography.Title level={1} style={{ marginBottom: 8 }}>{T.title}</Typography.Title><Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>{T.desc}</Typography.Paragraph></div><div className="page-toolbar__controls"><Input allowClear prefix={<SearchOutlined />} className="page-toolbar__search" placeholder={T.search} value={keyword} onChange={(event) => setKeyword(event.target.value)} /><YearQuarterPickerPopover year={year} quarter={quarter} yearOptions={yearOptions} quarterOptions={quarterOptions} onChange={(nextYear, nextQuarter) => { setPeriod(nextYear, nextQuarter); setEmployeeId(null); setGoalId(null); }} /><Button icon={<ReloadOutlined />} onClick={() => workbenchQuery.refetch()}>{T.refresh}</Button></div></div></Card>
       <Row gutter={[20, 20]}>
         <Col xs={24} xl={8}>
-          <Card className="leader-side-card" variant="borderless" title={T.employeeList}><div className="leader-employee-list">{filteredEmployees.length ? filteredEmployees.map((employee) => <Card key={employee.id} className={`leader-selectable-card ${employee.id === selectedEmployee?.id ? 'leader-selectable-card--active' : ''}`} onClick={() => { setEmployeeId(employee.id); setGoalId(null); }}><div className="leader-ranking-entry"><div><Typography.Title level={4} style={{ marginTop: 0, marginBottom: 8 }}>{employee.name}</Typography.Title><Typography.Paragraph type="secondary" style={{ marginBottom: 8 }}>{`${employee.sectionName ?? T.sectionFallback} / ${employee.reviewGroupName ?? T.groupFallback}`}</Typography.Paragraph></div><Tag color={employee.status === 'completed' ? 'green' : employee.status === 'in-progress' ? 'gold' : 'default'}>{getLeaderEmployeeStatusLabel(employee.status)}</Tag></div><Space wrap size={[8, 8]}><Tag>{`${employee.goalCount} ${T.employeeGoalsTag}`}</Tag><Tag>{`${employee.keyResultCount} ${T.employeeKrsTag}`}</Tag><Tag>{`${T.employeeScoredTag} ${employee.scoredKeyResultCount} \u6761`}</Tag><Tag>{`${employee.proofCount} ${T.employeeProofTag}`}</Tag></Space></Card>) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={T.employeeEmpty} />}</div></Card>
+          <Card className="leader-side-card" variant="borderless">
+            <Space direction="vertical" size={16} style={{ width: '100%' }}>
+              <div className="leader-side-card__head">
+                <Typography.Title level={4} style={{ margin: 0 }}>
+                  {T.employeeList}
+                </Typography.Title>
+                <div className="leader-side-card__filters">
+                  <Select
+                    aria-label={T.sectionFilter}
+                    size="small"
+                    style={{ width: '100%' }}
+                    value={queueSectionId ?? ALL_FILTER_VALUE}
+                    options={queueSectionOptions}
+                    onChange={(value) => {
+                      setQueueSectionId(value === ALL_FILTER_VALUE ? null : value);
+                    }}
+                  />
+                  <Select
+                    aria-label={T.groupFilter}
+                    size="small"
+                    style={{ width: '100%' }}
+                    value={queueReviewGroupId ?? ALL_FILTER_VALUE}
+                    options={queueReviewGroupOptions}
+                    onChange={(value) => {
+                      setQueueReviewGroupId(value === ALL_FILTER_VALUE ? null : value);
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="leader-employee-list">
+                {filteredEmployees.length ? (
+                  filteredEmployees.map((employee) => (
+                    <Card
+                      key={employee.id}
+                      className={`leader-selectable-card ${employee.id === displaySelectedEmployee?.id ? 'leader-selectable-card--active' : ''}`}
+                      onClick={() => {
+                        setEmployeeId(employee.id);
+                        setGoalId(null);
+                      }}
+                    >
+                      <div className="leader-ranking-entry">
+                        <div>
+                          <Typography.Title level={4} style={{ marginTop: 0, marginBottom: 8 }}>
+                            {employee.name}
+                          </Typography.Title>
+                          <Typography.Paragraph type="secondary" style={{ marginBottom: 8 }}>
+                            {`${employee.sectionName ?? T.sectionFallback} / ${employee.reviewGroupName ?? T.groupFallback}`}
+                          </Typography.Paragraph>
+                        </div>
+                        <Tag color={employee.status === 'completed' ? 'green' : employee.status === 'in-progress' ? 'gold' : 'default'}>
+                          {getLeaderEmployeeStatusLabel(employee.status)}
+                        </Tag>
+                      </div>
+                      <Space wrap size={[8, 8]}>
+                        <Tag>{`${employee.goalCount} ${T.employeeGoalsTag}`}</Tag>
+                        <Tag>{`${employee.keyResultCount} ${T.employeeKrsTag}`}</Tag>
+                        <Tag>{`${T.employeeScoredTag} ${employee.scoredKeyResultCount} \u6761`}</Tag>
+                        <Tag>{`${employee.proofCount} ${T.employeeProofTag}`}</Tag>
+                      </Space>
+                    </Card>
+                  ))
+                ) : (
+                  <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={T.employeeEmpty} />
+                )}
+              </div>
+            </Space>
+          </Card>
         </Col>
         <Col xs={24} xl={16}>
           <Space direction="vertical" size={20} style={{ width: '100%' }}>
-            <Card className="leader-detail-card" variant="borderless"><div className="page-hero"><div><Typography.Title level={2} style={{ marginBottom: 8 }}>{selectedEmployee?.name ?? T.noEmployee}</Typography.Title><Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>{`${selectedEmployee?.sectionName ?? T.sectionFallback} / ${selectedEmployee?.reviewGroupName ?? T.groupFallback} / ${formatQuarterLabel(year, quarter)}`}</Typography.Paragraph></div><Space size={16}><Button type="primary" onClick={openBulkModal} disabled={!workbenchQuery.data?.employees.length}>{T.batchTitle}</Button><Tag color="blue">{getLeaderEmployeeStatusLabel(selectedEmployee?.status ?? 'pending')}</Tag><Tag icon={<TrophyOutlined />}>{`${T.quarterScore} ${formatNullableScore(selectedEmployee?.quarterScore ?? null)}`}</Tag></Space></div><div className="leader-summary-grid" style={{ marginTop: 20 }}><Card variant="borderless"><Statistic title={T.goalCount} value={selectedEmployee?.goalCount ?? 0} /></Card><Card variant="borderless"><Statistic title={T.krCount} value={selectedEmployee?.keyResultCount ?? 0} /></Card><Card variant="borderless"><Statistic title={T.scoredKrCount} value={selectedEmployee?.scoredKeyResultCount ?? 0} /></Card><Card variant="borderless"><Statistic title={T.proofCount} value={selectedEmployee?.proofCount ?? 0} /></Card></div></Card>
-            <Card className="leader-detail-card" variant="borderless"><Tabs activeKey={selectedGoal?.id ?? undefined} items={goalTabs} onChange={(nextGoalId) => setGoalId(nextGoalId)} />{selectedGoal ? <Space direction="vertical" size={18} style={{ width: '100%' }}>{isReadonlyEmployee ? <Alert type="info" showIcon message={T.readonly} /> : null}<div className="page-hero"><div><Typography.Title level={3} style={{ marginBottom: 6 }}>{selectedGoal.code} {selectedGoal.name}</Typography.Title><Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>{selectedGoal.description ?? T.goalFallback}</Typography.Paragraph></div><Space wrap size={[8, 8]}><Tag color={selectedGoal.status === 'confirmed' ? 'green' : 'default'}>{getGoalStatusLabel(selectedGoal.status)}</Tag><Tag>{`${selectedGoal.totalPoints} \u5206`}</Tag><Tag>{`${selectedGoal.keyResultCount} ${T.goalKrsTag}`}</Tag><Tag>{`${selectedGoal.proofCount} ${T.goalProofTag}`}</Tag><Tag>{`${T.currentScore} ${formatNullableScore(selectedGoal.currentScore)}`}</Tag></Space></div><div className="leader-kr-grid">{filteredKeyResults.length ? filteredKeyResults.map((keyResult) => { const draft = drafts[keyResult.id] ?? { score: keyResult.reviewScore, comment: keyResult.reviewComment ?? '' }; return <Card key={keyResult.id} className="leader-kr-card" variant="borderless"><Space direction="vertical" size={16} style={{ width: '100%' }}><div className="page-hero"><div><Typography.Title level={4} style={{ marginBottom: 6 }}>{keyResult.code} {keyResult.name}</Typography.Title><Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>{keyResult.description ?? T.krFallback}</Typography.Paragraph></div><Space wrap size={[8, 8]}><Tag>{`${keyResult.points} \u5206`}</Tag><Tag color={keyResult.scoreType === 'objective' ? 'blue' : 'purple'}>{getScoreTypeLabel(keyResult.scoreType)}</Tag><Tag color={keyResult.completionState === 'completed' ? 'green' : 'red'}>{getCompletionStateLabel(keyResult.completionState)}</Tag><Tag icon={<FileTextOutlined />}>{`${keyResult.proofCount} ${T.goalProofTag}`}</Tag></Space></div><Row gutter={[16, 16]}><Col xs={24} lg={8}><Typography.Text strong>{T.score}</Typography.Text><InputNumber style={{ width: '100%', marginTop: 8 }} min={0} max={keyResult.points} step={0.5} value={draft.score ?? undefined} disabled={!keyResult.canScore} onChange={(value) => updateDraft(keyResult.id, { score: typeof value === 'number' ? value : null })} onBlur={() => commitDraft(keyResult)} /></Col><Col xs={24} lg={16}><Typography.Text strong>{T.comment}</Typography.Text><Input.TextArea rows={3} style={{ marginTop: 8 }} placeholder={T.commentPlaceholder} value={draft.comment} disabled={!keyResult.canScore} onChange={(event) => updateDraft(keyResult.id, { comment: event.target.value })} onBlur={() => commitDraft(keyResult)} /></Col></Row><div className="leader-proof-list">{keyResult.proofs.length ? keyResult.proofs.map((proof) => <Card key={proof.id} size="small"><div className="leader-proof-row"><div className="leader-proof-meta"><Typography.Link href={resolveProofPreviewUrl(proof)} target="_blank" rel="noreferrer">{proof.fileName}</Typography.Link><Typography.Text type="secondary">{proof.note ?? '-'}</Typography.Text><Typography.Text type="secondary">{new Date(proof.uploadedAt).toLocaleString()}</Typography.Text></div><Space size={8} className="leader-proof-actions"><Button type="link" size="small" href={resolveProofPreviewUrl(proof)} target="_blank" rel="noreferrer">{T.previewFile}</Button><Button type="link" size="small" href={resolveProofDownloadUrl(proof)} target="_blank" rel="noreferrer">{T.downloadFile}</Button></Space></div></Card>) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={T.proofEmpty} />}</div></Space></Card>; }) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={T.proofEmpty} />}</div></Space> : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={T.noGoals} />}</Card>
+            <Card className="leader-detail-card" variant="borderless"><div className="page-hero"><div><Typography.Title level={2} style={{ marginBottom: 8 }}>{displaySelectedEmployee?.name ?? T.noEmployee}</Typography.Title><Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>{`${displaySelectedEmployee?.sectionName ?? T.sectionFallback} / ${displaySelectedEmployee?.reviewGroupName ?? T.groupFallback} / ${formatQuarterLabel(year, quarter)}`}</Typography.Paragraph></div><Space size={16}><Button type="primary" onClick={openBulkModal} disabled={!workbenchQuery.data?.employees.length}>{T.batchTitle}</Button><Tag color="blue">{getLeaderEmployeeStatusLabel(displaySelectedEmployee?.status ?? 'pending')}</Tag><Tag icon={<TrophyOutlined />}>{`${T.quarterScore} ${formatNullableScore(displaySelectedEmployee?.quarterScore ?? null)}`}</Tag></Space></div><div className="leader-summary-grid" style={{ marginTop: 20 }}><Card variant="borderless"><Statistic title={T.goalCount} value={displaySelectedEmployee?.goalCount ?? 0} /></Card><Card variant="borderless"><Statistic title={T.krCount} value={displaySelectedEmployee?.keyResultCount ?? 0} /></Card><Card variant="borderless"><Statistic title={T.scoredKrCount} value={displaySelectedEmployee?.scoredKeyResultCount ?? 0} /></Card><Card variant="borderless"><Statistic title={T.proofCount} value={displaySelectedEmployee?.proofCount ?? 0} /></Card></div></Card>
+            <Card className="leader-detail-card" variant="borderless"><Tabs activeKey={displaySelectedGoal?.id ?? undefined} items={goalTabs} onChange={(nextGoalId) => setGoalId(nextGoalId)} />{displaySelectedGoal ? <Space direction="vertical" size={18} style={{ width: '100%' }}>{isReadonlyEmployee ? <Alert type="info" showIcon message={T.readonly} /> : null}<div className="page-hero"><div><Typography.Title level={3} style={{ marginBottom: 6 }}>{displaySelectedGoal.code} {displaySelectedGoal.name}</Typography.Title><Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>{displaySelectedGoal.description ?? T.goalFallback}</Typography.Paragraph></div><Space wrap size={[8, 8]}><Tag color={displaySelectedGoal.status === 'confirmed' ? 'green' : 'default'}>{getGoalStatusLabel(displaySelectedGoal.status)}</Tag><Tag>{`${displaySelectedGoal.totalPoints} \u5206`}</Tag><Tag>{`${displaySelectedGoal.keyResultCount} ${T.goalKrsTag}`}</Tag><Tag>{`${displaySelectedGoal.proofCount} ${T.goalProofTag}`}</Tag><Tag>{`${T.currentScore} ${formatNullableScore(displaySelectedGoal.currentScore)}`}</Tag></Space></div><div className="leader-kr-grid">{filteredKeyResults.length ? filteredKeyResults.map((keyResult) => { const draft = drafts[keyResult.id] ?? { score: keyResult.reviewScore, comment: keyResult.reviewComment ?? '' }; return <Card key={keyResult.id} className="leader-kr-card" variant="borderless"><Space direction="vertical" size={16} style={{ width: '100%' }}><div className="page-hero"><div><Typography.Title level={4} style={{ marginBottom: 6 }}>{keyResult.code} {keyResult.name}</Typography.Title><Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>{keyResult.description ?? T.krFallback}</Typography.Paragraph></div><Space wrap size={[8, 8]}><Tag>{`${keyResult.points} \u5206`}</Tag><Tag color={keyResult.scoreType === 'objective' ? 'blue' : 'purple'}>{getScoreTypeLabel(keyResult.scoreType)}</Tag><Tag color={keyResult.completionState === 'completed' ? 'green' : 'red'}>{getCompletionStateLabel(keyResult.completionState)}</Tag><Tag icon={<FileTextOutlined />}>{`${keyResult.proofCount} ${T.goalProofTag}`}</Tag></Space></div><Row gutter={[16, 16]}><Col xs={24} lg={8}><Typography.Text strong>{T.score}</Typography.Text><InputNumber style={{ width: '100%', marginTop: 8 }} min={0} max={keyResult.points} step={0.5} value={draft.score ?? undefined} disabled={!keyResult.canScore} onChange={(value) => updateDraft(keyResult.id, { score: typeof value === 'number' ? value : null })} onBlur={() => commitDraft(keyResult)} /></Col><Col xs={24} lg={16}><Typography.Text strong>{T.comment}</Typography.Text><Input.TextArea rows={3} style={{ marginTop: 8 }} placeholder={T.commentPlaceholder} value={draft.comment} disabled={!keyResult.canScore} onChange={(event) => updateDraft(keyResult.id, { comment: event.target.value })} onBlur={() => commitDraft(keyResult)} /></Col></Row><div className="leader-proof-list">{keyResult.proofs.length ? keyResult.proofs.map((proof) => <Card key={proof.id} size="small"><div className="leader-proof-row"><div className="leader-proof-meta"><Typography.Link href={resolveProofPreviewUrl(proof)} target="_blank" rel="noreferrer">{proof.fileName}</Typography.Link><Typography.Text type="secondary">{proof.note ?? '-'}</Typography.Text><Typography.Text type="secondary">{new Date(proof.uploadedAt).toLocaleString()}</Typography.Text></div><Space size={8} className="leader-proof-actions"><Checkbox checked={proof.isKnowledge} disabled={knowledgeMutation.isPending} onChange={(event) => toggleProofKnowledge(proof.id, event.target.checked)}>{T.markKnowledge}</Checkbox><Button type="link" size="small" href={resolveProofPreviewUrl(proof)} target="_blank" rel="noreferrer">{T.previewFile}</Button><Button type="link" size="small" href={resolveProofDownloadUrl(proof)} target="_blank" rel="noreferrer">{T.downloadFile}</Button></Space></div></Card>) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={T.proofEmpty} />}</div></Space></Card>; }) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={T.proofEmpty} />}</div></Space> : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={T.noGoals} />}</Card>
           </Space>
         </Col>
       </Row>
@@ -184,6 +316,7 @@ export function LeaderWorkbenchPage() {
     setBulkEmployeeIds(nextEmployeeIds);
     setBulkKrIds(selectAllObjectiveKeyResultIds(workbenchQuery.data?.bulkCatalog ?? [], { sectionId: bulkSectionId, reviewGroupId: bulkReviewGroupId, employeeIds: nextEmployeeIds, goalIds: bulkGoalIds, excludeTemplateGoals: bulkExcludeTemplates }));
   }
+  function toggleProofKnowledge(proofId: string, isKnowledge: boolean) { knowledgeMutation.mutate({ proofId, isKnowledge }); }
   function resolveProofPreviewUrl(proof: LeaderKeyResult['proofs'][number]) { return resolveApiUrl(proof.previewUrl ?? proof.fileUrl); }
   function resolveProofDownloadUrl(proof: LeaderKeyResult['proofs'][number]) { return resolveApiUrl(proof.downloadUrl ?? proof.fileUrl); }
   function submitBulkScore() { if (!bulkPreview.rows.length) { message.warning(T.batchNeedScope); return; } bulkMutation.mutate(); }

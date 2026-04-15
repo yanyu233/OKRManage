@@ -1,9 +1,11 @@
 import '@testing-library/jest-dom/vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { App as AntApp } from 'antd';
+import { act } from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmployeeOkrPage } from '../src/modules/employee/EmployeeOkrPage';
+import { resetSharedQuarterSelection } from '../src/shared/store/quarter-store';
 
 const mockNavigate = vi.fn();
 const mockGetEmployeeOkr = vi.fn();
@@ -13,7 +15,7 @@ const mockImportEmployeeGoalTemplates = vi.fn();
 const mockGetEmployeeGoalDetail = vi.fn();
 const mockUpdateEmployeeGoal = vi.fn();
 
-const EDIT_TEXT = '\u7f16\u8f91\u76ee\u6807';
+const EDIT_TEXT = '编辑目标';
 
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
@@ -55,6 +57,7 @@ describe('EmployeeOkrPage', () => {
     mockImportEmployeeGoalTemplates.mockReset();
     mockGetEmployeeGoalDetail.mockReset();
     mockUpdateEmployeeGoal.mockReset();
+    resetSharedQuarterSelection(new Date('2026-02-15T09:00:00'));
 
     mockGetEmployeeOkr.mockResolvedValue({
       year: 2026,
@@ -142,6 +145,10 @@ describe('EmployeeOkrPage', () => {
     });
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('shows editable and read-only goal card buttons with distinct states', async () => {
     renderWithProviders(<EmployeeOkrPage />);
 
@@ -164,7 +171,6 @@ describe('EmployeeOkrPage', () => {
     renderWithProviders(<EmployeeOkrPage />);
 
     const draftCard = (await screen.findByText('O1 Draft goal')).closest('.employee-goal-card');
-
     expect(draftCard).not.toBeNull();
 
     const editButton = within(draftCard as HTMLElement).getByRole('button', { name: EDIT_TEXT });
@@ -175,7 +181,37 @@ describe('EmployeeOkrPage', () => {
     expect(screen.getByDisplayValue('Draft goal')).toBeInTheDocument();
     expect(mockNavigate).not.toHaveBeenCalled();
   });
+
+  it('defaults to the business quarter and switches immediately when a quarter is clicked', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-14T09:00:00'));
+    resetSharedQuarterSelection(new Date('2026-04-14T09:00:00'));
+
+    renderWithProviders(<EmployeeOkrPage />);
+    await flush();
+
+    const periodTrigger = screen.getByRole('button', { name: '2026年一季度' });
+    fireEvent.click(periodTrigger);
+
+    expect(screen.getByText('选择时间')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '2026年' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '2026年三季度' }));
+    await flush();
+
+    expect(screen.queryByText('选择时间')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '2026年三季度' })).toBeInTheDocument();
+    expect(mockGetEmployeeOkr).toHaveBeenLastCalledWith({ year: 2026, quarter: 3 });
+  });
 });
+
+async function flush() {
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+    await vi.runAllTimersAsync();
+  });
+}
 
 function renderWithProviders(node: React.ReactNode) {
   const client = new QueryClient({

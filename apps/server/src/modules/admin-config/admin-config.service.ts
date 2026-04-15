@@ -262,6 +262,8 @@ export class AdminConfigService {
     switch (roleCode) {
       case 'system-admin':
         return { scopeType: 'system', scopeId: 'system' };
+      case 'department-head':
+        return { scopeType: 'department', scopeId: `managed-department:${userId || 'pending'}` };
       case 'employee':
         return { scopeType: 'user', scopeId: userId || 'user:pending' };
       case 'section-leader':

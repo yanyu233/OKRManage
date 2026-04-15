@@ -22,6 +22,7 @@ import { Request, Response } from 'express';
 import { SessionService } from '../session/session.service';
 import { AuthUser } from '../../shared/types/auth-user';
 import { DomainValidationError } from '../../shared/errors/domain-validation.error';
+import { buildInlineContentDisposition } from '../../shared/http/content-disposition';
 import { EmployeeService } from './employee.service';
 import { CreateGoalDto } from './dto/create-goal.dto';
 import { ImportGoalTemplatesDto } from './dto/import-goal-templates.dto';
@@ -187,7 +188,56 @@ export class EmployeeController {
 
     try {
       const result = await this.employeeService.downloadProof(actor, proofId);
-      response.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(result.fileName)}"`);
+      response.setHeader('Content-Disposition', buildInlineContentDisposition(result.fileName));
+      response.setHeader('Content-Type', 'application/octet-stream');
+      return result.file;
+    } catch (error) {
+      this.rethrowDomainError(error);
+    }
+  }
+
+  @Get('proofs/:proofId/preview-meta')
+  async getProofPreviewMeta(
+    @Req() request: Request,
+    @Param('proofId') proofId: string,
+    @Query('entryPath') entryPath: string | undefined
+  ) {
+    const actor = await this.requireProofViewer(request);
+
+    try {
+      return await this.employeeService.getProofPreviewMeta(actor, proofId, entryPath);
+    } catch (error) {
+      this.rethrowDomainError(error);
+    }
+  }
+
+  @Get('proofs/:proofId/archive')
+  async getProofArchive(@Req() request: Request, @Param('proofId') proofId: string) {
+    const actor = await this.requireProofViewer(request);
+
+    try {
+      return await this.employeeService.getProofArchive(actor, proofId);
+    } catch (error) {
+      this.rethrowDomainError(error);
+    }
+  }
+
+  @Get('proofs/:proofId/archive/entry')
+  async downloadProofArchiveEntry(
+    @Req() request: Request,
+    @Param('proofId') proofId: string,
+    @Query('entryPath') entryPath: string | undefined,
+    @Res({ passthrough: true }) response: Response
+  ): Promise<StreamableFile> {
+    const actor = await this.requireProofViewer(request);
+
+    if (!entryPath?.trim()) {
+      throw new BadRequestException('archive entry path is required');
+    }
+
+    try {
+      const result = await this.employeeService.downloadProofArchiveEntry(actor, proofId, entryPath);
+      response.setHeader('Content-Disposition', buildInlineContentDisposition(result.fileName));
       response.setHeader('Content-Type', 'application/octet-stream');
       return result.file;
     } catch (error) {
@@ -198,7 +248,7 @@ export class EmployeeController {
   private async requireEmployee(request: Request): Promise<AuthUser> {
     const session = await this.requireSession(request);
 
-    if (session.user.role !== 'employee') {
+    if (!['employee', 'department-head'].includes(session.user.role)) {
       throw new ForbiddenException('employee role required');
     }
 
@@ -208,7 +258,7 @@ export class EmployeeController {
   private async requireProofViewer(request: Request): Promise<AuthUser> {
     const session = await this.requireSession(request);
 
-    if (!['employee', 'section-leader', 'group-leader'].includes(session.user.role)) {
+    if (!['employee', 'department-head', 'section-leader', 'group-leader', 'system-admin'].includes(session.user.role)) {
       throw new ForbiddenException('proof viewer role required');
     }
 

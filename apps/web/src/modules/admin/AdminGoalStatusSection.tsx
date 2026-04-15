@@ -4,8 +4,9 @@ import { useMemo, useState } from 'react';
 import { getAdminGoalStatusControls, transitionAdminGoalStatuses } from '../../shared/api/admin';
 import { ApiError } from '../../shared/api/http';
 import { getGoalStatusLabel } from '../../shared/i18n/labels';
+import { useSharedQuarterPeriod } from '../../shared/store/quarter-store';
 import type { AdminOrgBootstrapInput } from '../../shared/types/admin-config';
-import { buildQuarterOptions, buildToolbarYearOptions } from '../../shared/ui/toolbar-options';
+import { YearQuarterPickerPopover } from '../../shared/ui/PeriodPickerPopover';
 
 const START_YEAR = 2026;
 const TEXT = {
@@ -31,8 +32,10 @@ const TEXT = {
 
 export function AdminGoalStatusSection({ draft }: { draft: AdminOrgBootstrapInput }) {
   const { message } = App.useApp();
-  const [year, setYear] = useState(2026);
-  const [quarter, setQuarter] = useState(1);
+  const { year, quarter, yearOptions, quarterOptions, setPeriod } = useSharedQuarterPeriod({
+    startYear: START_YEAR,
+    futureRange: 8
+  });
   const [userId, setUserId] = useState<string | null>(null);
 
   const employeeOptions = useMemo(
@@ -90,22 +93,18 @@ export function AdminGoalStatusSection({ draft }: { draft: AdminOrgBootstrapInpu
 
         <Space wrap size={[16, 16]}>
           <div>
-            <Typography.Text strong>{TEXT.year}</Typography.Text>
-            <Select
-              style={{ width: 140, display: 'block', marginTop: 8 }}
-              value={year}
-              options={buildToolbarYearOptions(START_YEAR, Math.max(START_YEAR, new Date().getFullYear() + 4))}
-              onChange={setYear}
-            />
-          </div>
-          <div>
-            <Typography.Text strong>{TEXT.quarter}</Typography.Text>
-            <Select
-              style={{ width: 140, display: 'block', marginTop: 8 }}
-              value={quarter}
-              options={buildQuarterOptions()}
-              onChange={setQuarter}
-            />
+            <Typography.Text strong>{`${TEXT.year} / ${TEXT.quarter}`}</Typography.Text>
+            <div style={{ marginTop: 8 }}>
+              <YearQuarterPickerPopover
+                year={year}
+                quarter={quarter}
+                yearOptions={yearOptions}
+                quarterOptions={quarterOptions}
+                onChange={(nextYear, nextQuarter) => {
+                  setPeriod(nextYear, nextQuarter);
+                }}
+              />
+            </div>
           </div>
           <div style={{ minWidth: 260 }}>
             <Typography.Text strong>{TEXT.employee}</Typography.Text>

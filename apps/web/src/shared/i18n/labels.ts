@@ -2,6 +2,7 @@ import type { ScoreType, UserRoleCode } from '../types/admin-config';
 
 const ROLE_LABELS: Record<UserRoleCode, string> = {
   'system-admin': '系统管理员',
+  'department-head': '部门负责人',
   'section-leader': '科室负责人',
   'group-leader': '小组负责人',
   employee: '员工'
@@ -30,7 +31,7 @@ const SCORE_TYPE_LABELS: Record<ScoreType, string> = {
   subjective: '主观评分项'
 };
 
-const ROLE_DISPLAY_ORDER: UserRoleCode[] = ['employee', 'section-leader', 'group-leader', 'system-admin'];
+const ROLE_DISPLAY_ORDER: UserRoleCode[] = ['employee', 'group-leader', 'section-leader', 'department-head', 'system-admin'];
 
 export function getRoleLabel(role: UserRoleCode | string) {
   return ROLE_LABELS[role as UserRoleCode] ?? role;

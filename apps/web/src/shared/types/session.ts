@@ -1,4 +1,4 @@
-export type UserRole = 'system-admin' | 'section-leader' | 'group-leader' | 'employee';
+export type UserRole = 'system-admin' | 'department-head' | 'section-leader' | 'group-leader' | 'employee';
 
 export type SessionRoleAssignment = {
   role: UserRole;

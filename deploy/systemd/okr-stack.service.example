@@ -1,0 +1,16 @@
+[Unit]
+Description=OKR stack with embedded kkFileView runtime
+After=network.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/srv/okr
+EnvironmentFile=-/etc/default/okr-stack
+ExecStart=/srv/okr/scripts/linux/start-stack.sh
+ExecStop=/srv/okr/scripts/linux/stop-stack.sh
+TimeoutStartSec=300
+TimeoutStopSec=60
+
+[Install]
+WantedBy=multi-user.target

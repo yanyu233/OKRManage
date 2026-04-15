@@ -1,6 +1,6 @@
-import { EditOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
+import { CalendarOutlined, EditOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, App, Button, Card, Col, Empty, Input, Row, Select, Space, Statistic, Tag, Typography } from 'antd';
+import { Alert, App, Button, Card, Col, Empty, Input, Popover, Row, Space, Statistic, Tag, Typography } from 'antd';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -13,16 +13,22 @@ import {
 } from '../../shared/api/employee';
 import { ApiError } from '../../shared/api/http';
 import { formatQuarterLabel, formatNullableScore, getGoalStatusLabel } from '../../shared/i18n/labels';
+import { useSharedQuarterPeriod } from '../../shared/store/quarter-store';
 import type { CreateEmployeeGoalInput, EmployeeGoalDetail, UpdateEmployeeGoalInput } from '../../shared/types/employee';
-import { buildQuarterOptions, buildToolbarYearOptions } from '../../shared/ui/toolbar-options';
-import { buildYearOptions, filterEmployeeGoals } from './employee.helpers';
+import {
+  EMPLOYEE_QUARTER_POINT_LIMIT,
+  filterEmployeeGoals,
+  getDraftGoalPoints,
+  getEmployeeQuarterAllocatedPoints,
+  isQuarterPointLimitError
+} from './employee.helpers';
 import { EmployeeCreateGoalDialog } from './EmployeeCreateGoalDialog';
+import { EmployeePeriodPickerDialog } from './EmployeePeriodPickerDialog';
 import { EmployeeTemplateImportDialog } from './EmployeeTemplateImportDialog';
 import './employee.css';
 
 const START_YEAR = 2026;
-const DEFAULT_YEAR = 2026;
-const DEFAULT_QUARTER = 1;
+const YEAR_RANGE_FUTURE = 8;
 const TEXT = {
   title: '\u6211\u7684 OKR',
   loading: '\u6b63\u5728\u52a0\u8f7d\u6211\u7684 OKR...',
@@ -53,8 +59,10 @@ const TEXT = {
   editLoadFailed: '\u76ee\u6807\u8be6\u60c5\u52a0\u8f7d\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002',
   editSuccess: '\u76ee\u6807\u4fee\u6539\u5df2\u4fdd\u5b58\u3002',
   editFailed: '\u76ee\u6807\u4fee\u6539\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002',
+  pointLimitExceeded: '\u5f53\u524d\u5b63\u5ea6\u6240\u6709\u76ee\u6807\u7684\u5173\u952e\u7ed3\u679c\u5206\u503c\u5408\u8ba1\u4e0d\u80fd\u8d85\u8fc7 100 \u5206\u3002',
   viewGoalDetail: '\u67e5\u770b\u76ee\u6807\u8be6\u60c5',
-  emptyGoals: '\u5f53\u524d\u7b5b\u9009\u6761\u4ef6\u4e0b\u6ca1\u6709\u5339\u914d\u76ee\u6807'
+  emptyGoals: '\u5f53\u524d\u7b5b\u9009\u6761\u4ef6\u4e0b\u6ca1\u6709\u5339\u914d\u76ee\u6807',
+  selectPeriod: '\u9009\u62e9\u65f6\u95f4'
 } as const;
 
 function canEditGoal(status: string) {
@@ -65,9 +73,12 @@ export function EmployeeOkrPage() {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [year, setYear] = useState(DEFAULT_YEAR);
-  const [quarter, setQuarter] = useState(DEFAULT_QUARTER);
+  const { year, quarter, yearOptions, quarterOptions, setPeriod } = useSharedQuarterPeriod({
+    startYear: START_YEAR,
+    futureRange: YEAR_RANGE_FUTURE
+  });
   const [keyword, setKeyword] = useState('');
+  const [periodPickerOpen, setPeriodPickerOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -82,13 +93,6 @@ export function EmployeeOkrPage() {
         quarter
       })
   });
-
-  const yearOptions = useMemo(
-    () => buildToolbarYearOptions(START_YEAR, Math.max(START_YEAR, new Date().getFullYear() + 4)),
-    []
-  );
-  const quarterOptions = useMemo(() => buildQuarterOptions(), []);
-  const yearValues = useMemo(() => buildYearOptions(START_YEAR, Math.max(START_YEAR, new Date().getFullYear() + 4)), []);
 
   const summaryCards = useMemo(
     () =>
@@ -132,7 +136,11 @@ export function EmployeeOkrPage() {
       await queryClient.invalidateQueries({ queryKey: ['employee-goal-templates'] });
     },
     onError: (error) => {
-      const description = error instanceof ApiError ? error.message : TEXT.loadFailedDescription;
+      const description = isQuarterPointLimitError(error)
+        ? TEXT.pointLimitExceeded
+        : error instanceof ApiError
+          ? error.message
+          : TEXT.loadFailedDescription;
       message.error(description);
     }
   });
@@ -145,7 +153,11 @@ export function EmployeeOkrPage() {
       await queryClient.invalidateQueries({ queryKey: ['employee-okr'] });
     },
     onError: (error) => {
-      const description = error instanceof ApiError ? error.message : TEXT.loadFailedDescription;
+      const description = isQuarterPointLimitError(error)
+        ? TEXT.pointLimitExceeded
+        : error instanceof ApiError
+          ? error.message
+          : TEXT.loadFailedDescription;
       message.error(description);
     }
   });
@@ -162,7 +174,11 @@ export function EmployeeOkrPage() {
       message.success(TEXT.editSuccess);
     },
     onError: (error) => {
-      const description = error instanceof ApiError ? error.message : TEXT.editFailed;
+      const description = isQuarterPointLimitError(error)
+        ? TEXT.pointLimitExceeded
+        : error instanceof ApiError
+          ? error.message
+          : TEXT.editFailed;
       message.error(description);
     }
   });
@@ -199,6 +215,7 @@ export function EmployeeOkrPage() {
   }
 
   const payload = okrQuery.data!;
+  const quarterAllocatedPoints = getEmployeeQuarterAllocatedPoints(payload.goals);
 
   return (
     <Space direction="vertical" size={24} className="employee-page">
@@ -224,19 +241,37 @@ export function EmployeeOkrPage() {
               value={keyword}
               onChange={(event) => setKeyword(event.target.value)}
             />
-            <Select
-              value={year}
-              options={yearOptions.filter((option) => yearValues.includes(option.value))}
-              onChange={(value) => setYear(value)}
-              style={{ minWidth: 140 }}
-            />
-            <Select
-              value={quarter}
-              options={quarterOptions}
-              onChange={(value) => setQuarter(value)}
-              style={{ minWidth: 140 }}
-            />
-            <Button onClick={() => setCreateDialogOpen(true)}>{TEXT.createGoal}</Button>
+            <Popover
+              trigger="click"
+              placement="bottomRight"
+              open={periodPickerOpen}
+              destroyOnHidden
+              overlayClassName="employee-period-popover"
+              onOpenChange={setPeriodPickerOpen}
+              content={
+                <EmployeePeriodPickerDialog
+                  year={year}
+                  quarter={quarter}
+                  yearOptions={yearOptions}
+                  quarterOptions={quarterOptions}
+                  onSelect={(nextYear, nextQuarter) => {
+                    setPeriod(nextYear, nextQuarter);
+                    setPeriodPickerOpen(false);
+                  }}
+                />
+              }
+            >
+              <Button
+                aria-label={formatQuarterLabel(year, quarter)}
+                icon={<CalendarOutlined />}
+                className="employee-period-trigger"
+              >
+                {formatQuarterLabel(year, quarter)}
+              </Button>
+            </Popover>
+            <Button type="primary" onClick={() => setCreateDialogOpen(true)}>
+              {TEXT.createGoal}
+            </Button>
             <Button type="primary" onClick={() => setImportDialogOpen(true)}>
               {TEXT.importTemplates}
             </Button>
@@ -345,22 +380,46 @@ export function EmployeeOkrPage() {
         departmentName={templatesQuery.data?.departmentName ?? payload.employee.sectionName ?? null}
         templates={templatesQuery.data?.templates ?? []}
         onCancel={() => setImportDialogOpen(false)}
-        onConfirm={(templateIds) => importMutation.mutate(templateIds)}
+        onConfirm={(templateIds) => {
+          const selectedTemplatePoints =
+            templatesQuery.data?.templates
+              .filter((template) => templateIds.includes(template.id))
+              .reduce((sum, template) => sum + template.totalPoints, 0) ?? 0;
+
+          if (quarterAllocatedPoints + selectedTemplatePoints > EMPLOYEE_QUARTER_POINT_LIMIT) {
+            message.error(TEXT.pointLimitExceeded);
+            return;
+          }
+
+          importMutation.mutate(templateIds);
+        }}
       />
 
       <EmployeeCreateGoalDialog
         open={createDialogOpen}
         year={year}
         quarter={quarter}
+        quarterAllocatedPoints={quarterAllocatedPoints}
+        maxQuarterPoints={EMPLOYEE_QUARTER_POINT_LIMIT}
         confirmLoading={createGoalMutation.isPending}
         onCancel={() => setCreateDialogOpen(false)}
-        onConfirm={(payload) => createGoalMutation.mutate(payload as CreateEmployeeGoalInput)}
+        onConfirm={(payload) => {
+          const nextGoalPoints = getDraftGoalPoints(payload as CreateEmployeeGoalInput);
+          if (quarterAllocatedPoints + nextGoalPoints > EMPLOYEE_QUARTER_POINT_LIMIT) {
+            message.error(TEXT.pointLimitExceeded);
+            return;
+          }
+
+          createGoalMutation.mutate(payload as CreateEmployeeGoalInput);
+        }}
       />
 
       <EmployeeCreateGoalDialog
         open={editDialogOpen}
         mode="edit"
         initialValue={editingGoal}
+        quarterAllocatedPoints={Math.max(quarterAllocatedPoints - (editingGoal?.totalPoints ?? 0), 0)}
+        maxQuarterPoints={EMPLOYEE_QUARTER_POINT_LIMIT}
         confirmLoading={updateGoalMutation.isPending}
         onCancel={() => {
           setEditDialogOpen(false);
@@ -368,6 +427,13 @@ export function EmployeeOkrPage() {
         }}
         onConfirm={(payload) => {
           if (!editingGoal) {
+            return;
+          }
+
+          const nextGoalPoints = getDraftGoalPoints(payload as UpdateEmployeeGoalInput);
+          const pointsWithoutEditingGoal = Math.max(quarterAllocatedPoints - editingGoal.totalPoints, 0);
+          if (pointsWithoutEditingGoal + nextGoalPoints > EMPLOYEE_QUARTER_POINT_LIMIT) {
+            message.error(TEXT.pointLimitExceeded);
             return;
           }
 

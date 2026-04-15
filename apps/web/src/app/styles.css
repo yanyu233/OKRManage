@@ -61,12 +61,6 @@ body {
   padding: 24px 20px 18px;
 }
 
-.app-shell__brand-subtitle {
-  display: block;
-  margin-top: 8px;
-  color: rgba(239, 246, 255, 0.72);
-}
-
 .app-shell__header {
   display: flex;
   align-items: center;

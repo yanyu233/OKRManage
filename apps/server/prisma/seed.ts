@@ -88,6 +88,23 @@ async function main(): Promise<void> {
   await upsertLocalAccount(sysadmin.id, loginName, await bcrypt.hash(password, 10), true);
   await upsertRoleAssignment(sysadmin.id, 'system-admin', 'system', 'system', true);
 
+  const departmentHead = await upsertUser({
+    employeeNo: 'LEADER-DEPT-01',
+    name: '\u90ed\u4e3b\u4efb',
+    wecomUserId: 'guo.department',
+    departmentId: department.id,
+    sectionId: sectionPlatform.id,
+    reviewGroupId: digitalGroup.id
+  });
+  await upsertLocalAccount(departmentHead.id, 'department.head', await bcrypt.hash('Leader123!', 10), true);
+  await upsertRoleAssignment(
+    departmentHead.id,
+    'department-head',
+    'department',
+    `managed-department:${departmentHead.id}`,
+    true
+  );
+
   const sectionLeader = await upsertUser({
     employeeNo: 'LEADER-SECTION-01',
     name: '\u5218\u79d1\u957f',
@@ -387,7 +404,7 @@ async function seedGoalsForZhang(ownerUserId: string, reviewerUserId: string) {
       name: '\u5f20\u6668 2026 \u5e74\u4e00\u5b63\u5ea6 OKR',
       description: '\u56f4\u7ed5\u5e73\u53f0\u4ea4\u4ed8\u6548\u7387\u3001\u77e5\u8bc6\u6c89\u6dc0\u548c\u95ee\u9898\u95ed\u73af\u63a8\u8fdb\u5b63\u5ea6\u5de5\u4f5c\u3002',
       status: 'confirmed',
-      totalPoints: 80
+      totalPoints: 70
     },
     create: {
       ownerUserId,
@@ -397,7 +414,7 @@ async function seedGoalsForZhang(ownerUserId: string, reviewerUserId: string) {
       name: '\u5f20\u6668 2026 \u5e74\u4e00\u5b63\u5ea6 OKR',
       description: '\u56f4\u7ed5\u5e73\u53f0\u4ea4\u4ed8\u6548\u7387\u3001\u77e5\u8bc6\u6c89\u6dc0\u548c\u95ee\u9898\u95ed\u73af\u63a8\u8fdb\u5b63\u5ea6\u5de5\u4f5c\u3002',
       status: 'confirmed',
-      totalPoints: 80
+      totalPoints: 70
     }
   });
 
@@ -414,7 +431,7 @@ async function seedGoalsForZhang(ownerUserId: string, reviewerUserId: string) {
       name: '\u5f20\u6668 \u77e5\u8bc6\u5e93\u6c89\u6dc0\u4e13\u9879',
       description: '\u6c89\u6dc0\u5e73\u53f0\u5e38\u89c1\u95ee\u9898\u548c\u4ea4\u4ed8\u6848\u4f8b\uff0c\u4f5c\u4e3a\u5b63\u5ea6\u8865\u5145\u76ee\u6807\u3002',
       status: 'confirmed',
-      totalPoints: 40
+      totalPoints: 20
     },
     create: {
       ownerUserId,
@@ -424,7 +441,7 @@ async function seedGoalsForZhang(ownerUserId: string, reviewerUserId: string) {
       name: '\u5f20\u6668 \u77e5\u8bc6\u5e93\u6c89\u6dc0\u4e13\u9879',
       description: '\u6c89\u6dc0\u5e73\u53f0\u5e38\u89c1\u95ee\u9898\u548c\u4ea4\u4ed8\u6848\u4f8b\uff0c\u4f5c\u4e3a\u5b63\u5ea6\u8865\u5145\u76ee\u6807\u3002',
       status: 'confirmed',
-      totalPoints: 40
+      totalPoints: 20
     }
   });
 
@@ -433,9 +450,9 @@ async function seedGoalsForZhang(ownerUserId: string, reviewerUserId: string) {
     code: 'KR1',
     name: '\u5b8c\u6210 6 \u4e2a\u7248\u672c\u4ea4\u4ed8',
     description: '\u8ddf\u8e2a\u5b63\u5ea6\u8ba1\u5212\u7248\u672c\u7684\u4ea4\u4ed8\u8282\u594f\u3002',
-    points: 35,
+    points: 30,
     completionState: 'incomplete',
-    reviewScore: 30.1,
+    reviewScore: 26.5,
     reviewComment: '\u7248\u672c\u4ea4\u4ed8\u8282\u594f\u7a33\u6b65\u63d0\u5347\u3002',
     reviewedByUserId: reviewerUserId
   });
@@ -471,9 +488,9 @@ async function seedGoalsForZhang(ownerUserId: string, reviewerUserId: string) {
     code: 'KR3',
     name: '\u95ee\u9898\u95ed\u73af\u65f6\u6548\u4e0d\u8d85\u8fc7 2 \u5929',
     description: '\u7f29\u77ed\u9ad8\u4f18\u95ee\u9898\u7684\u95ed\u73af\u5468\u671f\u3002',
-    points: 20,
+    points: 15,
     completionState: 'incomplete',
-    reviewScore: 14,
+    reviewScore: 12,
     reviewComment: '\u95ed\u73af\u65f6\u6548\u6539\u5584\u660e\u663e\uff0c\u4f46\u7a33\u5b9a\u6027\u8fd8\u9700\u52a0\u5f3a\u3002',
     reviewedByUserId: reviewerUserId
   });
@@ -483,7 +500,7 @@ async function seedGoalsForZhang(ownerUserId: string, reviewerUserId: string) {
     code: 'KR1',
     name: '\u6c89\u6dc0 20 \u7bc7\u77e5\u8bc6\u5e93\u5185\u5bb9',
     description: '\u5c06\u91cd\u590d\u4ea4\u4ed8\u95ee\u9898\u8f6c\u4e3a\u53ef\u590d\u7528\u77e5\u8bc6\u3002',
-    points: 20,
+    points: 10,
     completionState: 'incomplete',
     reviewScore: null,
     reviewComment: null,
@@ -495,7 +512,7 @@ async function seedGoalsForZhang(ownerUserId: string, reviewerUserId: string) {
     code: 'KR2',
     name: '\u8bd5\u8fd0\u884c FAQ \u6d41\u7a0b',
     description: '\u5efa\u7acb\u5e38\u89c1\u95ee\u9898\u7684\u8f7b\u91cf\u7b54\u7591\u673a\u5236\u3002',
-    points: 10,
+    points: 5,
     completionState: 'incomplete',
     reviewScore: null,
     reviewComment: null,
@@ -507,7 +524,7 @@ async function seedGoalsForZhang(ownerUserId: string, reviewerUserId: string) {
     code: 'KR3',
     name: '\u5efa\u7acb\u6587\u7ae0\u8bc4\u5ba1\u6e05\u5355',
     description: '\u4e3a\u77e5\u8bc6\u5e93\u5185\u5bb9\u589e\u52a0\u7edf\u4e00\u8d28\u91cf\u95e8\u69db\u3002',
-    points: 10,
+    points: 5,
     completionState: 'incomplete',
     reviewScore: null,
     reviewComment: null,

@@ -3,7 +3,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { AuthRoleAssignment, AuthUser } from '../../../shared/types/auth-user';
 import { SessionRecord, SessionsRepository } from './sessions.repository';
 
-const ROLE_PRIORITY = ['system-admin', 'section-leader', 'group-leader', 'employee'];
+const ROLE_PRIORITY = ['system-admin', 'department-head', 'section-leader', 'group-leader', 'employee'];
 
 @Injectable()
 export class PrismaSessionsRepository implements SessionsRepository {

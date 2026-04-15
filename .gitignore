@@ -24,10 +24,11 @@ apps/server/.runtime-*.log
 apps/web/.runtime-*.log
 .codex-logs/
 .codex-runtime/
-vendor/kkfileview/current/log/
-vendor/kkfileview/current/bin/kkFileView.pid
-vendor/kkfileview/current/file/
+vendor/kkfileview/source/
+vendor/kkfileview/current/*
+!vendor/kkfileview/current/.gitkeep
 kkFileView-*.tar.gz
+kkFileView-*.zip
 
 # Local browser automation / screenshots
 mvp/.edge-cdp/

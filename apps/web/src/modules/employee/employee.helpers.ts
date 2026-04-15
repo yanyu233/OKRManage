@@ -1,5 +1,8 @@
-import type { EmployeeOkrResponse } from '../../shared/types/employee';
+import { ApiError } from '../../shared/api/http';
+import type { CreateEmployeeGoalInput, EmployeeOkrResponse, UpdateEmployeeGoalInput } from '../../shared/types/employee';
 import { normalizeKeyword } from '../../shared/ui/toolbar-options';
+
+export const EMPLOYEE_QUARTER_POINT_LIMIT = 100;
 
 export function resolveEmployeeGoalSelection(data: EmployeeOkrResponse, goalId: string | null) {
   if (goalId && data.goals.some((goal) => goal.id === goalId)) {
@@ -42,4 +45,16 @@ export function buildYearOptions(startYear: number, endYear: number) {
   }
 
   return years;
+}
+
+export function getEmployeeQuarterAllocatedPoints(goals: EmployeeOkrResponse['goals']) {
+  return goals.reduce((sum, goal) => sum + goal.totalPoints, 0);
+}
+
+export function getDraftGoalPoints(payload: Pick<CreateEmployeeGoalInput, 'keyResults'> | Pick<UpdateEmployeeGoalInput, 'keyResults'>) {
+  return payload.keyResults.reduce((sum, keyResult) => sum + keyResult.points, 0);
+}
+
+export function isQuarterPointLimitError(error: unknown) {
+  return error instanceof ApiError && error.message === 'quarter total points cannot exceed 100';
 }

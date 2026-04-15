@@ -21,7 +21,7 @@ describe('Employee update goal', () => {
       .post('/api/employee/goals')
       .send({
         year: 2026,
-        quarter: 1,
+        quarter: 2,
         name: 'Draft goal for update',
         description: 'Created inside update-goal test',
         keyResults: [
@@ -74,5 +74,66 @@ describe('Employee update goal', () => {
         })
       ])
     );
+  });
+
+  it('rejects updates when quarter total points would exceed 100', async () => {
+    const agent = await loginAsEmployee(app);
+    const firstGoal = await agent
+      .post('/api/employee/goals')
+      .send({
+        year: 2027,
+        quarter: 1,
+        name: 'First draft goal',
+        description: 'Created for quarter-budget validation',
+        keyResults: [
+          {
+            code: 'KR1',
+            name: 'First draft result',
+            description: null,
+            points: 40
+          }
+        ]
+      })
+      .expect(201);
+
+    await agent
+      .post('/api/employee/goals')
+      .send({
+        year: 2027,
+        quarter: 1,
+        name: 'Second draft goal',
+        description: 'Keeps quarter budget near the limit',
+        keyResults: [
+          {
+            code: 'KR1',
+            name: 'Second draft result',
+            description: null,
+            points: 50
+          }
+        ]
+      })
+      .expect(201);
+
+    const goalId = firstGoal.body.id as string;
+    const detailResponse = await agent.get(`/api/employee/goals/${goalId}`).expect(200);
+
+    await agent
+      .put(`/api/employee/goals/${goalId}`)
+      .send({
+        name: detailResponse.body.name,
+        description: detailResponse.body.description,
+        keyResults: detailResponse.body.keyResults.map((keyResult: any, index: number) => ({
+          id: keyResult.id,
+          code: keyResult.code,
+          name: keyResult.name,
+          description: keyResult.description,
+          points: index === 0 ? 60 : keyResult.points,
+          scoreType: keyResult.scoreType
+        }))
+      })
+      .expect(400)
+      .expect(({ body }) => {
+        expect(body.message).toBe('quarter total points cannot exceed 100');
+      });
   });
 });

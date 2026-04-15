@@ -1,6 +1,7 @@
 import {
   ApartmentOutlined,
   BarChartOutlined,
+  BookOutlined,
   FundOutlined,
   SettingOutlined,
   TeamOutlined
@@ -21,6 +22,14 @@ export type NavigationSection = {
   title: string;
   items: NavigationLink[];
 };
+
+const COMMON_ITEMS: NavigationLink[] = [
+  {
+    key: '/knowledge-base',
+    label: '知识库',
+    role: 'employee'
+  }
+];
 
 const ADMIN_ITEMS: NavigationLink[] = [
   {
@@ -56,11 +65,35 @@ const EMPLOYEE_ITEMS: NavigationLink[] = [
   }
 ];
 
+const DEPARTMENT_HEAD_ITEMS: NavigationLink[] = [
+  {
+    key: '/leader/workbench',
+    label: '评分工作台',
+    role: 'department-head'
+  },
+  {
+    key: '/leader/ranking',
+    label: '评分排名',
+    role: 'department-head'
+  },
+  {
+    key: '/leader/annual-ranking',
+    label: '年度评分排名',
+    role: 'department-head'
+  },
+  {
+    key: '/employee/okr',
+    label: '我的 OKR',
+    role: 'department-head'
+  }
+];
+
 const MENU_ICONS: Record<string, ReactNode> = {
   '/admin/org': <SettingOutlined />,
   '/leader/workbench': <TeamOutlined />,
   '/leader/ranking': <BarChartOutlined />,
   '/leader/annual-ranking': <FundOutlined />,
+  '/knowledge-base': <BookOutlined />,
   '/employee/okr': <ApartmentOutlined />
 };
 
@@ -68,6 +101,7 @@ export function defaultPathForRole(role: UserRole) {
   switch (role) {
     case 'system-admin':
       return '/admin/org';
+    case 'department-head':
     case 'section-leader':
     case 'group-leader':
       return '/leader/workbench';
@@ -87,6 +121,15 @@ export function buildNavigationSections(user: SessionUser): NavigationSection[] 
       title: getRoleLabel('system-admin'),
       items: ADMIN_ITEMS
     });
+  }
+
+  if (roles.includes('department-head')) {
+    sections.push({
+      role: 'department-head',
+      title: getRoleLabel('department-head'),
+      items: DEPARTMENT_HEAD_ITEMS
+    });
+    return sections;
   }
 
   if (hasLeaderCapability(roles)) {
@@ -110,17 +153,21 @@ export function buildNavigationSections(user: SessionUser): NavigationSection[] 
 
 export function menuItemsForUser(user: SessionUser): ItemType[] {
   const sections = buildNavigationSections(user);
+  const commonItems = COMMON_ITEMS.map(toMenuItem);
 
   if (sections.length <= 1) {
-    return (sections[0]?.items ?? []).map(toMenuItem);
+    return [...commonItems, ...(sections[0]?.items ?? []).map(toMenuItem)];
   }
 
-  return sections.map((section) => ({
-    type: 'group' as const,
-    key: `group:${section.role}`,
-    label: section.title,
-    children: section.items.map(toMenuItem)
-  }));
+  return [
+    ...commonItems,
+    ...sections.map((section) => ({
+      type: 'group' as const,
+      key: `group:${section.role}`,
+      label: section.title,
+      children: section.items.map(toMenuItem)
+    }))
+  ];
 }
 
 export function selectedMenuKeyForPath(pathname: string) {
@@ -130,6 +177,10 @@ export function selectedMenuKeyForPath(pathname: string) {
 
   if (pathname.startsWith('/leader/annual-ranking')) {
     return '/leader/annual-ranking';
+  }
+
+  if (pathname.startsWith('/knowledge-base') || pathname.startsWith('/leader/knowledge-base')) {
+    return '/knowledge-base';
   }
 
   if (pathname.startsWith('/leader/ranking')) {
@@ -162,13 +213,29 @@ export function resolveTargetRoleForPath(user: SessionUser, pathname: string): U
     return roles.includes('system-admin') ? 'system-admin' : null;
   }
 
+  if (pathname.startsWith('/knowledge-base') || pathname.startsWith('/leader/knowledge-base')) {
+    return user.activeRole;
+  }
+
   if (pathname.startsWith('/employee/')) {
+    if (user.activeRole === 'employee' || user.activeRole === 'department-head') {
+      return user.activeRole;
+    }
+
+    if (roles.includes('department-head')) {
+      return 'department-head';
+    }
+
     return roles.includes('employee') ? 'employee' : null;
   }
 
   if (pathname.startsWith('/leader/')) {
-    if (user.activeRole === 'section-leader' || user.activeRole === 'group-leader') {
+    if (user.activeRole === 'department-head' || user.activeRole === 'section-leader' || user.activeRole === 'group-leader') {
       return user.activeRole;
+    }
+
+    if (roles.includes('department-head')) {
+      return 'department-head';
     }
 
     if (roles.includes('group-leader')) {
@@ -198,7 +265,7 @@ function getAssignedRoles(user: SessionUser): UserRole[] {
 }
 
 function hasLeaderCapability(roles: UserRole[]) {
-  return roles.includes('section-leader') || roles.includes('group-leader');
+  return roles.includes('department-head') || roles.includes('section-leader') || roles.includes('group-leader');
 }
 
 function toMenuItem(item: NavigationLink): ItemType {

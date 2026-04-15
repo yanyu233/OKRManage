@@ -29,7 +29,7 @@ describe('Employee goal template import', () => {
           {
             id: 'template-onboarding',
             departmentId,
-            name: '平台科新人入项模板',
+            name: '平台科新人入项目标模板',
             description: '用于校验模板 KR 评分类型继承',
             isActive: true,
             keyResults: [
@@ -60,7 +60,7 @@ describe('Employee goal template import', () => {
       .post('/api/employee/goal-templates/import')
       .send({
         year: 2026,
-        quarter: 1,
+        quarter: 2,
         templateIds: ['template-onboarding']
       })
       .expect(201);
@@ -80,5 +80,70 @@ describe('Employee goal template import', () => {
         })
       ])
     );
+  });
+
+  it('rejects template import when quarter total points would exceed 100', async () => {
+    const admin = await loginAsSysadmin(app);
+    const bootstrap = await admin.get('/api/admin/org/bootstrap').expect(200);
+    const departmentId = bootstrap.body.departments[0].id as string;
+
+    await admin
+      .put('/api/admin/org/bootstrap')
+      .send({
+        ...bootstrap.body,
+        goalTemplates: [
+          ...bootstrap.body.goalTemplates,
+          {
+            id: 'template-over-budget',
+            departmentId,
+            name: '超分模板目标',
+            description: '验证季度总分上限',
+            isActive: true,
+            keyResults: [
+              {
+                id: 'template-over-budget-kr-1',
+                code: 'KR1',
+                name: '超分模板 KR',
+                description: null,
+                points: 15,
+                scoreType: 'objective'
+              }
+            ]
+          }
+        ]
+      })
+      .expect(200);
+
+    const employee = await loginAsEmployee(app);
+
+    await employee
+      .post('/api/employee/goals')
+      .send({
+        year: 2027,
+        quarter: 3,
+        name: '季度基准目标',
+        description: '先占用 90 分额度',
+        keyResults: [
+          {
+            code: 'KR1',
+            name: '季度基准结果',
+            description: null,
+            points: 90
+          }
+        ]
+      })
+      .expect(201);
+
+    await employee
+      .post('/api/employee/goal-templates/import')
+      .send({
+        year: 2027,
+        quarter: 3,
+        templateIds: ['template-over-budget']
+      })
+      .expect(400)
+      .expect(({ body }) => {
+        expect(body.message).toBe('quarter total points cannot exceed 100');
+      });
   });
 });

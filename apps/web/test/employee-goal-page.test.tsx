@@ -4,6 +4,7 @@ import { App as AntApp } from 'antd';
 import { render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmployeeGoalPage } from '../src/modules/employee/EmployeeGoalPage';
+import { ApiError } from '../src/shared/api/http';
 
 const mockNavigate = vi.fn();
 const mockGetEmployeeGoalDetail = vi.fn();
@@ -25,7 +26,17 @@ vi.mock('react-router-dom', async () => {
     useNavigate: () => mockNavigate,
     useParams: () => ({ goalId: 'goal-1' })
   };
-  it('prefers proof preview and keeps download as a separate action', async () => {
+});
+
+describe('EmployeeGoalPage proof actions', () => {
+  beforeEach(() => {
+    mockNavigate.mockReset();
+    mockGetEmployeeGoalDetail.mockReset();
+    mockUpdateEmployeeGoal.mockReset();
+    mockSubmitEmployeeGoalReview.mockReset();
+  });
+
+  it('opens the final preview target directly and keeps download as a separate action', async () => {
     mockGetEmployeeGoalDetail.mockResolvedValueOnce({
       id: 'goal-1',
       code: 'O2',
@@ -55,7 +66,7 @@ vi.mock('react-router-dom', async () => {
             {
               id: 'proof-1',
               fileName: 'quarter-proof.txt',
-              previewUrl: 'http://127.0.0.1:3000/preview/onlinePreview?url=preview-token',
+              previewUrl: 'http://127.0.0.1:8012/onlinePreview?url=preview-token',
               downloadUrl: '/employee/proofs/proof-1/download',
               fileUrl: '/employee/proofs/proof-1/download',
               fileSize: 256,
@@ -70,11 +81,11 @@ vi.mock('react-router-dom', async () => {
     renderWithProviders(<EmployeeGoalPage />);
 
     const previewLink = await screen.findByRole('link', { name: 'quarter-proof.txt' });
-    const previewAction = screen.getByRole('link', { name: '\u9884\u89c8' });
-    const downloadAction = screen.getByRole('link', { name: '\u4e0b\u8f7d' });
+    const previewAction = screen.getByRole('link', { name: '预览' });
+    const downloadAction = screen.getByRole('link', { name: '下载' });
 
-    expect(previewLink).toHaveAttribute('href', 'http://127.0.0.1:3000/preview/onlinePreview?url=preview-token');
-    expect(previewAction).toHaveAttribute('href', 'http://127.0.0.1:3000/preview/onlinePreview?url=preview-token');
+    expect(previewLink).toHaveAttribute('href', 'http://127.0.0.1:8012/onlinePreview?url=preview-token');
+    expect(previewAction).toHaveAttribute('href', 'http://127.0.0.1:8012/onlinePreview?url=preview-token');
     expect(downloadAction).toHaveAttribute('href', 'http://127.0.0.1:3000/api/employee/proofs/proof-1/download');
     expect(within(previewAction.closest('.employee-proof-actions') as HTMLElement).getAllByRole('link')).toHaveLength(2);
   });
@@ -175,6 +186,15 @@ describe('EmployeeGoalPage', () => {
     expect(await screen.findByRole('button', { name: '确认目标完成并提交评分' })).toBeEnabled();
     expect(screen.queryByRole('button', { name: '编辑目标' })).not.toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: '上传证明材料' }).length).toBeGreaterThan(0);
+  });
+  it('redirects to the employee OKR list when the goal no longer exists', async () => {
+    mockGetEmployeeGoalDetail.mockRejectedValueOnce(new ApiError('goal not found', 404));
+
+    renderWithProviders(<EmployeeGoalPage />);
+
+    await vi.waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/employee/okr', { replace: true });
+    });
   });
 });
 

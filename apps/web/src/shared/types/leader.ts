@@ -8,7 +8,9 @@ export type LeaderProof = {
   fileUrl: string;
   fileSize: number;
   note: string | null;
+  isKnowledge: boolean;
   uploadedAt: string;
+  updatedAt: string;
 };
 
 export type LeaderKeyResult = {
@@ -206,4 +208,35 @@ export type LeaderAnnualRankingResponse = {
   year: number;
   ranking: LeaderAnnualRankingEntry[];
   selectedEmployee: LeaderAnnualRankingSelectedEmployee | null;
+};
+
+export type UpdateLeaderProofKnowledgeInput = {
+  isKnowledge: boolean;
+};
+
+export type LeaderKnowledgeEntry = {
+  id: string;
+  fileName: string;
+  previewUrl?: string;
+  downloadUrl?: string;
+  fileUrl: string;
+  fileSize: number;
+  note: string | null;
+  isKnowledge: boolean;
+  uploadedAt: string;
+  updatedAt: string;
+  employeeId: string;
+  employeeName: string;
+  sectionName: string | null;
+  reviewGroupName: string | null;
+  goalId: string;
+  goalCode: string;
+  goalName: string;
+  keyResultId: string;
+  keyResultCode: string;
+  keyResultName: string;
+};
+
+export type LeaderKnowledgeBaseResponse = {
+  entries: LeaderKnowledgeEntry[];
 };

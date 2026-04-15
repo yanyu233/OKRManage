@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { existsSync } from 'node:fs';
 
 export type AuthMode = 'local-debug' | 'wecom-preferred';
 
@@ -113,6 +114,46 @@ export class RuntimeConfigService {
     }
 
     return 'storage/proofs';
+  }
+
+  get libreOfficeExecutablePath(): string | null {
+    const configured = this.getOptionalString('LIBREOFFICE_EXECUTABLE_PATH');
+    if (configured) {
+      return configured;
+    }
+
+    const commonCandidates =
+      process.platform === 'win32'
+        ? [
+            'C:\\kkfvrun\\kkFileView-4.4.0\\LibreOfficePortable\\App\\libreoffice\\program\\soffice.com',
+            'C:\\kkfvrun\\kkFileView-4.4.0\\LibreOfficePortable\\App\\libreoffice\\program\\soffice.exe',
+            'C:\\Program Files\\LibreOffice\\program\\soffice.com',
+            'C:\\Program Files\\LibreOffice\\program\\soffice.exe',
+            'C:\\Program Files (x86)\\LibreOffice\\program\\soffice.com',
+            'C:\\Program Files (x86)\\LibreOffice\\program\\soffice.exe'
+          ]
+        : ['/usr/bin/soffice', '/usr/local/bin/soffice'];
+
+    const matched = commonCandidates.find((candidate) => existsSync(candidate));
+    if (matched) {
+      return matched;
+    }
+
+    return process.platform === 'win32' ? null : 'soffice';
+  }
+
+  get proofPdfPreviewTimeoutMs(): number {
+    const configured = this.configService.get<string>('PROOF_PDF_PREVIEW_TIMEOUT_MS');
+    if (!configured) {
+      return 120_000;
+    }
+
+    const value = Number(configured);
+    if (!Number.isInteger(value) || value <= 0) {
+      throw new Error(`Invalid PROOF_PDF_PREVIEW_TIMEOUT_MS: expected a positive integer, got "${configured}"`);
+    }
+
+    return value;
   }
 
   get serviceName(): string {

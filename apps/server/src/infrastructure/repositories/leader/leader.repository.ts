@@ -11,7 +11,9 @@ export type LeaderProofRecord = {
   fileUrl: string;
   fileSize: number;
   note: string | null;
+  isKnowledge: boolean;
   uploadedAt: string;
+  updatedAt: string;
 };
 
 export type LeaderKeyResultRecord = {
@@ -223,6 +225,70 @@ export type LeaderBulkScoreResult = {
   skipped: LeaderBulkScoreSkipRecord[];
 };
 
+export type LeaderProofKnowledgeToggleResult = {
+  before: {
+    id: string;
+    isKnowledge: boolean;
+  };
+  after: LeaderProofRecord;
+};
+
+export type LeaderKnowledgeEntryRecord = {
+  id: string;
+  fileName: string;
+  previewUrl: string;
+  downloadUrl: string;
+  fileUrl: string;
+  fileSize: number;
+  note: string | null;
+  isKnowledge: boolean;
+  uploadedAt: string;
+  updatedAt: string;
+  employeeId: string;
+  employeeName: string;
+  sectionName: string | null;
+  reviewGroupName: string | null;
+  goalId: string;
+  goalCode: string;
+  goalName: string;
+  keyResultId: string;
+  keyResultCode: string;
+  keyResultName: string;
+};
+
+export type LeaderKnowledgeBaseRecord = {
+  entries: LeaderKnowledgeEntryRecord[];
+};
+
+export type LeaderKnowledgeProofUpdateInput = {
+  fileName?: string;
+  storageKey?: string;
+  fileSize?: number;
+  note: string | null;
+};
+
+export type LeaderKnowledgeProofUpdateResult = {
+  before: {
+    id: string;
+    fileName: string;
+    note: string | null;
+    storageKey: string;
+  };
+  after: LeaderKnowledgeEntryRecord;
+  previousStorageKey: string | null;
+};
+
+export type LeaderKnowledgeProofDownloadRecord = {
+  id: string;
+  fileName: string;
+  storageKey: string;
+  employeeName: string;
+  goalCode: string;
+  goalName: string;
+  keyResultCode: string;
+  keyResultName: string;
+};
+
 export interface LeaderRepository {
   getWorkbench(
     actor: AuthUser,
@@ -233,6 +299,14 @@ export interface LeaderRepository {
   ): Promise<LeaderWorkbenchRecord>;
   updateKeyResultScore(actor: AuthUser, krId: string, score: number, comment: string | null): Promise<LeaderScoreUpdateResult>;
   batchScore(actor: AuthUser, input: LeaderBulkScoreInput): Promise<LeaderBulkScoreResult>;
+  updateProofKnowledge(actor: AuthUser, proofId: string, isKnowledge: boolean): Promise<LeaderProofKnowledgeToggleResult>;
+  getKnowledgeBase(actor: AuthUser): Promise<LeaderKnowledgeBaseRecord>;
+  updateKnowledgeProof(
+    actor: AuthUser,
+    proofId: string,
+    input: LeaderKnowledgeProofUpdateInput
+  ): Promise<LeaderKnowledgeProofUpdateResult>;
+  getKnowledgeProofDownloads(actor: AuthUser, proofIds: string[]): Promise<LeaderKnowledgeProofDownloadRecord[]>;
   getRanking(
     actor: AuthUser,
     year: number,

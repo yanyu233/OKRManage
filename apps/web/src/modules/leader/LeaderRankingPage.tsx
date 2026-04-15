@@ -4,13 +4,12 @@ import { Alert, Button, Card, Col, Empty, Input, Row, Select, Space, Statistic, 
 import { useEffect, useMemo, useState } from 'react';
 import { getLeaderRanking } from '../../shared/api/leader';
 import { formatQuarterLabel, getLeaderEmployeeStatusLabel } from '../../shared/i18n/labels';
-import { buildQuarterOptions, buildToolbarYearOptions } from '../../shared/ui/toolbar-options';
+import { useSharedQuarterPeriod } from '../../shared/store/quarter-store';
+import { YearQuarterPickerPopover } from '../../shared/ui/PeriodPickerPopover';
 import { filterRankingEntries, filterRankingGoalBreakdown, formatQuarterScore, resolveRankingSelection } from './leader-ranking.helpers';
 import './leader.css';
 
 const START_YEAR = 2026;
-const DEFAULT_YEAR = 2026;
-const DEFAULT_QUARTER = 1;
 const TEXT = {
   title: '\u8bc4\u5206\u6392\u540d',
   description:
@@ -38,17 +37,13 @@ const TEXT = {
 } as const;
 
 export function LeaderRankingPage() {
-  const [year, setYear] = useState(DEFAULT_YEAR);
-  const [quarter, setQuarter] = useState(DEFAULT_QUARTER);
+  const { year, quarter, yearOptions, quarterOptions, setPeriod } = useSharedQuarterPeriod({
+    startYear: START_YEAR,
+    futureRange: 8
+  });
   const [keyword, setKeyword] = useState('');
   const [reviewGroupId, setReviewGroupId] = useState<string | null>(null);
   const [employeeId, setEmployeeId] = useState<string | null>(null);
-
-  const yearOptions = useMemo(
-    () => buildToolbarYearOptions(START_YEAR, Math.max(START_YEAR, new Date().getFullYear() + 4)),
-    []
-  );
-  const quarterOptions = useMemo(() => buildQuarterOptions(), []);
 
   const rankingQuery = useQuery({
     queryKey: ['leader-ranking', year, quarter, reviewGroupId, employeeId],
@@ -116,25 +111,16 @@ export function LeaderRankingPage() {
               value={keyword}
               onChange={(event) => setKeyword(event.target.value)}
             />
-            <Select
-              value={year}
-              options={yearOptions}
-              onChange={(value) => {
-                setYear(value);
+            <YearQuarterPickerPopover
+              year={year}
+              quarter={quarter}
+              yearOptions={yearOptions}
+              quarterOptions={quarterOptions}
+              onChange={(nextYear, nextQuarter) => {
+                setPeriod(nextYear, nextQuarter);
                 setReviewGroupId(null);
                 setEmployeeId(null);
               }}
-              style={{ minWidth: 140 }}
-            />
-            <Select
-              value={quarter}
-              options={quarterOptions}
-              onChange={(value) => {
-                setQuarter(value);
-                setReviewGroupId(null);
-                setEmployeeId(null);
-              }}
-              style={{ minWidth: 140 }}
             />
             <Button icon={<ReloadOutlined />} onClick={() => rankingQuery.refetch()}>
               {TEXT.refresh}

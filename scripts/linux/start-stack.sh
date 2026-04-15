@@ -38,4 +38,4 @@ fi
 "$ROOT_DIR/scripts/linux/start-kkfileview.sh"
 
 echo "Server PID: $(cat "$SERVER_PID_FILE")"
-echo "kkFileView expected at: ${KKFILEVIEW_HOME:-$ROOT_DIR/vendor/kkfileview/current}"
+echo "kkFileView runtime root: ${KKFILEVIEW_HOME:-$ROOT_DIR/vendor/kkfileview/current}"

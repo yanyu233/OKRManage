@@ -1,6 +1,6 @@
 import { App as AntApp } from 'antd';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { LeaderWorkbenchPage } from '../src/modules/leader/LeaderWorkbenchPage';
 
@@ -246,10 +246,43 @@ vi.mock('../src/shared/api/leader', () => ({
     ]
   }),
   updateLeaderKrScore: vi.fn(),
-  bulkLeaderKrScore: vi.fn()
+  bulkLeaderKrScore: vi.fn(),
+  updateLeaderProofKnowledge: vi.fn()
 }));
 
 describe('LeaderWorkbenchPage batch score modal', () => {
+  it('filters the employee queue by section and review group with all selected by default', async () => {
+    ensureMatchMedia();
+
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <AntApp>
+          <LeaderWorkbenchPage />
+        </AntApp>
+      </QueryClientProvider>
+    );
+
+    const queueCard = (await screen.findByText('人员队列')).closest('.leader-side-card');
+    expect(queueCard).toBeTruthy();
+
+    expect(within(queueCard as HTMLElement).getByText(T.employeeName)).toBeTruthy();
+    expect(within(queueCard as HTMLElement).getByText(T.readonlyEmployee)).toBeTruthy();
+    expect(screen.getAllByText('全部').length).toBeGreaterThanOrEqual(2);
+
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: T.sectionFilter }));
+    fireEvent.click(await screen.findByText('解决方案科'));
+
+    const updatedQueueCard = (await screen.findByText('人员队列')).closest('.leader-side-card');
+    expect(within(updatedQueueCard as HTMLElement).getByText(T.readonlyEmployee)).toBeTruthy();
+    expect(within(updatedQueueCard as HTMLElement).queryByText(T.employeeName)).toBeNull();
+
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: T.groupFilter }));
+    fireEvent.click(await screen.findByText('运营组'));
+
+    const groupFilteredQueueCard = (await screen.findByText('人员队列')).closest('.leader-side-card');
+    expect(within(groupFilteredQueueCard as HTMLElement).getByText(T.readonlyEmployee)).toBeTruthy();
+  });
+
   it(
     'shows selected employees, goals and objective key results for full-score bulk actions',
     async () => {

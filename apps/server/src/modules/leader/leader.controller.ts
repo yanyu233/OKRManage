@@ -11,14 +11,23 @@ import {
   Put,
   Query,
   Req,
+  Res,
+  StreamableFile,
+  UploadedFile,
+  UseInterceptors,
   UnauthorizedException
 } from '@nestjs/common';
-import { Request } from 'express';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { Request, Response } from 'express';
 import { SessionService } from '../session/session.service';
 import { AuthUser } from '../../shared/types/auth-user';
 import { DomainValidationError } from '../../shared/errors/domain-validation.error';
+import { buildInlineContentDisposition } from '../../shared/http/content-disposition';
 import { LeaderService } from './leader.service';
 import { BulkScoreDto } from './dto/bulk-score.dto';
+import { DownloadKnowledgeProofsDto } from './dto/download-knowledge-proofs.dto';
+import { UpdateKnowledgeProofDto } from './dto/update-knowledge-proof.dto';
+import { UpdateProofKnowledgeDto } from './dto/update-proof-knowledge.dto';
 import { UpdateKrScoreDto } from './dto/update-kr-score.dto';
 
 @Controller('leader')
@@ -83,6 +92,68 @@ export class LeaderController {
     }
   }
 
+  @Put('proofs/:proofId/knowledge')
+  async updateProofKnowledge(
+    @Req() request: Request,
+    @Param('proofId') proofId: string,
+    @Body() payload: UpdateProofKnowledgeDto
+  ) {
+    const actor = await this.requireAuthenticatedUser(request);
+
+    try {
+      return await this.leaderService.updateProofKnowledge(actor, proofId, payload.isKnowledge);
+    } catch (error) {
+      this.rethrowDomainError(error);
+    }
+  }
+
+  @Get('knowledge-base')
+  async getKnowledgeBase(@Req() request: Request) {
+    const actor = await this.requireAuthenticatedUser(request);
+
+    try {
+      return await this.leaderService.getKnowledgeBase(actor);
+    } catch (error) {
+      this.rethrowDomainError(error);
+    }
+  }
+
+  @Post('knowledge-base/download')
+  @HttpCode(200)
+  async downloadKnowledgeProofs(
+    @Req() request: Request,
+    @Body() payload: DownloadKnowledgeProofsDto,
+    @Res({ passthrough: true }) response: Response
+  ): Promise<StreamableFile> {
+    const actor = await this.requireAuthenticatedUser(request);
+
+    try {
+      const result = await this.leaderService.downloadKnowledgeProofs(actor, payload.proofIds);
+      response.setHeader('Content-Disposition', buildInlineContentDisposition(result.fileName));
+      response.setHeader('Content-Type', 'application/zip');
+      return result.file;
+    } catch (error) {
+      this.rethrowDomainError(error);
+    }
+  }
+
+  @Put('knowledge-base/:proofId')
+  @UseInterceptors(FileInterceptor('file'))
+  async updateKnowledgeProof(
+    @Req() request: Request,
+    @Param('proofId') proofId: string,
+    @Body() payload: UpdateKnowledgeProofDto,
+    @UploadedFile() file: any
+  ) {
+    const actor = await this.requireAuthenticatedUser(request);
+
+    try {
+      return await this.leaderService.updateKnowledgeProof(actor, proofId, file, payload.note);
+    } catch (error) {
+      this.rethrowDomainError(error);
+    }
+  }
+
   @Get('ranking')
   async getRanking(
     @Req() request: Request,
@@ -116,18 +187,28 @@ export class LeaderController {
   }
 
   private async requireLeader(request: Request): Promise<AuthUser> {
+    const session = await this.requireSession(request);
+
+    if (!['department-head', 'section-leader', 'group-leader'].includes(session.user.role)) {
+      throw new ForbiddenException('leader role required');
+    }
+
+    return session.user;
+  }
+
+  private async requireAuthenticatedUser(request: Request): Promise<AuthUser> {
+    const session = await this.requireSession(request);
+    return session.user;
+  }
+
+  private async requireSession(request: Request) {
     const sessionId = this.readSessionId(request);
     const session = await this.sessionService.get(sessionId);
 
     if (!session) {
       throw new UnauthorizedException('authentication required');
     }
-
-    if (session.user.role !== 'section-leader' && session.user.role !== 'group-leader') {
-      throw new ForbiddenException('leader role required');
-    }
-
-    return session.user;
+    return session;
   }
 
   private readSessionId(request: Request): string | null {

@@ -1,5 +1,5 @@
 export type ReviewGradeCode = 'A+' | 'A' | 'B' | 'C' | 'D';
-export type UserRoleCode = 'system-admin' | 'section-leader' | 'group-leader' | 'employee';
+export type UserRoleCode = 'system-admin' | 'department-head' | 'section-leader' | 'group-leader' | 'employee';
 export type RoleScopeType = 'system' | 'department' | 'section' | 'review-group' | 'user';
 export type ScoreType = 'objective' | 'subjective';
 

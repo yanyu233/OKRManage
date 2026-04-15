@@ -55,6 +55,7 @@ type ProofWithOwner = Prisma.ProofGetPayload<{
     };
   };
 }>;
+const MAX_EMPLOYEE_QUARTER_POINTS = 100;
 
 @Injectable()
 export class PrismaEmployeeRepository implements EmployeeRepository {
@@ -153,6 +154,13 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
 
   async createGoal(actor: AuthUser, input: EmployeeCreateGoalInput): Promise<EmployeeGoalCreateResult> {
     const created = await this.prisma.$transaction(async (transaction) => {
+      await this.assertQuarterPointBudget(transaction, {
+        ownerUserId: actor.id,
+        year: input.year,
+        quarter: input.quarter,
+        nextPoints: input.keyResults.reduce((sum, keyResult) => sum + keyResult.points, 0)
+      });
+
       const goal = await transaction.goal.create({
         data: {
           ownerUserId: actor.id,
@@ -245,6 +253,14 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
       if (goal.status !== 'draft') {
         throw new DomainValidationError('goal can only be edited in draft status');
       }
+
+      await this.assertQuarterPointBudget(transaction, {
+        ownerUserId: actor.id,
+        year: goal.year,
+        quarter: goal.quarter,
+        nextPoints: input.keyResults.reduce((sum, keyResult) => sum + keyResult.points, 0),
+        excludeGoalId: goalId
+      });
 
       const existingKeyResultsById = new Map(goal.keyResults.map((keyResult) => [keyResult.id, keyResult]));
       const nextKeyResultIds = new Set(input.keyResults.map((keyResult) => keyResult.id).filter(Boolean) as string[]);
@@ -402,6 +418,16 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
     }
 
     const importedGoals = await this.prisma.$transaction(async (transaction) => {
+      await this.assertQuarterPointBudget(transaction, {
+        ownerUserId: actor.id,
+        year,
+        quarter,
+        nextPoints: templates.reduce(
+          (sum, template) => sum + template.keyResults.reduce((templateSum, keyResult) => templateSum + keyResult.points, 0),
+          0
+        )
+      });
+
       const importedGoalIds: string[] = [];
       const temporaryCodePrefix = `TMP-IMPORT-${Date.now()}`;
 
@@ -704,6 +730,10 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
     const canAccess =
       actor.role === 'employee'
         ? owner.id === actor.id
+        : actor.role === 'department-head'
+          ? true
+        : actor.role === 'system-admin'
+          ? true
         : actor.role === 'section-leader' || actor.role === 'group-leader'
           ? await this.canLeaderAccessEmployee(actor, owner)
           : false;
@@ -868,6 +898,7 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
       previewUrl: buildProofPreviewUrl({
         proofId: proof.id,
         fileName: proof.fileName,
+        webBaseUrl: this.runtimeConfig.webBaseUrl,
         sourceBaseUrl: this.runtimeConfig.kkFileViewSourceBaseUrl,
         previewBaseUrl: this.runtimeConfig.kkFileViewPublicBaseUrl,
         previewToken: this.runtimeConfig.kkFileViewPreviewToken
@@ -925,6 +956,40 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
           code: `O${index + 1}`
         }
       });
+    }
+  }
+
+  private async assertQuarterPointBudget(
+    transaction: Prisma.TransactionClient,
+    input: {
+      ownerUserId: string;
+      year: number;
+      quarter: number;
+      nextPoints: number;
+      excludeGoalId?: string;
+    }
+  ) {
+    const aggregate = await transaction.goal.aggregate({
+      where: {
+        ownerUserId: input.ownerUserId,
+        year: input.year,
+        quarter: input.quarter,
+        ...(input.excludeGoalId
+          ? {
+              id: {
+                not: input.excludeGoalId
+              }
+            }
+          : {})
+      },
+      _sum: {
+        totalPoints: true
+      }
+    });
+
+    const existingPoints = aggregate._sum.totalPoints ?? 0;
+    if (existingPoints + input.nextPoints > MAX_EMPLOYEE_QUARTER_POINTS) {
+      throw new DomainValidationError('quarter total points cannot exceed 100');
     }
   }
 }

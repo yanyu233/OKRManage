@@ -1,21 +1,41 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { StreamableFile } from '@nestjs/common';
 import { AuditService } from '../audit/audit.service';
+import { RuntimeConfigService } from '../config/runtime-config.service';
+import { ProofPdfPreviewService } from './proof-pdf-preview.service';
 import { AuthUser } from '../../shared/types/auth-user';
 import { DomainValidationError } from '../../shared/errors/domain-validation.error';
+import { normalizeUploadedFileName } from '../../shared/http/upload-file-name';
 import { LocalProofStorageService } from '../../infrastructure/storage/local-proof-storage.service';
+import { ProofArchiveService } from '../../infrastructure/storage/proof-archive.service';
 import {
   EMPLOYEE_REPOSITORY,
   EmployeeCreateGoalInput,
   EmployeeGoalUpdateInput,
   EmployeeRepository
 } from '../../infrastructure/repositories/employee/employee.repository';
+import {
+  buildInternalProofPdfUrl,
+  buildSafeProofPreviewFileName,
+  buildKkFileViewPreviewUrl,
+  buildProofArchiveEntryDownloadUrl,
+  buildProofArchiveEntryPreviewUrl,
+  buildProofArchivePageUrl,
+  buildProofDownloadUrl,
+  buildProofSourceUrl,
+  classifyProofPreview,
+  getProofContentType,
+  isArchiveProofFile
+} from '../../shared/proof/proof-links';
 
 @Injectable()
 export class EmployeeService {
   constructor(
     @Inject(EMPLOYEE_REPOSITORY) private readonly employeeRepository: EmployeeRepository,
     private readonly proofStorage: LocalProofStorageService,
+    private readonly proofArchive: ProofArchiveService,
+    private readonly proofPdfPreview: ProofPdfPreviewService,
+    private readonly runtimeConfig: RuntimeConfigService,
     private readonly auditService: AuditService
   ) {}
 
@@ -187,11 +207,12 @@ export class EmployeeService {
       throw new BadRequestException('proof file is required');
     }
 
-    const stored = await this.proofStorage.save(file.originalname, file.buffer);
+    const originalFileName = normalizeUploadedFileName(file.originalname);
+    const stored = await this.proofStorage.save(originalFileName, file.buffer);
 
     try {
       const result = await this.employeeRepository.createProof(actor, krId, {
-        fileName: file.originalname,
+        fileName: originalFileName,
         storageKey: stored.storageKey,
         fileSize: stored.fileSize,
         note: note?.trim() || null
@@ -227,14 +248,227 @@ export class EmployeeService {
     };
   }
 
-  async getProofPreviewSource(proofId: string) {
+  async getProofArchive(actor: AuthUser, proofId: string) {
+    const proof = await this.employeeRepository.getProofDownload(actor, proofId);
+
+    if (!isArchiveProofFile(proof.fileName)) {
+      throw new BadRequestException('proof archive preview is only supported for ZIP files');
+    }
+
+    const entries = await this.proofArchive.listEntries(proof.storageKey);
+
+    return {
+      proofId,
+      fileName: proof.fileName,
+      downloadUrl: buildProofDownloadUrl(proofId),
+      entryCount: entries.length,
+      entries: entries.map((entry) => ({
+        path: entry.path,
+        name: entry.name,
+        fileSize: entry.fileSize,
+        extension: entry.extension,
+        previewUrl: buildProofArchiveEntryPreviewUrl({
+          proofId,
+          entryPath: entry.path,
+          fileName: entry.name,
+          sourceBaseUrl: this.runtimeConfig.kkFileViewSourceBaseUrl,
+          previewBaseUrl: this.runtimeConfig.kkFileViewPublicBaseUrl,
+          previewToken: this.runtimeConfig.kkFileViewPreviewToken,
+          webBaseUrl: this.runtimeConfig.webBaseUrl
+        }),
+        downloadUrl: buildProofArchiveEntryDownloadUrl(proofId, entry.path)
+      }))
+    };
+  }
+
+  async getProofPreviewMeta(actor: AuthUser, proofId: string, entryPath?: string | null) {
+    const proof = await this.employeeRepository.getProofDownload(actor, proofId);
+    const normalizedEntryPath = entryPath ? normalizeArchiveEntryPath(entryPath) : null;
+    const fileName = normalizedEntryPath
+      ? await this.resolveArchiveEntryName(proof.storageKey, proof.fileName, normalizedEntryPath)
+      : proof.fileName;
+    const previewFileName = buildSafeProofPreviewFileName(fileName, normalizedEntryPath ? `${proofId}:${normalizedEntryPath}` : proofId);
+    const classification = classifyProofPreview(fileName, {
+      allowArchive: !normalizedEntryPath
+    });
+    const downloadUrl = normalizedEntryPath
+      ? buildProofArchiveEntryDownloadUrl(proofId, normalizedEntryPath)
+      : buildProofDownloadUrl(proofId);
+
+    if (classification.mode === 'archive') {
+      return {
+        proofId,
+        entryPath: normalizedEntryPath,
+        fileName,
+        mode: 'archive' as const,
+        targetUrl: buildProofArchivePageUrl(proofId, this.runtimeConfig.webBaseUrl),
+        fallbackUrl: null,
+        downloadUrl,
+        contentType: getProofContentType(fileName)
+      };
+    }
+
+    if (classification.mode === 'kkfileview') {
+      return {
+        proofId,
+        entryPath: normalizedEntryPath,
+        fileName,
+        mode: 'kkfileview' as const,
+        targetUrl: buildKkFileViewPreviewUrl({
+          proofId,
+          entryPath: normalizedEntryPath ?? undefined,
+          fileName,
+          previewFileName,
+          sourceBaseUrl: this.runtimeConfig.kkFileViewSourceBaseUrl,
+          previewBaseUrl: this.runtimeConfig.kkFileViewPublicBaseUrl,
+          previewToken: this.runtimeConfig.kkFileViewPreviewToken,
+          officePreviewType: classification.officePreviewType
+        }),
+        fallbackUrl: classification.officePreviewType
+          ? buildKkFileViewPreviewUrl({
+              proofId,
+              entryPath: normalizedEntryPath ?? undefined,
+              fileName,
+              previewFileName,
+              sourceBaseUrl: this.runtimeConfig.kkFileViewSourceBaseUrl,
+              previewBaseUrl: this.runtimeConfig.kkFileViewPublicBaseUrl,
+              previewToken: this.runtimeConfig.kkFileViewPreviewToken
+            })
+          : null,
+        downloadUrl,
+        contentType: null
+      };
+    }
+
+    return {
+      proofId,
+      entryPath: normalizedEntryPath,
+      fileName,
+      mode: 'native' as const,
+      targetUrl: buildProofSourceUrl({
+        proofId,
+        entryPath: normalizedEntryPath ?? undefined,
+        fileName,
+        previewFileName,
+        sourceBaseUrl: this.runtimeConfig.kkFileViewSourceBaseUrl,
+        previewToken: this.runtimeConfig.kkFileViewPreviewToken
+      }),
+      fallbackUrl: null,
+      downloadUrl,
+      contentType: classification.contentType
+    };
+  }
+
+  async downloadProofArchiveEntry(actor: AuthUser, proofId: string, entryPath: string) {
+    const proof = await this.employeeRepository.getProofDownload(actor, proofId);
+
+    if (!isArchiveProofFile(proof.fileName)) {
+      throw new BadRequestException('proof archive preview is only supported for ZIP files');
+    }
+
+    const entry = await this.proofArchive.openEntry(proof.storageKey, entryPath);
+
+    return {
+      fileName: entry.fileName,
+      file: new StreamableFile(entry.file)
+    };
+  }
+
+  async getProofPreviewSource(proofId: string, entryPath?: string | null) {
     const proof = await this.employeeRepository.getProofStorage(proofId);
+
+    if (entryPath?.trim()) {
+      const entry = await this.proofArchive.openEntry(proof.storageKey, entryPath);
+
+      return {
+        fileName: entry.fileName,
+        file: new StreamableFile(entry.file)
+      };
+    }
+
     const stream = await this.proofStorage.open(proof.storageKey);
 
     return {
       fileName: proof.fileName,
       file: new StreamableFile(stream)
     };
+  }
+
+  async resolveProofDirectPreviewUrl(proofId: string, entryPath?: string | null) {
+    const proof = await this.employeeRepository.getProofStorage(proofId);
+    const normalizedEntryPath = entryPath?.trim() ? normalizeArchiveEntryPath(entryPath) : null;
+    const fileName = normalizedEntryPath
+      ? await this.resolveArchiveEntryName(proof.storageKey, proof.fileName, normalizedEntryPath)
+      : proof.fileName;
+    const classification = classifyProofPreview(fileName, {
+      allowArchive: !normalizedEntryPath
+    });
+    const previewFileName = buildSafeProofPreviewFileName(fileName, normalizedEntryPath ? `${proofId}:${normalizedEntryPath}` : proofId);
+
+    if (classification.mode === 'archive') {
+      return buildProofArchivePageUrl(proofId, this.runtimeConfig.webBaseUrl);
+    }
+
+    if (classification.mode === 'kkfileview') {
+      if (classification.officePreviewType === 'pdf') {
+        const converted = await this.proofPdfPreview.ensurePdfPreview(proofId, normalizedEntryPath);
+        if (converted) {
+          return buildInternalProofPdfUrl({
+            proofId,
+            entryPath: normalizedEntryPath ?? undefined,
+            sourceBaseUrl: this.runtimeConfig.kkFileViewSourceBaseUrl,
+            previewToken: this.runtimeConfig.kkFileViewPreviewToken
+          });
+        }
+      }
+
+      return buildKkFileViewPreviewUrl({
+        proofId,
+        entryPath: normalizedEntryPath ?? undefined,
+        fileName,
+        previewFileName,
+        sourceBaseUrl: this.runtimeConfig.kkFileViewSourceBaseUrl,
+        previewBaseUrl: this.runtimeConfig.kkFileViewPublicBaseUrl,
+        previewToken: this.runtimeConfig.kkFileViewPreviewToken,
+        officePreviewType: classification.officePreviewType
+      });
+    }
+
+    return buildProofSourceUrl({
+      proofId,
+      entryPath: normalizedEntryPath ?? undefined,
+      fileName,
+      previewFileName,
+      sourceBaseUrl: this.runtimeConfig.kkFileViewSourceBaseUrl,
+      previewToken: this.runtimeConfig.kkFileViewPreviewToken
+    });
+  }
+
+  async getProofPdfPreviewSource(proofId: string, entryPath?: string | null) {
+    const converted = await this.proofPdfPreview.openPdfPreview(proofId, entryPath);
+    if (!converted) {
+      throw new BadRequestException('pdf preview is not available');
+    }
+
+    return {
+      fileName: converted.fileName,
+      file: new StreamableFile(converted.file)
+    };
+  }
+
+  private async resolveArchiveEntryName(storageKey: string, archiveFileName: string, entryPath: string) {
+    if (!isArchiveProofFile(archiveFileName)) {
+      throw new BadRequestException('archive entry preview is only supported for ZIP files');
+    }
+
+    const entries = await this.proofArchive.listEntries(storageKey);
+    const entry = entries.find((item) => item.path === entryPath);
+
+    if (!entry) {
+      throw new BadRequestException('archive entry not found');
+    }
+
+    return entry.name;
   }
 
   private validateQuarter(year: number, quarter: number) {
@@ -287,4 +521,18 @@ export class EmployeeService {
       }))
     };
   }
+}
+
+function normalizeArchiveEntryPath(input: string) {
+  const normalized = input
+    .replace(/\\/g, '/')
+    .split('/')
+    .map((segment) => segment.trim())
+    .filter((segment) => Boolean(segment) && segment !== '.');
+
+  if (!normalized.length || normalized.some((segment) => segment === '..')) {
+    throw new BadRequestException('archive entry path is invalid');
+  }
+
+  return normalized.join('/');
 }

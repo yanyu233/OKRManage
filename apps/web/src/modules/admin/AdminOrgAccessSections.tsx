@@ -33,6 +33,7 @@ const TEXT = {
 
 const ROLE_OPTIONS: Array<{ label: string; value: UserRoleCode }> = [
   { label: '\u7cfb\u7edf\u7ba1\u7406\u5458', value: 'system-admin' },
+  { label: '\u90e8\u95e8\u8d1f\u8d23\u4eba', value: 'department-head' },
   { label: '\u79d1\u5ba4\u9886\u5bfc', value: 'section-leader' },
   { label: '\u5c0f\u7ec4\u8d1f\u8d23\u4eba', value: 'group-leader' },
   { label: '\u5458\u5de5', value: 'employee' }

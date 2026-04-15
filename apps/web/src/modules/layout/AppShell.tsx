@@ -133,9 +133,6 @@ export function AppShell() {
           <Typography.Title level={4} style={{ color: '#eff6ff', margin: 0 }}>
             {siderCollapsed ? 'OKR' : 'OKR \u7cfb\u7edf'}
           </Typography.Title>
-          {!siderCollapsed ? (
-            <Typography.Text className="app-shell__brand-subtitle">{'Route C / React 前台'}</Typography.Text>
-          ) : null}
         </div>
 
         <Menu

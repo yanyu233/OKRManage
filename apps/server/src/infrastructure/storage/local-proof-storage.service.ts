@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { createReadStream } from 'node:fs';
-import { mkdir, stat, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, stat, unlink, writeFile } from 'node:fs/promises';
 import { basename, extname, join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { RuntimeConfigService } from '../../modules/config/runtime-config.service';
@@ -47,9 +47,33 @@ export class LocalProofStorageService {
     return createReadStream(targetPath);
   }
 
+  async readBuffer(storageKey: string) {
+    const targetPath = this.resolveStoragePath(storageKey);
+
+    try {
+      await stat(targetPath);
+    } catch {
+      throw new NotFoundException('proof file not found');
+    }
+
+    return readFile(targetPath);
+  }
+
   async delete(storageKey: string): Promise<void> {
     const targetPath = this.resolveStoragePath(storageKey);
     await unlink(targetPath).catch(() => undefined);
+  }
+
+  async getAbsolutePath(storageKey: string) {
+    const targetPath = this.resolveStoragePath(storageKey);
+
+    try {
+      await stat(targetPath);
+    } catch {
+      throw new NotFoundException('proof file not found');
+    }
+
+    return targetPath;
   }
 
   get storageRoot(): string {

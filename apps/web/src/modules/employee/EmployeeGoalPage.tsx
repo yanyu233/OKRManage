@@ -1,8 +1,8 @@
-import { ArrowLeftOutlined, FileTextOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, FileTextOutlined, InboxOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, Card, Empty, Input, Segmented, Space, Tag, Typography, Upload } from 'antd';
 import type { UploadRequestOption } from 'rc-upload/lib/interface';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   getEmployeeGoalDetail,
@@ -15,7 +15,7 @@ import { ApiError, resolveApiUrl } from '../../shared/api/http';
 import { formatQuarterLabel, formatNullableScore, getCompletionStateLabel, getGoalStatusLabel, getScoreTypeLabel } from '../../shared/i18n/labels';
 import type { EmployeeKeyResult } from '../../shared/types/employee';
 import { EmployeeCreateGoalDialog } from './EmployeeCreateGoalDialog';
-import { formatProofSize } from './employee.helpers';
+import { formatProofSize, isQuarterPointLimitError } from './employee.helpers';
 import './employee.css';
 
 const TEXT = {
@@ -57,6 +57,8 @@ const TEXT = {
   uploadAllowed: '材料上传入口在已确认、待评分、已完成阶段都保留。'
 } as const;
 
+const { Dragger } = Upload;
+
 function canEditGoal(status: string) {
   return status === 'draft';
 }
@@ -67,6 +69,10 @@ function canToggleCompletion(status: string) {
 
 function canSubmitReview(status: string, allCompleted: boolean) {
   return status === 'confirmed' && allCompleted;
+}
+
+function isMissingGoalError(error: unknown) {
+  return error instanceof ApiError && error.status === 404 && error.message.toLowerCase() === 'goal not found';
 }
 
 export function EmployeeGoalPage() {
@@ -94,7 +100,13 @@ export function EmployeeGoalPage() {
       message.success(TEXT.editSuccess);
     },
     onError: (error) => {
-      message.error(error instanceof ApiError ? error.message : TEXT.editFailed);
+      message.error(
+        isQuarterPointLimitError(error)
+          ? '当前季度所有目标的关键结果分值合计不能超过 100 分。'
+          : error instanceof ApiError
+            ? error.message
+            : TEXT.editFailed
+      );
     }
   });
 
@@ -153,8 +165,19 @@ export function EmployeeGoalPage() {
     () => (goal ? goal.keyResults.every((keyResult) => keyResult.completionState === 'completed') : false),
     [goal]
   );
+  const missingGoal = goalQuery.isError ? isMissingGoalError(goalQuery.error) : false;
+
+  useEffect(() => {
+    if (missingGoal) {
+      navigate('/employee/okr', { replace: true });
+    }
+  }, [missingGoal, navigate]);
 
   if (goalQuery.isLoading) {
+    return <Card className="employee-toolbar-card">{TEXT.loading}</Card>;
+  }
+
+  if (missingGoal) {
     return <Card className="employee-toolbar-card">{TEXT.loading}</Card>;
   }
 
@@ -295,11 +318,24 @@ export function EmployeeGoalPage() {
                   />
                 </div>
 
-                <Upload showUploadList={false} customRequest={(options) => uploadProof(options, keyResult)} accept="*">
-                  <Button type="primary" loading={uploadMutation.isPending}>
-                    {TEXT.uploadProof}
-                  </Button>
-                </Upload>
+                <Dragger
+                  multiple
+                  accept="*"
+                  showUploadList={false}
+                  className="employee-proof-dragger"
+                  customRequest={(options) => uploadProof(options, keyResult)}
+                >
+                  <Space direction="vertical" size={6} style={{ width: '100%' }}>
+                    <InboxOutlined className="employee-proof-dragger__icon" />
+                    <Typography.Text strong>{TEXT.uploadProof}</Typography.Text>
+                    <Typography.Text className="employee-proof-dragger__title">
+                      拖拽文件到这里，或点击选择文件
+                    </Typography.Text>
+                    <Typography.Text type="secondary" className="employee-proof-dragger__hint">
+                      支持多选后一次上传，当前说明会应用到本次选择的所有文件
+                    </Typography.Text>
+                  </Space>
+                </Dragger>
 
                 <div className="employee-proof-list">
                   {keyResult.proofs.length ? (
@@ -351,6 +387,7 @@ export function EmployeeGoalPage() {
 
   function uploadProof(options: UploadRequestOption, keyResult: EmployeeKeyResult) {
     const file = options.file as File;
+    options.onProgress?.({ percent: 20 });
 
     uploadMutation.mutate(
       {
@@ -360,6 +397,7 @@ export function EmployeeGoalPage() {
       },
       {
         onSuccess: (proof) => {
+          options.onProgress?.({ percent: 100 });
           options.onSuccess?.(proof);
         },
         onError: (error) => {

@@ -2,11 +2,15 @@ import type {
   LeaderAnnualRankingResponse,
   BulkLeaderKrScoreInput,
   BulkLeaderKrScoreResponse,
+  LeaderKnowledgeBaseResponse,
+  LeaderKnowledgeEntry,
+  LeaderProof,
   LeaderRankingResponse,
   LeaderWorkbenchResponse,
+  UpdateLeaderProofKnowledgeInput,
   UpdateLeaderKrScoreInput
 } from '../types/leader';
-import { apiRequest } from './http';
+import { apiRequest, apiRequestBlob } from './http';
 
 type WorkbenchQuery = {
   year: number;
@@ -44,6 +48,33 @@ export function bulkLeaderKrScore(payload: BulkLeaderKrScoreInput) {
   return apiRequest<BulkLeaderKrScoreResponse>('/leader/bulk-score', {
     method: 'POST',
     body: JSON.stringify(payload)
+  });
+}
+
+export function updateLeaderProofKnowledge(proofId: string, payload: UpdateLeaderProofKnowledgeInput) {
+  return apiRequest<LeaderProof>(`/leader/proofs/${proofId}/knowledge`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  });
+}
+
+export function getLeaderKnowledgeBase() {
+  return apiRequest<LeaderKnowledgeBaseResponse>('/leader/knowledge-base', {
+    method: 'GET'
+  });
+}
+
+export function updateLeaderKnowledgeProof(proofId: string, payload: FormData) {
+  return apiRequest<LeaderKnowledgeEntry>(`/leader/knowledge-base/${proofId}`, {
+    method: 'PUT',
+    body: payload
+  });
+}
+
+export function downloadLeaderKnowledgeBase(proofIds: string[]) {
+  return apiRequestBlob('/leader/knowledge-base/download', {
+    method: 'POST',
+    body: JSON.stringify({ proofIds })
   });
 }
 

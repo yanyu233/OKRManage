@@ -256,6 +256,8 @@ export function deriveRoleAssignmentScope(roleCode: UserRoleCode, userId: string
   switch (roleCode) {
     case 'system-admin':
       return { scopeType: 'system' as const, scopeId: 'system' };
+    case 'department-head':
+      return { scopeType: 'department' as const, scopeId: `managed-department:${userId || 'pending'}` };
     case 'employee':
       return { scopeType: 'user' as const, scopeId: userId || 'user:pending' };
     case 'section-leader':
