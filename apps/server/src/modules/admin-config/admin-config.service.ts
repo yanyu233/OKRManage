@@ -188,6 +188,7 @@ export class AdminConfigService {
         id: user.id.trim(),
         employeeNo: user.employeeNo?.trim() || null,
         name: user.name.trim(),
+        positionName: user.positionName?.trim() || null,
         departmentId: user.departmentId?.trim() || null,
         sectionId: user.sectionId?.trim() || null,
         reviewGroupId: user.reviewGroupId?.trim() || null

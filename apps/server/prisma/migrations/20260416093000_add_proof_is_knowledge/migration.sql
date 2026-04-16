@@ -1,0 +1,2 @@
+ALTER TABLE `Proof`
+ADD COLUMN `isKnowledge` BOOLEAN NOT NULL DEFAULT false;

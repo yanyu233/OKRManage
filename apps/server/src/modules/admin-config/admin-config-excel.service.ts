@@ -116,31 +116,32 @@ export class AdminConfigExcelService {
       next.reviewGroups = baseGroups;
     }
 
-    const usersRows = this.readRows(workbook.getWorksheet(SHEETS.users), [2, 3, 5, 7, 9, 10]);
+    const usersRows = this.readRows(workbook.getWorksheet(SHEETS.users), [2, 3, 4, 6, 8, 10, 11]);
     if (usersRows.length > 0) {
       next.users = usersRows.map((row) => ({
         id: this.readString(row, 1) || randomUUID(),
         employeeNo: this.readString(row, 2) || null,
+        positionName: this.readString(row, 4) || null,
         name: this.requiredString(row, 3, '员工姓名'),
         departmentId: this.resolveOptionalReferenceId({
-          idValue: this.readString(row, 4),
-          nameValue: this.readString(row, 5),
+          idValue: this.readString(row, 5),
+          nameValue: this.readString(row, 6),
           items: next.departments,
           label: '所属部门'
         }),
         sectionId: this.resolveOptionalReferenceId({
-          idValue: this.readString(row, 6),
-          nameValue: this.readString(row, 7),
+          idValue: this.readString(row, 7),
+          nameValue: this.readString(row, 8),
           items: next.sections,
           label: '所属科室'
         }),
         reviewGroupId: this.resolveOptionalReferenceId({
-          idValue: this.readString(row, 8),
-          nameValue: this.readString(row, 9),
+          idValue: this.readString(row, 9),
+          nameValue: this.readString(row, 10),
           items: next.reviewGroups,
           label: '所属评价组'
         }),
-        isActive: this.readBoolean(row, 10, true)
+        isActive: this.readBoolean(row, 11, true)
       }));
     }
 
@@ -590,13 +591,14 @@ export class AdminConfigExcelService {
     this.addSheet(
       workbook,
       SHEETS.users,
-      ['员工ID', '工号', '员工姓名', '所属部门ID', '所属部门', '所属科室ID', '所属科室', '所属评价组ID', '所属评价组', '启用'],
-      ['系统内部隐藏 ID', '可选', '必填', '隐藏辅助列', '可选，按名称匹配', '隐藏辅助列', '可选，按名称匹配', '隐藏辅助列', '可选，按名称匹配', '填写 是/否'],
-      '维护员工主数据。部门、科室、评价组都支持按名称匹配，但建议保留隐藏 ID。',
+      ['员工ID', '工号', '员工姓名', '岗位', '所属部门ID', '所属部门', '所属科室ID', '所属科室', '所属评价组ID', '所属评价组', '启用'],
+      ['系统内部隐藏 ID', '可选', '必填', '可选', '隐藏辅助列', '可选，按名称匹配', '隐藏辅助列', '可选，按名称匹配', '隐藏辅助列', '可选，按名称匹配', '填写 是/否'],
+      '维护员工主数据。岗位支持从 Excel 导入，部门、科室、评价组都支持按名称匹配，但建议保留隐藏 ID。',
       bootstrap.users.map((entry) => [
         entry.id,
         entry.employeeNo ?? '',
         entry.name,
+        entry.positionName ?? '',
         entry.departmentId ?? '',
         entry.departmentId ? departmentsById.get(entry.departmentId) ?? '' : '',
         entry.sectionId ?? '',
@@ -605,7 +607,7 @@ export class AdminConfigExcelService {
         entry.reviewGroupId ? reviewGroupsById.get(entry.reviewGroupId) ?? '' : '',
         this.boolText(entry.isActive)
       ]),
-      [1, 4, 6, 8]
+      [1, 5, 7, 9]
     );
   }
 

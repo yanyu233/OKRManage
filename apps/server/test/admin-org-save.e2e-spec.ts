@@ -175,6 +175,34 @@ describe('Admin org bootstrap save', () => {
     ]);
   });
 
+  it('persists user position name through bootstrap save', async () => {
+    const agent = await loginAsSysadmin(app);
+    const bootstrap = await agent.get('/api/admin/org/bootstrap').expect(200);
+    const targetUser = bootstrap.body.users.find((entry: { employeeNo: string }) => entry.employeeNo === 'EMP-0001');
+
+    expect(targetUser).toBeDefined();
+
+    await agent
+      .put('/api/admin/org/bootstrap')
+      .send({
+        ...bootstrap.body,
+        users: bootstrap.body.users.map((entry: { id: string }) =>
+          entry.id === targetUser.id
+            ? {
+                ...entry,
+                positionName: '架构工程师'
+              }
+            : entry
+        )
+      })
+      .expect(200);
+
+    const refreshed = await agent.get('/api/admin/org/bootstrap').expect(200);
+    const refreshedUser = refreshed.body.users.find((entry: { id: string }) => entry.id === targetUser.id);
+
+    expect(refreshedUser.positionName).toBe('架构工程师');
+  });
+
   it('rejects bootstrap review group quotas when total seats exceed active member count', async () => {
     const agent = await loginAsSysadmin(app);
     const bootstrap = await agent.get('/api/admin/org/bootstrap').expect(200);
@@ -189,12 +217,12 @@ describe('Admin org bootstrap save', () => {
       .send({
         ...bootstrap.body,
         reviewGroups: bootstrap.body.reviewGroups.map(
-          (entry: { id: string; quotas: Array<{ gradeCode: string; seatCount: number }> }) =>
+          (entry: { id: string; memberCount: number; quotas: Array<{ gradeCode: string; seatCount: number }> }) =>
             entry.id === targetGroup.id
               ? {
                   ...entry,
                   quotas: [
-                    { gradeCode: 'A+', seatCount: 6 },
+                    { gradeCode: 'A+', seatCount: entry.memberCount + 1 },
                     { gradeCode: 'A', seatCount: 0 },
                     { gradeCode: 'B', seatCount: 0 },
                     { gradeCode: 'C', seatCount: 0 },

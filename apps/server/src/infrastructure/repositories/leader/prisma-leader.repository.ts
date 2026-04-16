@@ -7,6 +7,7 @@ import { AuthUser } from '../../../shared/types/auth-user';
 import { RuntimeConfigService } from '../../../modules/config/runtime-config.service';
 import { buildProofDownloadUrl, buildProofPreviewUrl } from '../../../shared/proof/proof-links';
 import {
+  LeaderAnnualPublicNoticeRecord,
   LeaderAnnualQuarterScoreRecord,
   LeaderAnnualRankingEntryRecord,
   LeaderAnnualRankingRecord,
@@ -20,10 +21,12 @@ import {
   LeaderKnowledgeEntryRecord,
   LeaderKnowledgeProofUpdateInput,
   LeaderKnowledgeProofUpdateResult,
+  LeaderPublicNoticeEntryRecord,
   LeaderGoalSummaryRecord,
   LeaderKeyResultRecord,
   LeaderProofKnowledgeToggleResult,
   LeaderProofRecord,
+  LeaderQuarterlyPublicNoticeRecord,
   LeaderRankingEntryRecord,
   LeaderRankingGoalBreakdownRecord,
   LeaderRankingRecord,
@@ -37,6 +40,7 @@ import {
 
 type EmployeeWithQuarterData = Prisma.UserGetPayload<{
   include: {
+    department: true;
     section: true;
     reviewGroup: true;
     ownedGoals: {
@@ -548,6 +552,27 @@ export class PrismaLeaderRepository implements LeaderRepository {
     };
   }
 
+  async getQuarterlyPublicNotice(
+    actor: AuthUser,
+    year: number,
+    quarter: number,
+    reviewGroupId?: string | null
+  ): Promise<LeaderQuarterlyPublicNoticeRecord> {
+    void actor;
+    const employees = await this.getVisibleEmployees(year, quarter);
+    const filteredEmployees = reviewGroupId
+      ? employees.filter((employee) => employee.reviewGroupId === reviewGroupId)
+      : employees;
+
+    return {
+      year,
+      quarter,
+      departmentName: resolveSingleDepartmentName(filteredEmployees),
+      reviewGroupName: resolveSingleReviewGroupName(filteredEmployees),
+      entries: await this.buildQuarterlyPublicNoticeEntries(filteredEmployees)
+    };
+  }
+
   async getAnnualRanking(actor: AuthUser, year: number, employeeId?: string | null): Promise<LeaderAnnualRankingRecord> {
     const employees = await this.getVisibleEmployeesForYear(year);
     const ranking = employees.map((employee) => this.toAnnualRankingEntry(employee)).sort(compareAnnualRanking);
@@ -557,6 +582,17 @@ export class PrismaLeaderRepository implements LeaderRepository {
       year,
       ranking,
       selectedEmployee
+    };
+  }
+
+  async getAnnualPublicNotice(actor: AuthUser, year: number): Promise<LeaderAnnualPublicNoticeRecord> {
+    void actor;
+    const employees = await this.getVisibleEmployeesForYear(year);
+
+    return {
+      year,
+      departmentName: resolveSingleDepartmentName(employees),
+      entries: await this.buildAnnualPublicNoticeEntries(employees)
     };
   }
 
@@ -575,6 +611,7 @@ export class PrismaLeaderRepository implements LeaderRepository {
         createdAt: 'asc'
       },
       include: {
+        department: true,
         section: true,
         reviewGroup: true,
         ownedGoals: {
@@ -622,6 +659,7 @@ export class PrismaLeaderRepository implements LeaderRepository {
         createdAt: 'asc'
       },
       include: {
+        department: true,
         section: true,
         reviewGroup: true,
         ownedGoals: {
@@ -763,6 +801,118 @@ export class PrismaLeaderRepository implements LeaderRepository {
     }
 
     return ranking[0];
+  }
+
+  private async buildQuarterlyPublicNoticeEntries(
+    employees: EmployeeWithQuarterData[]
+  ): Promise<LeaderPublicNoticeEntryRecord[]> {
+    const gradesByEmployeeId = await this.buildQuarterlyGradeLookup(employees);
+
+    return employees
+      .map((employee) => {
+        const score = scoreFromKeyResults(employee.ownedGoals.flatMap((goal) => goal.keyResults));
+        return this.toPublicNoticeEntry(
+          employee,
+          gradesByEmployeeId.get(employee.id) || scoreToNoticeLabel(score)
+        );
+      })
+      .sort(comparePublicNoticeEntry);
+  }
+
+  private async buildAnnualPublicNoticeEntries(
+    employees: EmployeeWithQuarterData[]
+  ): Promise<LeaderPublicNoticeEntryRecord[]> {
+    const gradesByEmployeeId = await this.buildAnnualGradeLookup(employees);
+
+    return employees
+      .map((employee) => {
+        const annualScore = this.toAnnualRankingEntry(employee).annualScore;
+        return this.toPublicNoticeEntry(
+          employee,
+          gradesByEmployeeId.get(employee.id) || scoreToNoticeLabel(annualScore / 4)
+        );
+      })
+      .sort(comparePublicNoticeEntry);
+  }
+
+  private async buildQuarterlyGradeLookup(employees: EmployeeWithQuarterData[]) {
+    const quotasByReviewGroupId = await this.getReviewGroupQuotaMap(employees);
+    const grades = new Map<string, string>();
+
+    for (const [reviewGroupId, groupEmployees] of groupEmployeesByReviewGroup(employees)) {
+      const ranking = this.assignGrades(
+        groupEmployees.map((employee) => this.toRankingEntry(employee)).sort(compareRanking),
+        quotasByReviewGroupId.get(reviewGroupId) ?? []
+      );
+
+      for (const entry of ranking) {
+        grades.set(entry.employeeId, gradeCodeToNoticeLabel(entry.currentGrade) ?? '');
+      }
+    }
+
+    return grades;
+  }
+
+  private async buildAnnualGradeLookup(employees: EmployeeWithQuarterData[]) {
+    const quotasByReviewGroupId = await this.getReviewGroupQuotaMap(employees);
+    const grades = new Map<string, string>();
+
+    for (const [reviewGroupId, groupEmployees] of groupEmployeesByReviewGroup(employees)) {
+      const ranking = assignAnnualGrades(
+        groupEmployees.map((employee) => this.toAnnualRankingEntry(employee)).sort(compareAnnualRanking),
+        quotasByReviewGroupId.get(reviewGroupId) ?? []
+      );
+
+      for (const entry of ranking) {
+        grades.set(entry.employeeId, gradeCodeToNoticeLabel(entry.currentGrade) ?? '');
+      }
+    }
+
+    return grades;
+  }
+
+  private async getReviewGroupQuotaMap(employees: EmployeeWithQuarterData[]) {
+    const reviewGroupIds = Array.from(
+      new Set(employees.map((employee) => employee.reviewGroupId).filter((reviewGroupId): reviewGroupId is string => Boolean(reviewGroupId)))
+    );
+
+    if (!reviewGroupIds.length) {
+      return new Map<string, Array<{ gradeCode: string; seatCount: number }>>();
+    }
+
+    const quotas = await this.prisma.reviewGradeQuota.findMany({
+      where: {
+        reviewGroupId: {
+          in: reviewGroupIds
+        }
+      },
+      orderBy: [{ reviewGroupId: 'asc' }, { gradeCode: 'asc' }]
+    });
+
+    const quotasByReviewGroupId = new Map<string, Array<{ gradeCode: string; seatCount: number }>>();
+    for (const quota of quotas) {
+      const current = quotasByReviewGroupId.get(quota.reviewGroupId) ?? [];
+      current.push({
+        gradeCode: quota.gradeCode,
+        seatCount: quota.seatCount
+      });
+      quotasByReviewGroupId.set(quota.reviewGroupId, current);
+    }
+
+    return quotasByReviewGroupId;
+  }
+
+  private toPublicNoticeEntry(employee: EmployeeWithQuarterData, resultLabel: string): LeaderPublicNoticeEntryRecord {
+    return {
+      employeeId: employee.id,
+      employeeNo: employee.employeeNo ?? null,
+      employeeName: employee.name,
+      departmentName: employee.department?.name ?? null,
+      sectionName: employee.section?.name ?? null,
+      positionName: employee.positionName ?? null,
+      reviewGroupName: employee.reviewGroup?.name ?? null,
+      resultLabel,
+    };
   }
 
   private toEmployeeSummary(employee: EmployeeWithQuarterData, canScore: boolean): LeaderEmployeeSummaryRecord {
@@ -1115,6 +1265,101 @@ function buildSeatSummary(
     seatCount: quotas.find((entry) => entry.gradeCode === gradeCode)?.seatCount ?? 0,
     occupiedCount: ranking.filter((entry) => entry.currentGrade === gradeCode).length
   }));
+}
+
+function assignAnnualGrades(
+  ranking: LeaderAnnualRankingEntryRecord[],
+  quotas: Array<{ gradeCode: string; seatCount: number }>
+) {
+  const entries = ranking.map((entry) => ({
+    ...entry,
+    currentGrade: null as string | null
+  }));
+  const eligible = entries.filter((entry) => entry.annualScore > 0);
+  let cursor = 0;
+
+  for (const gradeCode of REVIEW_GRADE_CODES) {
+    const quota = quotas.find((entry) => entry.gradeCode === gradeCode);
+    const seatCount = quota?.seatCount ?? 0;
+
+    for (let index = 0; index < seatCount && cursor < eligible.length; index += 1) {
+      eligible[cursor].currentGrade = gradeCode;
+      cursor += 1;
+    }
+  }
+
+  return entries;
+}
+
+function groupEmployeesByReviewGroup(employees: EmployeeWithQuarterData[]) {
+  const groups = new Map<string, EmployeeWithQuarterData[]>();
+
+  for (const employee of employees) {
+    const reviewGroupId = employee.reviewGroupId ?? '__ungrouped__';
+    const current = groups.get(reviewGroupId) ?? [];
+    current.push(employee);
+    groups.set(reviewGroupId, current);
+  }
+
+  return groups;
+}
+
+function resolveSingleDepartmentName(employees: EmployeeWithQuarterData[]) {
+  const departmentNames = Array.from(
+    new Set(employees.map((employee) => employee.department?.name?.trim()).filter((name): name is string => Boolean(name)))
+  );
+
+  return departmentNames.length === 1 ? departmentNames[0] : null;
+}
+
+function resolveSingleReviewGroupName(employees: EmployeeWithQuarterData[]) {
+  const reviewGroupNames = Array.from(
+    new Set(employees.map((employee) => employee.reviewGroup?.name?.trim()).filter((name): name is string => Boolean(name)))
+  );
+
+  return reviewGroupNames.length === 1 ? reviewGroupNames[0] : null;
+}
+
+function comparePublicNoticeEntry(left: LeaderPublicNoticeEntryRecord, right: LeaderPublicNoticeEntryRecord) {
+  const collator = new Intl.Collator('zh-CN');
+  return collator.compare(left.employeeName, right.employeeName);
+}
+
+function gradeCodeToNoticeLabel(gradeCode: string | null | undefined) {
+  switch (gradeCode) {
+    case 'A+':
+      return '五星';
+    case 'A':
+      return '四星';
+    case 'B':
+      return '三星';
+    case 'C':
+      return '二星+';
+    case 'D':
+      return '二星';
+    default:
+      return null;
+  }
+}
+
+function scoreToNoticeLabel(score: number | null) {
+  if (score === null || !Number.isFinite(score) || score <= 0) {
+    return '';
+  }
+
+  if (score >= 90) {
+    return '五星';
+  }
+  if (score >= 80) {
+    return '四星';
+  }
+  if (score >= 70) {
+    return '三星';
+  }
+  if (score >= 60) {
+    return '二星+';
+  }
+  return '二星';
 }
 
 function canScoreEmployee(

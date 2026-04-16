@@ -73,6 +73,7 @@ export function createUserRecord(defaultDepartmentId: string | null = null, defa
     id: createId('user'),
     employeeNo: null,
     name: '',
+    positionName: null,
     departmentId: defaultDepartmentId,
     sectionId: defaultSectionId,
     reviewGroupId: null,

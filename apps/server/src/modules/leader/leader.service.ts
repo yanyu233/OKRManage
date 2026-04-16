@@ -11,13 +11,15 @@ import {
 } from '../../infrastructure/repositories/leader/leader.repository';
 import { AuthUser } from '../../shared/types/auth-user';
 import { DomainValidationError } from '../../shared/errors/domain-validation.error';
+import { LeaderPublicNoticeDocxService } from './leader-public-notice-docx.service';
 
 @Injectable()
 export class LeaderService {
   constructor(
     @Inject(LEADER_REPOSITORY) private readonly leaderRepository: LeaderRepository,
     private readonly proofStorage: LocalProofStorageService,
-    private readonly auditService: AuditService
+    private readonly auditService: AuditService,
+    private readonly publicNoticeDocxService: LeaderPublicNoticeDocxService
   ) {}
 
   getWorkbench(actor: AuthUser, year: number, quarter: number, employeeId?: string, goalId?: string) {
@@ -205,9 +207,57 @@ export class LeaderService {
     return this.leaderRepository.getRanking(actor, year, quarter, reviewGroupId, employeeId);
   }
 
+  async downloadQuarterlyPublicNotice(actor: AuthUser, year: number, quarter: number, reviewGroupId?: string) {
+    this.validateQuarter(year, quarter);
+    const notice = await this.leaderRepository.getQuarterlyPublicNotice(actor, year, quarter, reviewGroupId);
+    const result = await this.publicNoticeDocxService.buildQuarterlyNotice(notice);
+
+    await this.auditService.write({
+      actorUserId: actor.id,
+      actorRoleCode: actor.role,
+      action: 'leader.ranking.public-notice.download',
+      entityType: 'leader-ranking',
+      entityId: null,
+      afterJson: {
+        year,
+        quarter,
+        reviewGroupId: reviewGroupId ?? null,
+        rowCount: notice.entries.length
+      }
+    });
+
+    return {
+      fileName: result.fileName,
+      file: new StreamableFile(result.buffer)
+    };
+  }
+
   getAnnualRanking(actor: AuthUser, year: number, employeeId?: string) {
     this.validateYear(year);
     return this.leaderRepository.getAnnualRanking(actor, year, employeeId);
+  }
+
+  async downloadAnnualPublicNotice(actor: AuthUser, year: number) {
+    this.validateYear(year);
+    const notice = await this.leaderRepository.getAnnualPublicNotice(actor, year);
+    const result = await this.publicNoticeDocxService.buildAnnualNotice(notice);
+
+    await this.auditService.write({
+      actorUserId: actor.id,
+      actorRoleCode: actor.role,
+      action: 'leader.annual-ranking.public-notice.download',
+      entityType: 'leader-annual-ranking',
+      entityId: null,
+      afterJson: {
+        year,
+        rowCount: notice.entries.length
+      }
+    });
+
+    return {
+      fileName: result.fileName,
+      file: new StreamableFile(result.buffer)
+    };
   }
 
   private validateQuarter(year: number, quarter: number) {

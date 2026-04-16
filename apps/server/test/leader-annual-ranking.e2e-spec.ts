@@ -11,7 +11,7 @@ describe('Leader annual ranking', () => {
   });
 
   afterAll(async () => {
-    await app.close();
+    await app?.close();
     await closeTestDatabase();
   });
 
@@ -36,9 +36,9 @@ describe('Leader annual ranking', () => {
       expect.arrayContaining([
         expect.objectContaining({
           employeeName: '张晨',
-          annualScore: 142.6,
+          annualScore: 137,
           quarterScores: [
-            { quarter: 1, score: 63.6 },
+            { quarter: 1, score: 58 },
             { quarter: 2, score: 0 },
             { quarter: 3, score: 79 },
             { quarter: 4, score: 0 }

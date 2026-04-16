@@ -57,6 +57,10 @@ class UserSnapshotDto {
 
   @IsOptional()
   @IsString()
+  positionName?: string | null;
+
+  @IsOptional()
+  @IsString()
   departmentId?: string | null;
 
   @IsOptional()

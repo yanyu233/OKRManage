@@ -190,6 +190,7 @@ export class PrismaOrgRepository implements OrgRepository {
         id: user.id,
         employeeNo: user.employeeNo,
         name: user.name,
+        positionName: user.positionName,
         departmentId: user.departmentId,
         sectionId: user.sectionId,
         reviewGroupId: user.reviewGroupId,
@@ -441,6 +442,7 @@ export class PrismaOrgRepository implements OrgRepository {
           update: {
             employeeNo: user.employeeNo,
             name: user.name,
+            positionName: user.positionName,
             departmentId: user.departmentId,
             sectionId: user.sectionId,
             reviewGroupId: user.reviewGroupId,
@@ -450,6 +452,7 @@ export class PrismaOrgRepository implements OrgRepository {
             id: user.id,
             employeeNo: user.employeeNo,
             name: user.name,
+            positionName: user.positionName,
             departmentId: user.departmentId,
             sectionId: user.sectionId,
             reviewGroupId: user.reviewGroupId,

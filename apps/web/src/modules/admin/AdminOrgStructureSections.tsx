@@ -29,6 +29,8 @@ const TEXT = {
   userNamePlaceholder: '\u8bf7\u8f93\u5165\u5458\u5de5\u59d3\u540d',
   employeeNo: '\u5de5\u53f7',
   employeeNoPlaceholder: '\u9009\u586b',
+  positionName: '\u5c97\u4f4d',
+  positionNamePlaceholder: '\u9009\u586b',
   userDepartmentPlaceholder: '\u8bf7\u9009\u62e9\u6240\u5c5e\u90e8\u95e8',
   userSectionPlaceholder: '\u8bf7\u9009\u62e9\u6240\u5c5e\u79d1\u5ba4',
   reviewGroup: '\u6240\u5c5e\u8bc4\u4ef7\u7ec4',
@@ -172,7 +174,7 @@ export function StructureSections({
         <Table
           rowKey="id"
           pagination={false}
-          scroll={{ x: 1100 }}
+          scroll={{ x: 1280 }}
           dataSource={draft.users}
           columns={[
             {
@@ -198,6 +200,22 @@ export function StructureSections({
                   onChange={(event) =>
                     updateCollection('users', (items) =>
                       items.map((item) => (item.id === record.id ? { ...item, employeeNo: event.target.value || null } : item))
+                    )
+                  }
+                />
+              )
+            },
+            {
+              title: TEXT.positionName,
+              render: (_value, record) => (
+                <Input
+                  value={record.positionName ?? ''}
+                  placeholder={TEXT.positionNamePlaceholder}
+                  onChange={(event) =>
+                    updateCollection('users', (items) =>
+                      items.map((item) =>
+                        item.id === record.id ? { ...item, positionName: event.target.value || null } : item
+                      )
                     )
                   }
                 />

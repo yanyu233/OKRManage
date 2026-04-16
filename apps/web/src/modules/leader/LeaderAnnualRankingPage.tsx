@@ -1,8 +1,10 @@
-import { FundOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
-import { useQuery } from '@tanstack/react-query';
-import { Alert, Button, Card, Col, Empty, Input, Row, Space, Statistic, Tag, Typography } from 'antd';
+import { DownloadOutlined, FundOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { Alert, App, Button, Card, Col, Empty, Input, Row, Space, Statistic, Tag, Typography } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
-import { getLeaderAnnualRanking } from '../../shared/api/leader';
+import { ApiError } from '../../shared/api/http';
+import { downloadLeaderAnnualRankingPublicNotice, getLeaderAnnualRanking } from '../../shared/api/leader';
+import { downloadBlobFile, resolveDownloadFileName } from '../../shared/files/download';
 import { YearPickerPopover } from '../../shared/ui/PeriodPickerPopover';
 import { buildCurrentAndFutureYearOptions } from '../../shared/ui/toolbar-options';
 import { filterAnnualRankingEntries, formatAnnualScore, resolveAnnualRankingSelection } from './leader-annual-ranking.helpers';
@@ -11,20 +13,24 @@ import './leader.css';
 const START_YEAR = 2026;
 const TEXT = {
   title: '年度评分排名',
-  description: '查看指定年度内员工四个季度实际得分的汇总排名，缺失季度按 0 计入年度总分。',
+  description: '查看指定年度内员工四个季度实际得分的汇总排名，缺失季度按 0 分计入年度总分。',
   loading: '正在加载年度评分排名...',
   loadFailed: '年度评分排名加载失败。',
   refresh: '刷新',
   searchPlaceholder: '搜索员工、科室或小组',
   rankingListTitle: '年度排名列表',
   noEmployeeSelected: '未选择员工',
-  emptyRanking: '当前条件下没有匹配的年度排名',
+  emptyRanking: '当前条件下没有匹配的年度评分排名',
   annualScore: '年度总分',
   sectionFallback: '未分配科室',
-  reviewGroupFallback: '未分配小组'
+  reviewGroupFallback: '未分配小组',
+  exportNotice: '生成公示表',
+  exportSuccess: '公示表已开始下载。',
+  exportFailed: '公示表生成失败。'
 } as const;
 
 export function LeaderAnnualRankingPage() {
+  const { message } = App.useApp();
   const [year, setYear] = useState(() => Math.max(START_YEAR, new Date().getFullYear()));
   const [keyword, setKeyword] = useState('');
   const [employeeId, setEmployeeId] = useState<string | null>(null);
@@ -37,6 +43,18 @@ export function LeaderAnnualRankingPage() {
   const annualRankingQuery = useQuery({
     queryKey: ['leader-annual-ranking', year, employeeId],
     queryFn: () => getLeaderAnnualRanking({ year, employeeId })
+  });
+
+  const exportMutation = useMutation({
+    mutationFn: () => downloadLeaderAnnualRankingPublicNotice({ year }),
+    onSuccess: ({ blob, headers }) => {
+      downloadBlobFile(
+        blob,
+        resolveDownloadFileName(headers.get('content-disposition'), `${year}年年度绩效考评结果表.docx`)
+      );
+      message.success(TEXT.exportSuccess);
+    },
+    onError: (error) => message.error(error instanceof ApiError ? error.message : TEXT.exportFailed)
   });
 
   useEffect(() => {
@@ -100,6 +118,15 @@ export function LeaderAnnualRankingPage() {
             />
             <Button icon={<ReloadOutlined />} onClick={() => annualRankingQuery.refetch()}>
               {TEXT.refresh}
+            </Button>
+            <Button
+              type="primary"
+              icon={<DownloadOutlined />}
+              loading={exportMutation.isPending}
+              disabled={!(payload?.ranking.length)}
+              onClick={() => void exportMutation.mutateAsync()}
+            >
+              {TEXT.exportNotice}
             </Button>
           </div>
         </div>

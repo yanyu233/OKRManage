@@ -54,7 +54,7 @@ describe('Review group admin config', () => {
 
     const bootstrap = await agent.get('/api/admin/org/bootstrap').expect(200);
     const seededReviewGroup = bootstrap.body.reviewGroups.find(
-      (reviewGroup: { name: string; id: string }) => reviewGroup.name === '\u4fe1\u606f\u5316\u7ec4'
+      (reviewGroup: { name: string; id: string; memberCount: number }) => reviewGroup.name === '\u4fe1\u606f\u5316\u7ec4'
     );
 
     expect(seededReviewGroup?.id).toBeDefined();
@@ -63,7 +63,7 @@ describe('Review group admin config', () => {
       .put(`/api/admin/review-groups/${seededReviewGroup.id}/quotas`)
       .send({
         quotas: [
-          { gradeCode: 'A+', seatCount: 6 },
+          { gradeCode: 'A+', seatCount: (seededReviewGroup.memberCount ?? 0) + 1 },
           { gradeCode: 'A', seatCount: 0 },
           { gradeCode: 'B', seatCount: 0 },
           { gradeCode: 'C', seatCount: 0 },

@@ -1,8 +1,10 @@
-import { BarChartOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
-import { useQuery } from '@tanstack/react-query';
-import { Alert, Button, Card, Col, Empty, Input, Row, Select, Space, Statistic, Tag, Typography } from 'antd';
+import { BarChartOutlined, DownloadOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { Alert, App, Button, Card, Col, Empty, Input, Row, Select, Space, Statistic, Tag, Typography } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
-import { getLeaderRanking } from '../../shared/api/leader';
+import { ApiError } from '../../shared/api/http';
+import { downloadLeaderRankingPublicNotice, getLeaderRanking } from '../../shared/api/leader';
+import { downloadBlobFile, resolveDownloadFileName } from '../../shared/files/download';
 import { formatQuarterLabel, getLeaderEmployeeStatusLabel } from '../../shared/i18n/labels';
 import { useSharedQuarterPeriod } from '../../shared/store/quarter-store';
 import { YearQuarterPickerPopover } from '../../shared/ui/PeriodPickerPopover';
@@ -33,10 +35,14 @@ const TEXT = {
   goalCountTag: '\u4e2a\u76ee\u6807',
   keyResultCountTag: '\u6761\u5173\u952e\u7ed3\u679c',
   scoredTagPrefix: '\u5df2\u8bc4',
-  goalScorePrefix: '\u76ee\u6807\u5f97\u5206'
+  goalScorePrefix: '\u76ee\u6807\u5f97\u5206',
+  exportNotice: '\u751f\u6210\u516c\u793a\u8868',
+  exportSuccess: '\u516c\u793a\u8868\u5df2\u5f00\u59cb\u4e0b\u8f7d\u3002',
+  exportFailed: '\u516c\u793a\u8868\u751f\u6210\u5931\u8d25\u3002'
 } as const;
 
 export function LeaderRankingPage() {
+  const { message } = App.useApp();
   const { year, quarter, yearOptions, quarterOptions, setPeriod } = useSharedQuarterPeriod({
     startYear: START_YEAR,
     futureRange: 8
@@ -54,6 +60,24 @@ export function LeaderRankingPage() {
         reviewGroupId,
         employeeId
       })
+  });
+
+  const exportMutation = useMutation({
+    mutationFn: () =>
+      downloadLeaderRankingPublicNotice({
+        year,
+        quarter,
+        reviewGroupId: payload?.selectedReviewGroup?.id ?? reviewGroupId,
+        employeeId: undefined
+      }),
+    onSuccess: ({ blob, headers }) => {
+      downloadBlobFile(
+        blob,
+        resolveDownloadFileName(headers.get('content-disposition'), `${year}Q${quarter}-公示表.docx`)
+      );
+      message.success(TEXT.exportSuccess);
+    },
+    onError: (error) => message.error(error instanceof ApiError ? error.message : TEXT.exportFailed)
   });
 
   useEffect(() => {
@@ -124,6 +148,15 @@ export function LeaderRankingPage() {
             />
             <Button icon={<ReloadOutlined />} onClick={() => rankingQuery.refetch()}>
               {TEXT.refresh}
+            </Button>
+            <Button
+              type="primary"
+              icon={<DownloadOutlined />}
+              loading={exportMutation.isPending}
+              disabled={!(payload?.ranking.length)}
+              onClick={() => void exportMutation.mutateAsync()}
+            >
+              {TEXT.exportNotice}
             </Button>
           </div>
         </div>

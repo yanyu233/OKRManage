@@ -23,6 +23,11 @@ describe('Admin bootstrap', () => {
     expect(response.body.departments).toEqual(expect.any(Array));
     expect(response.body.sections).toEqual(expect.any(Array));
     expect(response.body.users).toEqual(expect.any(Array));
+    expect(response.body.users[0]).toEqual(
+      expect.objectContaining({
+        positionName: expect.anything()
+      })
+    );
     expect(response.body.localAccounts).toEqual(expect.any(Array));
     expect(response.body.roleAssignments).toEqual(expect.any(Array));
     expect(response.body.sectionLeaderBindings).toEqual(expect.any(Array));

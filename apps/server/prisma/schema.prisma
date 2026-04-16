@@ -16,6 +16,7 @@ model User {
   id                 String                 @id @default(cuid())
   employeeNo         String?                @unique
   name               String
+  positionName       String?
   email              String?                @unique
   mobile             String?                @unique
   wecomUserId        String?                @unique

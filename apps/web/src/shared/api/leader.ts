@@ -84,8 +84,20 @@ export function getLeaderRanking(query: RankingQuery) {
   });
 }
 
+export function downloadLeaderRankingPublicNotice(query: RankingQuery) {
+  return apiRequestBlob(`/leader/ranking/public-notice${toQueryString(query)}`, {
+    method: 'GET'
+  });
+}
+
 export function getLeaderAnnualRanking(query: AnnualRankingQuery) {
   return apiRequest<LeaderAnnualRankingResponse>(`/leader/annual-ranking${toQueryString(query)}`, {
+    method: 'GET'
+  });
+}
+
+export function downloadLeaderAnnualRankingPublicNotice(query: AnnualRankingQuery) {
+  return apiRequestBlob(`/leader/annual-ranking/public-notice${toQueryString(query)}`, {
     method: 'GET'
   });
 }

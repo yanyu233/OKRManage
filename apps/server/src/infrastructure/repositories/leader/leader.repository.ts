@@ -186,6 +186,31 @@ export type LeaderAnnualRankingRecord = {
   selectedEmployee: LeaderAnnualRankingSelectedEmployeeRecord | null;
 };
 
+export type LeaderPublicNoticeEntryRecord = {
+  employeeId: string;
+  employeeNo: string | null;
+  employeeName: string;
+  departmentName: string | null;
+  sectionName: string | null;
+  positionName: string | null;
+  reviewGroupName: string | null;
+  resultLabel: string;
+};
+
+export type LeaderQuarterlyPublicNoticeRecord = {
+  year: number;
+  quarter: number;
+  departmentName: string | null;
+  reviewGroupName: string | null;
+  entries: LeaderPublicNoticeEntryRecord[];
+};
+
+export type LeaderAnnualPublicNoticeRecord = {
+  year: number;
+  departmentName: string | null;
+  entries: LeaderPublicNoticeEntryRecord[];
+};
+
 export type LeaderScoreUpdateResult = {
   before: {
     id: string;
@@ -314,5 +339,12 @@ export interface LeaderRepository {
     reviewGroupId?: string | null,
     employeeId?: string | null
   ): Promise<LeaderRankingRecord>;
+  getQuarterlyPublicNotice(
+    actor: AuthUser,
+    year: number,
+    quarter: number,
+    reviewGroupId?: string | null
+  ): Promise<LeaderQuarterlyPublicNoticeRecord>;
   getAnnualRanking(actor: AuthUser, year: number, employeeId?: string | null): Promise<LeaderAnnualRankingRecord>;
+  getAnnualPublicNotice(actor: AuthUser, year: number): Promise<LeaderAnnualPublicNoticeRecord>;
 }

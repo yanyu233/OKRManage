@@ -20,6 +20,7 @@ export type AdminUserRecord = {
   id: string;
   employeeNo: string | null;
   name: string;
+  positionName: string | null;
   departmentId: string | null;
   sectionId: string | null;
   reviewGroupId: string | null;

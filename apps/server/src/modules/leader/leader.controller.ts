@@ -171,6 +171,29 @@ export class LeaderController {
     }
   }
 
+  @Get('ranking/public-notice')
+  async downloadQuarterlyPublicNotice(
+    @Req() request: Request,
+    @Query('year', ParseIntPipe) year: number,
+    @Query('quarter', ParseIntPipe) quarter: number,
+    @Query('reviewGroupId') reviewGroupId: string | undefined,
+    @Res({ passthrough: true }) response: Response
+  ): Promise<StreamableFile> {
+    const actor = await this.requireLeader(request);
+
+    try {
+      const result = await this.leaderService.downloadQuarterlyPublicNotice(actor, year, quarter, reviewGroupId);
+      response.setHeader('Content-Disposition', buildInlineContentDisposition(result.fileName));
+      response.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      );
+      return result.file;
+    } catch (error) {
+      this.rethrowDomainError(error);
+    }
+  }
+
   @Get('annual-ranking')
   async getAnnualRanking(
     @Req() request: Request,
@@ -181,6 +204,27 @@ export class LeaderController {
 
     try {
       return await this.leaderService.getAnnualRanking(actor, year, employeeId);
+    } catch (error) {
+      this.rethrowDomainError(error);
+    }
+  }
+
+  @Get('annual-ranking/public-notice')
+  async downloadAnnualPublicNotice(
+    @Req() request: Request,
+    @Query('year', ParseIntPipe) year: number,
+    @Res({ passthrough: true }) response: Response
+  ): Promise<StreamableFile> {
+    const actor = await this.requireLeader(request);
+
+    try {
+      const result = await this.leaderService.downloadAnnualPublicNotice(actor, year);
+      response.setHeader('Content-Disposition', buildInlineContentDisposition(result.fileName));
+      response.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      );
+      return result.file;
     } catch (error) {
       this.rethrowDomainError(error);
     }

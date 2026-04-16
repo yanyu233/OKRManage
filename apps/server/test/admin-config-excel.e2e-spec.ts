@@ -5,6 +5,7 @@ import { createTestApp, loginAsSysadmin } from './support/test-app';
 
 describe('Admin config excel import/export', () => {
   let app: INestApplication;
+  const expectedSysadminName = process.env.DEBUG_SYSADMIN_NAME?.trim() || '严主任';
 
   beforeAll(async () => {
     await resetTestDatabase();
@@ -91,6 +92,41 @@ describe('Admin config excel import/export', () => {
     ]);
   });
 
+  it('exports and imports user position names in employee sheet', async () => {
+    const agent = await loginAsSysadmin(app);
+    const exportResponse = await agent
+      .get('/api/admin/org/bootstrap/excel')
+      .buffer(true)
+      .parse(binaryParser)
+      .expect(200);
+
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(exportResponse.body);
+
+    const userSheet = workbook.getWorksheet('员工');
+    expect(userSheet).toBeDefined();
+    expect(userSheet!.getRow(3).getCell(4).text).toBe('岗位');
+
+    const targetRow = userSheet!
+      .getRows(4, userSheet!.rowCount - 3)
+      ?.find((row) => row.getCell(2).text === 'EMP-0001');
+    expect(targetRow).toBeDefined();
+
+    targetRow!.getCell(4).value = '测试岗位';
+
+    const importBuffer = Buffer.from(await workbook.xlsx.writeBuffer());
+
+    await agent
+      .post('/api/admin/org/bootstrap/excel')
+      .attach('file', Buffer.from(importBuffer), 'admin-config-users.xlsx')
+      .expect(200);
+
+    const refreshed = await agent.get('/api/admin/org/bootstrap').expect(200);
+    const targetUser = refreshed.body.users.find((entry: { employeeNo: string }) => entry.employeeNo === 'EMP-0001');
+
+    expect(targetUser.positionName).toBe('测试岗位');
+  });
+
   it('imports an older exported workbook after ids change on reset', async () => {
     const firstAgent = await loginAsSysadmin(app);
     const exportResponse = await firstAgent
@@ -111,10 +147,12 @@ describe('Admin config excel import/export', () => {
 
     const meResponse = await secondAgent.get('/api/me').expect(200);
     expect(meResponse.body.authenticated).toBe(true);
-    expect(meResponse.body.user.name).toBe('严主任');
+    expect(meResponse.body.user.name).toBe(expectedSysadminName);
 
     const bootstrapResponse = await secondAgent.get('/api/admin/org/bootstrap').expect(200);
-    const sysadminUser = bootstrapResponse.body.users.find((entry: { name: string }) => entry.name === '严主任');
+    const sysadminUser = bootstrapResponse.body.users.find(
+      (entry: { name: string }) => entry.name === expectedSysadminName
+    );
     expect(sysadminUser).toBeDefined();
     expect(sysadminUser.isActive).toBe(true);
   }, 20000);
@@ -132,8 +170,10 @@ describe('Admin config excel import/export', () => {
 
     const quotaSheet = workbook.getWorksheet('评价组名额');
     const infoGroupRow = quotaSheet!.getRows(4, quotaSheet!.rowCount - 3)?.find((row) => row.getCell(2).text === '信息化组');
+    const bootstrap = await agent.get('/api/admin/org/bootstrap').expect(200);
+    const targetGroup = bootstrap.body.reviewGroups.find((entry: { name: string }) => entry.name === '信息化组');
 
-    infoGroupRow!.getCell(3).value = 6;
+    infoGroupRow!.getCell(3).value = (targetGroup?.memberCount ?? 0) + 1;
     infoGroupRow!.getCell(4).value = 0;
     infoGroupRow!.getCell(5).value = 0;
     infoGroupRow!.getCell(6).value = 0;

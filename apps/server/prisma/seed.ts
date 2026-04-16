@@ -80,6 +80,7 @@ async function main(): Promise<void> {
   const sysadmin = await upsertUser({
     employeeNo: 'DEBUG-SYSADMIN',
     name: sysadminName,
+    positionName: '系统管理员',
     wecomUserId: 'sysadmin.routec',
     departmentId: department.id,
     sectionId: sectionPlatform.id,
@@ -91,6 +92,7 @@ async function main(): Promise<void> {
   const departmentHead = await upsertUser({
     employeeNo: 'LEADER-DEPT-01',
     name: '\u90ed\u4e3b\u4efb',
+    positionName: '部门负责人',
     wecomUserId: 'guo.department',
     departmentId: department.id,
     sectionId: sectionPlatform.id,
@@ -108,6 +110,7 @@ async function main(): Promise<void> {
   const sectionLeader = await upsertUser({
     employeeNo: 'LEADER-SECTION-01',
     name: '\u5218\u79d1\u957f',
+    positionName: '科室负责人',
     wecomUserId: 'liu.section',
     departmentId: department.id,
     sectionId: sectionPlatform.id,
@@ -120,6 +123,7 @@ async function main(): Promise<void> {
   const groupLeader = await upsertUser({
     employeeNo: 'LEADER-GROUP-01',
     name: '\u9a6c\u7ec4\u957f',
+    positionName: '小组负责人',
     wecomUserId: 'ma.group',
     departmentId: department.id,
     sectionId: sectionPlatform.id,
@@ -133,6 +137,7 @@ async function main(): Promise<void> {
   const zhangChen = await upsertUser({
     employeeNo: 'EMP-0001',
     name: '\u5f20\u6668',
+    positionName: '平台产品经理',
     wecomUserId: 'zhangchen',
     departmentId: department.id,
     sectionId: sectionPlatform.id,
@@ -144,6 +149,7 @@ async function main(): Promise<void> {
   const wangMin = await upsertUser({
     employeeNo: 'EMP-0002',
     name: '\u738b\u654f',
+    positionName: '平台研发工程师',
     wecomUserId: 'wangmin',
     departmentId: department.id,
     sectionId: sectionPlatform.id,
@@ -155,6 +161,7 @@ async function main(): Promise<void> {
   const liLei = await upsertUser({
     employeeNo: 'EMP-0003',
     name: '\u674e\u96f7',
+    positionName: '运营支持专员',
     wecomUserId: 'lilei',
     departmentId: department.id,
     sectionId: sectionSolutions.id,
@@ -236,6 +243,7 @@ async function upsertReviewGroup(name: string, seatCounts: Record<(typeof GRADE_
 async function upsertUser(input: {
   employeeNo: string;
   name: string;
+  positionName?: string | null;
   wecomUserId: string;
   departmentId: string;
   sectionId: string;
@@ -245,6 +253,7 @@ async function upsertUser(input: {
     where: { employeeNo: input.employeeNo },
     update: {
       name: input.name,
+      positionName: input.positionName ?? null,
       wecomUserId: input.wecomUserId,
       departmentId: input.departmentId,
       sectionId: input.sectionId,
@@ -254,6 +263,7 @@ async function upsertUser(input: {
     create: {
       employeeNo: input.employeeNo,
       name: input.name,
+      positionName: input.positionName ?? null,
       wecomUserId: input.wecomUserId,
       departmentId: input.departmentId,
       sectionId: input.sectionId,

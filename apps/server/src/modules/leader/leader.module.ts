@@ -5,6 +5,7 @@ import { LEADER_REPOSITORY } from '../../infrastructure/repositories/leader/lead
 import { AuditModule } from '../audit/audit.module';
 import { SessionModule } from '../session/session.module';
 import { LeaderController } from './leader.controller';
+import { LeaderPublicNoticeDocxService } from './leader-public-notice-docx.service';
 import { LeaderService } from './leader.service';
 
 @Module({
@@ -12,6 +13,7 @@ import { LeaderService } from './leader.service';
   controllers: [LeaderController],
   providers: [
     LeaderService,
+    LeaderPublicNoticeDocxService,
     PrismaLeaderRepository,
     LocalProofStorageService,
     {
