@@ -3,6 +3,7 @@ import {
   BarChartOutlined,
   BookOutlined,
   FundOutlined,
+  ProfileOutlined,
   SettingOutlined,
   TeamOutlined
 } from '@ant-design/icons';
@@ -24,6 +25,11 @@ export type NavigationSection = {
 };
 
 const COMMON_ITEMS: NavigationLink[] = [
+  {
+    key: '/okr/all',
+    label: '全部OKR',
+    role: 'employee'
+  },
   {
     key: '/knowledge-base',
     label: '知识库',
@@ -60,7 +66,7 @@ const LEADER_ITEMS: NavigationLink[] = [
 const EMPLOYEE_ITEMS: NavigationLink[] = [
   {
     key: '/employee/okr',
-    label: '我的 OKR',
+    label: '我的OKR',
     role: 'employee'
   }
 ];
@@ -83,7 +89,7 @@ const DEPARTMENT_HEAD_ITEMS: NavigationLink[] = [
   },
   {
     key: '/employee/okr',
-    label: '我的 OKR',
+    label: '我的OKR',
     role: 'department-head'
   }
 ];
@@ -94,6 +100,7 @@ const MENU_ICONS: Record<string, ReactNode> = {
   '/leader/ranking': <BarChartOutlined />,
   '/leader/annual-ranking': <FundOutlined />,
   '/knowledge-base': <BookOutlined />,
+  '/okr/all': <ProfileOutlined />,
   '/employee/okr': <ApartmentOutlined />
 };
 
@@ -171,6 +178,10 @@ export function menuItemsForUser(user: SessionUser): ItemType[] {
 }
 
 export function selectedMenuKeyForPath(pathname: string) {
+  if (pathname.startsWith('/okr/all')) {
+    return '/okr/all';
+  }
+
   if (pathname.startsWith('/admin/')) {
     return '/admin/org';
   }
@@ -213,7 +224,7 @@ export function resolveTargetRoleForPath(user: SessionUser, pathname: string): U
     return roles.includes('system-admin') ? 'system-admin' : null;
   }
 
-  if (pathname.startsWith('/knowledge-base') || pathname.startsWith('/leader/knowledge-base')) {
+  if (pathname.startsWith('/okr/all') || pathname.startsWith('/knowledge-base') || pathname.startsWith('/leader/knowledge-base')) {
     return user.activeRole;
   }
 

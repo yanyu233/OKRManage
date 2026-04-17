@@ -47,6 +47,17 @@ export function filterWorkbenchEmployees(employees: LeaderWorkbenchResponse['emp
   );
 }
 
+export function filterWorkbenchEmployeesByProofStatus(
+  employees: LeaderWorkbenchResponse['employees'],
+  onlyWithProofs: boolean
+) {
+  if (!onlyWithProofs) {
+    return employees;
+  }
+
+  return employees.filter((employee) => employee.proofCount > 0);
+}
+
 export function filterWorkbenchGoals(goals: LeaderWorkbenchResponse['goals'], keyword: string) {
   const normalized = normalizeKeyword(keyword);
   if (!normalized) {
@@ -56,6 +67,14 @@ export function filterWorkbenchGoals(goals: LeaderWorkbenchResponse['goals'], ke
   return goals.filter((goal) =>
     [goal.code, goal.name, goal.description ?? ''].some((value) => normalizeKeyword(value).includes(normalized))
   );
+}
+
+export function filterWorkbenchGoalsByProofStatus(goals: LeaderWorkbenchResponse['goals'], onlyWithProofs: boolean) {
+  if (!onlyWithProofs) {
+    return goals;
+  }
+
+  return goals.filter((goal) => goal.proofCount > 0);
 }
 
 export function filterWorkbenchKeyResults(keyResults: LeaderGoalDetail['keyResults'], keyword: string) {
@@ -69,6 +88,27 @@ export function filterWorkbenchKeyResults(keyResults: LeaderGoalDetail['keyResul
       normalizeKeyword(value).includes(normalized)
     )
   );
+}
+
+export function filterWorkbenchKeyResultsByProofStatus(
+  keyResults: LeaderGoalDetail['keyResults'],
+  onlyWithProofs: boolean
+) {
+  if (!onlyWithProofs) {
+    return sortWorkbenchKeyResults(keyResults);
+  }
+
+  return sortWorkbenchKeyResults(keyResults.filter((keyResult) => keyResult.hasProofs));
+}
+
+export function sortWorkbenchKeyResults(keyResults: LeaderGoalDetail['keyResults']) {
+  return [...keyResults].sort((left, right) => {
+    if (left.isProofMissing !== right.isProofMissing) {
+      return left.isProofMissing ? -1 : 1;
+    }
+
+    return left.code.localeCompare(right.code);
+  });
 }
 
 export function buildWorkbenchFilterOptions(employees: LeaderWorkbenchResponse['employees']) {
@@ -148,6 +188,9 @@ export type BulkPreviewRow = {
   scoreType: 'objective' | 'subjective';
   reviewScore: number | null;
   canScore: boolean;
+  proofCount: number;
+  hasProofs: boolean;
+  isProofMissing: boolean;
 };
 
 export function buildBulkScorePreview(
@@ -157,13 +200,13 @@ export function buildBulkScorePreview(
     reviewGroupId?: string | null;
     employeeIds: string[];
     goalIds: string[];
-    keyResultIds: string[];
+    keyResultIds: string[] | null;
     excludeTemplateGoals: boolean;
   }
 ) {
   const selectedEmployeeIds = new Set(selection.employeeIds);
   const selectedGoalIds = new Set(selection.goalIds);
-  const selectedKeyResultIds = new Set(selection.keyResultIds);
+  const selectedKeyResultIds = new Set(selection.keyResultIds ?? []);
 
   const selectedEmployees = filterBulkCatalogEmployees(catalog, {
     sectionId: selection.sectionId,
@@ -186,7 +229,7 @@ export function buildBulkScorePreview(
       .flatMap((goal) =>
         goal.keyResults
           .filter((keyResult) => keyResult.scoreType === 'objective')
-          .filter((keyResult) => selectedKeyResultIds.size === 0 || selectedKeyResultIds.has(keyResult.id))
+          .filter((keyResult) => selection.keyResultIds === null || selectedKeyResultIds.has(keyResult.id))
           .map((keyResult) => ({
             employeeId: employee.id,
             employeeName: employee.name,
@@ -202,7 +245,10 @@ export function buildBulkScorePreview(
             points: keyResult.points,
             scoreType: keyResult.scoreType,
             reviewScore: keyResult.reviewScore,
-            canScore: employee.canScore
+            canScore: employee.canScore,
+            proofCount: keyResult.proofCount,
+            hasProofs: keyResult.hasProofs,
+            isProofMissing: keyResult.isProofMissing
           }))
       )
   );

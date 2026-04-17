@@ -13,11 +13,13 @@ describe('Employee proof upload', () => {
   });
 
   afterAll(async () => {
-    await app.close();
+    if (app) {
+      await app.close();
+    }
     await closeTestDatabase();
   });
 
-  it('uploads a proof, returns it in detail, and allows leader download access', async () => {
+  it('uploads a proof, auto-completes the key result, and allows leader download access', async () => {
     const employeeAgent = await loginAsEmployee(app);
     const listResponse = await employeeAgent.get('/api/employee/okr?year=2026&quarter=1').expect(200);
     const goalId = listResponse.body.goals[0].id as string;
@@ -34,6 +36,10 @@ describe('Employee proof upload', () => {
     const refreshedKeyResult = refreshed.body.keyResults.find((entry: { id: string }) => entry.id === keyResult.id);
     const uploadedProof = refreshedKeyResult.proofs.find((entry: { fileName: string }) => entry.fileName === 'quarter-proof.txt');
 
+    expect(refreshedKeyResult.completionState).toBe('completed');
+    expect(refreshedKeyResult.hasProofs).toBe(true);
+    expect(refreshedKeyResult.isProofMissing).toBe(false);
+    expect(refreshedKeyResult.latestProofUploadedAt).toEqual(expect.any(String));
     expect(uploadedProof).toBeDefined();
     expect(uploadedProof.previewUrl).toContain('/api/internal/proofs/');
     expect(uploadedProof.downloadUrl).toBe(`/employee/proofs/${uploadedProof.id}/download`);

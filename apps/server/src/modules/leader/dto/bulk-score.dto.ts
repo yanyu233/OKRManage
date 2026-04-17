@@ -45,4 +45,8 @@ export class BulkScoreDto {
   @IsOptional()
   @IsBoolean()
   excludeTemplateGoals?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  allowMissingProofs?: boolean;
 }

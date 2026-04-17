@@ -11,22 +11,13 @@ describe('Leader workbench', () => {
   });
 
   afterAll(async () => {
-    await app.close();
+    if (app) {
+      await app.close();
+    }
     await closeTestDatabase();
   });
 
-  it('returns all employees for leaders, keeps out-of-scope users readonly, and exposes bulk preview catalog', async () => {
-    const employee = await loginAsEmployee(app);
-    const templates = await employee.get('/api/employee/goal-templates?year=2026&quarter=1').expect(200);
-    await employee
-      .post('/api/employee/goal-templates/import')
-      .send({
-        year: 2026,
-        quarter: 1,
-        templateIds: [templates.body.templates[0].id]
-      })
-      .expect(201);
-
+  it('returns proof readiness metadata, keeps out-of-scope users readonly, and exposes bulk preview catalog', async () => {
     const agent = await loginAsSectionLeader(app);
     const response = await agent.get('/api/leader/workbench?year=2026&quarter=1').expect(200);
     const zhang = response.body.employees.find((entry: { name: string }) => entry.name === '张晨');
@@ -50,6 +41,16 @@ describe('Leader workbench', () => {
     );
     expect(zhang).toBeTruthy();
     expect(liLei).toBeTruthy();
+    expect(zhang).toEqual(
+      expect.objectContaining({
+        canScore: true,
+        missingProofKeyResultCount: expect.any(Number)
+      })
+    );
+
+    const zhangResponse = await agent
+      .get(`/api/leader/workbench?year=2026&quarter=1&employeeId=${zhang.id}`)
+      .expect(200);
 
     const selectedResponse = await agent
       .get(`/api/leader/workbench?year=2026&quarter=1&employeeId=${liLei.id}`)
@@ -70,7 +71,28 @@ describe('Leader workbench', () => {
       expect.arrayContaining([
         expect.objectContaining({
           code: 'KR1',
-          canScore: false
+          canScore: false,
+          hasProofs: expect.any(Boolean),
+          isProofMissing: expect.any(Boolean)
+        })
+      ])
+    );
+
+    expect(zhangResponse.body.selectedGoal).toEqual(
+      expect.objectContaining({
+        status: 'pending-review',
+        missingProofKeyResultCount: expect.any(Number)
+      })
+    );
+    expect(zhangResponse.body.selectedGoal.keyResults).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          hasProofs: true,
+          isProofMissing: false
+        }),
+        expect.objectContaining({
+          hasProofs: false,
+          isProofMissing: true
         })
       ])
     );
@@ -82,10 +104,12 @@ describe('Leader workbench', () => {
           name: '张晨',
           goals: expect.arrayContaining([
             expect.objectContaining({
-              isTemplateGoal: true,
               keyResults: expect.arrayContaining([
                 expect.objectContaining({
-                  scoreType: expect.any(String)
+                  scoreType: expect.any(String),
+                  hasProofs: expect.any(Boolean),
+                  isProofMissing: expect.any(Boolean),
+                  proofCount: expect.any(Number)
                 })
               ])
             })

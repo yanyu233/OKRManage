@@ -1,0 +1,344 @@
+.all-okr-page {
+  width: 100%;
+}
+
+.all-okr-toolbar-card,
+.all-okr-summary-card,
+.all-okr-employee-card,
+.all-okr-goal-card {
+  border-radius: 18px;
+  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.08);
+}
+
+.all-okr-toolbar-card .ant-card-body {
+  padding: 16px 18px !important;
+}
+
+.all-okr-employee-card .ant-card-body {
+  padding: 14px 16px !important;
+}
+
+.all-okr-goal-card .ant-card-body {
+  padding: 12px 14px !important;
+}
+
+.all-okr-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(540px, 0.95fr);
+  align-items: stretch;
+  gap: 14px;
+}
+
+.all-okr-toolbar__main,
+.all-okr-toolbar__side {
+  min-width: 0;
+}
+
+.all-okr-toolbar__main {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.all-okr-toolbar__side {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  justify-items: end;
+}
+
+.all-okr-toolbar__period-row,
+.all-okr-toolbar__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  width: 100%;
+}
+
+.all-okr-toolbar__filter-stack {
+  display: grid;
+  gap: 10px;
+  justify-items: end;
+  width: 100%;
+}
+
+.all-okr-toolbar__title.ant-typography {
+  margin-bottom: 4px;
+}
+
+.all-okr-toolbar__description.ant-typography {
+  margin-bottom: 0;
+  font-size: 13px;
+}
+
+.all-okr-toolbar__search.page-toolbar__search {
+  width: 100%;
+}
+
+.all-okr-toolbar__checkbox {
+  align-self: start;
+}
+
+.all-okr-toolbar__select {
+  width: 180px;
+  min-width: 180px;
+  max-width: 100%;
+}
+
+.all-okr-toolbar__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  width: auto;
+}
+
+.all-okr-summary-grid,
+.all-okr-employee-list,
+.all-okr-goal-list,
+.all-okr-kr-list {
+  display: grid;
+  gap: 12px;
+}
+
+.all-okr-summary-grid {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.all-okr-employee-list {
+  gap: 10px;
+}
+
+.all-okr-summary-card .ant-card-body {
+  padding: 12px 14px !important;
+}
+
+.all-okr-summary-card .ant-statistic {
+  min-height: auto;
+}
+
+.all-okr-summary-card .ant-statistic-title {
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.all-okr-summary-card .ant-statistic-content {
+  font-size: 24px;
+  line-height: 1.1;
+}
+
+.all-okr-employee-card {
+  border-radius: 16px;
+}
+
+.all-okr-employee-card--expanded {
+  box-shadow: 0 16px 34px rgba(37, 99, 235, 0.12);
+}
+
+.all-okr-employee-card__trigger {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.all-okr-employee-card__content,
+.all-okr-goal-card__content,
+.all-okr-kr-row__main {
+  min-width: 0;
+}
+
+.all-okr-employee-card__title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.all-okr-employee-card__title.ant-typography,
+.all-okr-goal-card__title.ant-typography {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.all-okr-employee-card__title.ant-typography {
+  line-height: 1.16;
+}
+
+.all-okr-employee-card__position {
+  display: inline-flex;
+  align-items: center;
+  padding-top: 1px;
+  font-size: 12px;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.all-okr-employee-card__subtitle.ant-typography,
+.all-okr-goal-card__description.ant-typography,
+.all-okr-kr-row__description.ant-typography {
+  margin-top: 0;
+  margin-bottom: 0;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.all-okr-employee-card__meta {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.all-okr-employee-card__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.08);
+  color: #1d4ed8;
+  flex: 0 0 auto;
+}
+
+.all-okr-chip-row {
+  gap: 5px !important;
+}
+
+.all-okr-chip-row .ant-tag {
+  margin-inline-end: 0;
+  padding-inline: 7px;
+  line-height: 18px;
+  font-size: 11px;
+  border-radius: 999px;
+}
+
+.all-okr-employee-card__details {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(226, 232, 240, 0.92);
+}
+
+.all-okr-goal-card {
+  border-radius: 14px;
+  background: rgba(248, 250, 252, 0.92);
+  box-shadow: none;
+}
+
+.all-okr-goal-list {
+  gap: 8px;
+}
+
+.all-okr-goal-card__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+}
+
+.all-okr-goal-card__content {
+  padding-top: 0;
+}
+
+.all-okr-goal-card__title.ant-typography {
+  line-height: 1.18;
+}
+
+.all-okr-goal-card__description.ant-typography {
+  margin-top: 2px;
+}
+
+.all-okr-kr-list {
+  margin-top: 8px;
+  gap: 8px;
+}
+
+.all-okr-kr-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.all-okr-kr-row__title {
+  display: inline-block;
+  margin-bottom: 1px;
+  line-height: 1.2;
+}
+
+.all-okr-kr-row__title + .all-okr-kr-row__description.ant-typography {
+  margin-left: 6px;
+}
+
+.all-okr-kr-row__tags {
+  justify-content: flex-end;
+}
+
+@media (max-width: 992px) {
+  .all-okr-toolbar-card .ant-card-body,
+  .all-okr-employee-card .ant-card-body {
+    padding: 14px !important;
+  }
+
+  .all-okr-goal-card .ant-card-body {
+    padding: 12px !important;
+  }
+
+  .all-okr-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .all-okr-toolbar__side {
+    justify-items: start;
+  }
+
+  .all-okr-toolbar__period-row,
+  .all-okr-toolbar__filter-stack,
+  .all-okr-toolbar__footer,
+  .all-okr-toolbar__actions,
+  .all-okr-employee-card__meta,
+  .all-okr-goal-card__header,
+  .all-okr-kr-row,
+  .all-okr-employee-card__trigger {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .all-okr-toolbar__period-row,
+  .all-okr-toolbar__footer {
+    justify-content: flex-start;
+  }
+
+  .all-okr-toolbar__filter-stack {
+    justify-items: start;
+  }
+
+  .all-okr-toolbar__actions {
+    justify-content: flex-start;
+  }
+
+  .all-okr-toolbar__select {
+    width: min(180px, 100%) !important;
+    min-width: 0;
+    max-width: 180px;
+  }
+
+  .all-okr-employee-card__meta,
+  .all-okr-goal-card__header,
+  .all-okr-kr-row__tags {
+    justify-content: flex-start;
+  }
+}

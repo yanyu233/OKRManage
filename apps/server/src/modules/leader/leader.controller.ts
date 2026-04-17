@@ -54,6 +54,21 @@ export class LeaderController {
     }
   }
 
+  @Get('all-okr')
+  async getAllOkr(
+    @Req() request: Request,
+    @Query('year', ParseIntPipe) year: number,
+    @Query('quarter', ParseIntPipe) quarter: number
+  ) {
+    const actor = await this.requireAuthenticatedUser(request);
+
+    try {
+      return await this.leaderService.getAllOkr(actor, year, quarter);
+    } catch (error) {
+      this.rethrowDomainError(error);
+    }
+  }
+
   @Put('key-results/:krId/score')
   async updateKeyResultScore(
     @Req() request: Request,
@@ -85,7 +100,8 @@ export class LeaderController {
         keyResultIds: payload.keyResultIds ?? [],
         comment: payload.comment ?? null,
         overwriteExisting: payload.overwriteExisting ?? false,
-        excludeTemplateGoals: payload.excludeTemplateGoals ?? false
+        excludeTemplateGoals: payload.excludeTemplateGoals ?? false,
+        allowMissingProofs: payload.allowMissingProofs ?? false
       });
     } catch (error) {
       this.rethrowDomainError(error);

@@ -35,6 +35,8 @@ describe('Leader public notice export', () => {
     expect(documentXml).toContain('张晨');
     expect(documentXml).toContain('EMP-0001');
     expect(documentXml).toContain('平台产品经理');
+    expect(documentXml).toContain('A+');
+    expect(documentXml).toContain('B');
   });
 
   it('exports annual public notice as a docx document', async () => {
@@ -54,6 +56,7 @@ describe('Leader public notice export', () => {
     expect(documentXml).toContain('王敏');
     expect(documentXml).toContain('EMP-0002');
     expect(documentXml).toContain('平台研发工程师');
+    expect(documentXml).toContain('A+');
   });
 });
 

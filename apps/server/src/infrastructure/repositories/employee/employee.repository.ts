@@ -24,7 +24,10 @@ export type EmployeeKeyResultRecord = {
   completionState: string;
   reviewScore: number | null;
   reviewComment: string | null;
+  hasProofs: boolean;
+  isProofMissing: boolean;
   proofCount: number;
+  latestProofUploadedAt: string | null;
   proofs: EmployeeProofRecord[];
 };
 
@@ -37,6 +40,7 @@ export type EmployeeGoalSummaryRecord = {
   totalPoints: number;
   keyResultCount: number;
   completedKeyResultCount: number;
+  missingProofKeyResultCount: number;
   proofCount: number;
   currentScore: number | null;
 };
@@ -77,6 +81,7 @@ export type EmployeeQuarterSummaryRecord = {
   goalCount: number;
   keyResultCount: number;
   completedKeyResultCount: number;
+  missingProofKeyResultCount: number;
   proofCount: number;
   quarterScore: number | null;
 };

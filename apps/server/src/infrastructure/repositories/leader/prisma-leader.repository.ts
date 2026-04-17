@@ -6,7 +6,12 @@ import { DomainValidationError } from '../../../shared/errors/domain-validation.
 import { AuthUser } from '../../../shared/types/auth-user';
 import { RuntimeConfigService } from '../../../modules/config/runtime-config.service';
 import { buildProofDownloadUrl, buildProofPreviewUrl } from '../../../shared/proof/proof-links';
+import { shouldAdvanceGoalsToPendingReview } from '../../../shared/time/goal-review-window';
 import {
+  AllOkrEmployeeRecord,
+  AllOkrGoalRecord,
+  AllOkrKeyResultRecord,
+  AllOkrRecord,
   LeaderAnnualPublicNoticeRecord,
   LeaderAnnualQuarterScoreRecord,
   LeaderAnnualRankingEntryRecord,
@@ -83,6 +88,17 @@ export class PrismaLeaderRepository implements LeaderRepository {
     private readonly runtimeConfig: RuntimeConfigService
   ) {}
 
+  async getAllOkr(year: number, quarter: number): Promise<AllOkrRecord> {
+    await this.advanceQuarterGoalsToReviewIfNeeded(year, quarter);
+    const employees = await this.getVisibleEmployees(year, quarter);
+
+    return {
+      year,
+      quarter,
+      employees: employees.map((employee) => this.toAllOkrEmployeeRecord(employee))
+    };
+  }
+
   async getWorkbench(
     actor: AuthUser,
     year: number,
@@ -90,6 +106,7 @@ export class PrismaLeaderRepository implements LeaderRepository {
     employeeId?: string | null,
     goalId?: string | null
   ): Promise<LeaderWorkbenchRecord> {
+    await this.advanceQuarterGoalsToReviewIfNeeded(year, quarter);
     const employees = await this.getVisibleEmployees(year, quarter);
     const scoringScope = await this.getScoringScope(actor);
     const employeeSummaries = employees.map((employee) => this.toEmployeeSummary(employee, canScoreEmployee(employee, scoringScope)));
@@ -285,6 +302,14 @@ export class PrismaLeaderRepository implements LeaderRepository {
         skipped.push({
           keyResultId: entry.keyResult.id,
           reason: 'subjective-only'
+        });
+        return false;
+      }
+
+      if (!input.allowMissingProofs && entry.keyResult.proofs.length === 0) {
+        skipped.push({
+          keyResultId: entry.keyResult.id,
+          reason: 'proof-missing'
         });
         return false;
       }
@@ -502,6 +527,7 @@ export class PrismaLeaderRepository implements LeaderRepository {
     reviewGroupId?: string | null,
     employeeId?: string | null
   ): Promise<LeaderRankingRecord> {
+    await this.advanceQuarterGoalsToReviewIfNeeded(year, quarter);
     const employees = await this.getVisibleEmployees(year, quarter);
     const reviewGroups = await this.listVisibleReviewGroups();
     const selectedReviewGroup = this.pickReviewGroup(reviewGroups, reviewGroupId);
@@ -559,6 +585,7 @@ export class PrismaLeaderRepository implements LeaderRepository {
     reviewGroupId?: string | null
   ): Promise<LeaderQuarterlyPublicNoticeRecord> {
     void actor;
+    await this.advanceQuarterGoalsToReviewIfNeeded(year, quarter);
     const employees = await this.getVisibleEmployees(year, quarter);
     const filteredEmployees = reviewGroupId
       ? employees.filter((employee) => employee.reviewGroupId === reviewGroupId)
@@ -918,10 +945,13 @@ export class PrismaLeaderRepository implements LeaderRepository {
   private toEmployeeSummary(employee: EmployeeWithQuarterData, canScore: boolean): LeaderEmployeeSummaryRecord {
     const keyResults = employee.ownedGoals.flatMap((goal) => goal.keyResults);
     const scoredKeyResults = keyResults.filter((keyResult) => keyResult.reviewScore !== null);
+    const missingProofKeyResultCount = keyResults.filter((keyResult) => keyResult.proofs.length === 0).length;
 
     return {
       id: employee.id,
       name: employee.name,
+      positionName: employee.positionName ?? null,
+      departmentName: employee.department?.name ?? null,
       sectionId: employee.sectionId ?? null,
       sectionName: employee.section?.name ?? null,
       reviewGroupId: employee.reviewGroupId ?? null,
@@ -930,9 +960,37 @@ export class PrismaLeaderRepository implements LeaderRepository {
       goalCount: employee.ownedGoals.length,
       keyResultCount: keyResults.length,
       scoredKeyResultCount: scoredKeyResults.length,
+      missingProofKeyResultCount,
       proofCount: keyResults.reduce((sum, keyResult) => sum + keyResult.proofs.length, 0),
       quarterScore: scoreFromKeyResults(keyResults),
       status: statusFromCounts(scoredKeyResults.length, keyResults.length)
+    };
+  }
+
+  private toAllOkrEmployeeRecord(employee: EmployeeWithQuarterData): AllOkrEmployeeRecord {
+    const keyResults = employee.ownedGoals.flatMap((goal) => goal.keyResults);
+    const completedKeyResultCount = keyResults.filter((keyResult) => keyResult.completionState === 'completed').length;
+    const scoredKeyResultCount = keyResults.filter((keyResult) => keyResult.reviewScore !== null).length;
+    const missingProofKeyResultCount = keyResults.filter((keyResult) => keyResult.proofs.length === 0).length;
+
+    return {
+      id: employee.id,
+      name: employee.name,
+      positionName: employee.positionName ?? null,
+      departmentName: employee.department?.name ?? null,
+      sectionId: employee.sectionId ?? null,
+      sectionName: employee.section?.name ?? null,
+      reviewGroupId: employee.reviewGroupId ?? null,
+      reviewGroupName: employee.reviewGroup?.name ?? null,
+      goalCount: employee.ownedGoals.length,
+      keyResultCount: keyResults.length,
+      completedKeyResultCount,
+      scoredKeyResultCount,
+      missingProofKeyResultCount,
+      proofCount: keyResults.reduce((sum, keyResult) => sum + keyResult.proofs.length, 0),
+      quarterScore: scoreFromKeyResults(keyResults),
+      status: statusFromCounts(scoredKeyResultCount, keyResults.length),
+      goals: employee.ownedGoals.map((goal) => this.toAllOkrGoalRecord(goal))
     };
   }
 
@@ -940,6 +998,7 @@ export class PrismaLeaderRepository implements LeaderRepository {
     const keyResults = goal.keyResults;
     const scoredKeyResultCount = keyResults.filter((keyResult) => keyResult.reviewScore !== null).length;
     const goalCanScore = canScore && goal.status === 'pending-review';
+    const missingProofKeyResultCount = keyResults.filter((keyResult) => keyResult.proofs.length === 0).length;
 
     return {
       id: goal.id,
@@ -952,8 +1011,32 @@ export class PrismaLeaderRepository implements LeaderRepository {
       isTemplateGoal: goal.importedTemplates.length > 0,
       keyResultCount: keyResults.length,
       scoredKeyResultCount,
+      missingProofKeyResultCount,
       proofCount: keyResults.reduce((sum, keyResult) => sum + keyResult.proofs.length, 0),
       currentScore: scoreFromKeyResults(keyResults)
+    };
+  }
+
+  private toAllOkrGoalRecord(goal: GoalWithQuarterData): AllOkrGoalRecord {
+    const completedKeyResultCount = goal.keyResults.filter((keyResult) => keyResult.completionState === 'completed').length;
+    const scoredKeyResultCount = goal.keyResults.filter((keyResult) => keyResult.reviewScore !== null).length;
+    const missingProofKeyResultCount = goal.keyResults.filter((keyResult) => keyResult.proofs.length === 0).length;
+
+    return {
+      id: goal.id,
+      code: goal.code,
+      name: goal.name,
+      description: goal.description,
+      status: goal.status,
+      totalPoints: goal.totalPoints,
+      isTemplateGoal: goal.importedTemplates.length > 0,
+      keyResultCount: goal.keyResults.length,
+      completedKeyResultCount,
+      scoredKeyResultCount,
+      missingProofKeyResultCount,
+      proofCount: goal.keyResults.reduce((sum, keyResult) => sum + keyResult.proofs.length, 0),
+      currentScore: scoreFromKeyResults(goal.keyResults),
+      keyResults: goal.keyResults.map((keyResult) => this.toAllOkrKeyResultRecord(keyResult))
     };
   }
 
@@ -985,7 +1068,10 @@ export class PrismaLeaderRepository implements LeaderRepository {
           name: keyResult.name,
           points: keyResult.points,
           scoreType: keyResult.scoreType,
-          reviewScore: keyResult.reviewScore
+          reviewScore: keyResult.reviewScore,
+          proofCount: keyResult.proofs.length,
+          hasProofs: keyResult.proofs.length > 0,
+          isProofMissing: keyResult.proofs.length === 0
         }))
       }))
     };
@@ -995,6 +1081,8 @@ export class PrismaLeaderRepository implements LeaderRepository {
     keyResult: KeyResultWithProofs,
     canScore = true
   ): LeaderKeyResultRecord {
+    const latestProof = keyResult.proofs[0] ?? null;
+
     return {
       id: keyResult.id,
       code: keyResult.code,
@@ -1006,8 +1094,31 @@ export class PrismaLeaderRepository implements LeaderRepository {
       completionState: keyResult.completionState,
       reviewScore: keyResult.reviewScore,
       reviewComment: keyResult.reviewComment,
+      hasProofs: keyResult.proofs.length > 0,
+      isProofMissing: keyResult.proofs.length === 0,
       proofCount: keyResult.proofs.length,
+      latestProofUploadedAt: latestProof?.uploadedAt.toISOString() ?? null,
       proofs: keyResult.proofs.map((proof) => this.toProofRecord(proof))
+    };
+  }
+
+  private toAllOkrKeyResultRecord(keyResult: KeyResultWithProofs): AllOkrKeyResultRecord {
+    const latestProof = keyResult.proofs[0] ?? null;
+
+    return {
+      id: keyResult.id,
+      code: keyResult.code,
+      name: keyResult.name,
+      description: keyResult.description,
+      points: keyResult.points,
+      scoreType: keyResult.scoreType,
+      completionState: keyResult.completionState,
+      reviewScore: keyResult.reviewScore,
+      reviewComment: keyResult.reviewComment,
+      hasProofs: keyResult.proofs.length > 0,
+      isProofMissing: keyResult.proofs.length === 0,
+      proofCount: keyResult.proofs.length,
+      latestProofUploadedAt: latestProof?.uploadedAt.toISOString() ?? null
     };
   }
 
@@ -1199,6 +1310,23 @@ export class PrismaLeaderRepository implements LeaderRepository {
 
     return proof;
   }
+
+  private async advanceQuarterGoalsToReviewIfNeeded(year: number, quarter: number) {
+    if (!shouldAdvanceGoalsToPendingReview(year, quarter)) {
+      return;
+    }
+
+    await this.prisma.goal.updateMany({
+      where: {
+        year,
+        quarter,
+        status: 'confirmed'
+      },
+      data: {
+        status: 'pending-review'
+      }
+    });
+  }
 }
 
 function scoreFromKeyResults(
@@ -1328,15 +1456,11 @@ function comparePublicNoticeEntry(left: LeaderPublicNoticeEntryRecord, right: Le
 function gradeCodeToNoticeLabel(gradeCode: string | null | undefined) {
   switch (gradeCode) {
     case 'A+':
-      return '五星';
     case 'A':
-      return '四星';
     case 'B':
-      return '三星';
     case 'C':
-      return '二星+';
     case 'D':
-      return '二星';
+      return gradeCode;
     default:
       return null;
   }
@@ -1348,18 +1472,18 @@ function scoreToNoticeLabel(score: number | null) {
   }
 
   if (score >= 90) {
-    return '五星';
+    return 'A+';
   }
   if (score >= 80) {
-    return '四星';
+    return 'A';
   }
   if (score >= 70) {
-    return '三星';
+    return 'B';
   }
   if (score >= 60) {
-    return '二星+';
+    return 'C';
   }
-  return '二星';
+  return 'D';
 }
 
 function canScoreEmployee(

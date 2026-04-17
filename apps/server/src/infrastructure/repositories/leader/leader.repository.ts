@@ -27,7 +27,10 @@ export type LeaderKeyResultRecord = {
   completionState: string;
   reviewScore: number | null;
   reviewComment: string | null;
+  hasProofs: boolean;
+  isProofMissing: boolean;
   proofCount: number;
+  latestProofUploadedAt: string | null;
   proofs: LeaderProofRecord[];
 };
 
@@ -42,6 +45,7 @@ export type LeaderGoalSummaryRecord = {
   isTemplateGoal: boolean;
   keyResultCount: number;
   scoredKeyResultCount: number;
+  missingProofKeyResultCount: number;
   proofCount: number;
   currentScore: number | null;
 };
@@ -53,6 +57,8 @@ export type LeaderGoalDetailRecord = LeaderGoalSummaryRecord & {
 export type LeaderEmployeeSummaryRecord = {
   id: string;
   name: string;
+  positionName: string | null;
+  departmentName: string | null;
   sectionId: string | null;
   sectionName: string | null;
   reviewGroupId: string | null;
@@ -61,9 +67,69 @@ export type LeaderEmployeeSummaryRecord = {
   goalCount: number;
   keyResultCount: number;
   scoredKeyResultCount: number;
+  missingProofKeyResultCount: number;
   proofCount: number;
   quarterScore: number | null;
   status: string;
+};
+
+export type AllOkrKeyResultRecord = {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  points: number;
+  scoreType: LeaderScoreType;
+  completionState: string;
+  reviewScore: number | null;
+  reviewComment: string | null;
+  hasProofs: boolean;
+  isProofMissing: boolean;
+  proofCount: number;
+  latestProofUploadedAt: string | null;
+};
+
+export type AllOkrGoalRecord = {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  status: string;
+  totalPoints: number;
+  isTemplateGoal: boolean;
+  keyResultCount: number;
+  completedKeyResultCount: number;
+  scoredKeyResultCount: number;
+  missingProofKeyResultCount: number;
+  proofCount: number;
+  currentScore: number | null;
+  keyResults: AllOkrKeyResultRecord[];
+};
+
+export type AllOkrEmployeeRecord = {
+  id: string;
+  name: string;
+  positionName: string | null;
+  departmentName: string | null;
+  sectionId: string | null;
+  sectionName: string | null;
+  reviewGroupId: string | null;
+  reviewGroupName: string | null;
+  goalCount: number;
+  keyResultCount: number;
+  completedKeyResultCount: number;
+  scoredKeyResultCount: number;
+  missingProofKeyResultCount: number;
+  proofCount: number;
+  quarterScore: number | null;
+  status: string;
+  goals: AllOkrGoalRecord[];
+};
+
+export type AllOkrRecord = {
+  year: number;
+  quarter: number;
+  employees: AllOkrEmployeeRecord[];
 };
 
 export type LeaderBulkCatalogKeyResultRecord = {
@@ -73,6 +139,9 @@ export type LeaderBulkCatalogKeyResultRecord = {
   points: number;
   scoreType: LeaderScoreType;
   reviewScore: number | null;
+  proofCount: number;
+  hasProofs: boolean;
+  isProofMissing: boolean;
 };
 
 export type LeaderBulkCatalogGoalRecord = {
@@ -224,7 +293,8 @@ export type LeaderBulkScoreSkipReason =
   | 'out-of-scope'
   | 'already-scored'
   | 'subjective-only'
-  | 'goal-status-blocked';
+  | 'goal-status-blocked'
+  | 'proof-missing';
 
 export type LeaderBulkScoreSkipRecord = {
   keyResultId: string;
@@ -242,6 +312,7 @@ export type LeaderBulkScoreInput = {
   comment: string | null;
   overwriteExisting: boolean;
   excludeTemplateGoals: boolean;
+  allowMissingProofs: boolean;
 };
 
 export type LeaderBulkScoreResult = {
@@ -315,6 +386,7 @@ export type LeaderKnowledgeProofDownloadRecord = {
 };
 
 export interface LeaderRepository {
+  getAllOkr(year: number, quarter: number): Promise<AllOkrRecord>;
   getWorkbench(
     actor: AuthUser,
     year: number,

@@ -5,6 +5,7 @@ import { AuthUser } from '../../../shared/types/auth-user';
 import { DomainValidationError } from '../../../shared/errors/domain-validation.error';
 import { RuntimeConfigService } from '../../../modules/config/runtime-config.service';
 import { buildProofDownloadUrl, buildProofPreviewUrl } from '../../../shared/proof/proof-links';
+import { shouldAdvanceGoalsToPendingReview } from '../../../shared/time/goal-review-window';
 import {
   EmployeeCompletionUpdateResult,
   EmployeeCreateGoalInput,
@@ -65,6 +66,7 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
   ) {}
 
   async getQuarterOverview(actor: AuthUser, year: number, quarter: number): Promise<EmployeeQuarterRecord> {
+    await this.advanceQuarterGoalsToReviewIfNeeded(year, quarter);
     const employee = await this.requireEmployeeQuarter(actor.id, year, quarter);
 
     return {
@@ -508,6 +510,20 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
   }
 
   async getGoalDetail(actor: AuthUser, goalId: string): Promise<EmployeeGoalDetailRecord> {
+    const goalMeta = await this.prisma.goal.findUnique({
+      where: { id: goalId },
+      select: {
+        year: true,
+        quarter: true
+      }
+    });
+
+    if (!goalMeta) {
+      throw new NotFoundException('goal not found');
+    }
+
+    await this.advanceQuarterGoalsToReviewIfNeeded(goalMeta.year, goalMeta.quarter);
+
     const goal = await this.prisma.goal.findUnique({
       where: { id: goalId },
       include: {
@@ -647,6 +663,10 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
       throw new DomainValidationError('key result completion can only be updated before review starts');
     }
 
+    if (completionState === 'completed' && keyResult.proofs.length === 0) {
+      throw new DomainValidationError('key result requires at least one proof before marking completed');
+    }
+
     const updated = await this.prisma.keyResult.update({
       where: { id: krId },
       data: {
@@ -675,35 +695,46 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
     krId: string,
     input: { fileName: string; storageKey: string; fileSize: number; note: string | null }
   ): Promise<EmployeeProofUploadResult> {
-    const keyResult = await this.prisma.keyResult.findUnique({
-      where: { id: krId },
-      include: {
-        goal: true
+    return this.prisma.$transaction(async (transaction) => {
+      const keyResult = await transaction.keyResult.findUnique({
+        where: { id: krId },
+        include: {
+          goal: true
+        }
+      });
+
+      if (!keyResult) {
+        throw new NotFoundException('key result not found');
       }
-    });
 
-    if (!keyResult) {
-      throw new NotFoundException('key result not found');
-    }
+      if (keyResult.goal.ownerUserId !== actor.id) {
+        throw new ForbiddenException('employee scope mismatch');
+      }
 
-    if (keyResult.goal.ownerUserId !== actor.id) {
-      throw new ForbiddenException('employee scope mismatch');
-    }
+      const proof = await transaction.proof.create({
+        data: {
+          keyResultId: krId,
+          fileName: input.fileName,
+          fileUrl: input.storageKey,
+          fileSize: input.fileSize,
+          note: input.note
+        }
+      });
 
-    const proof = await this.prisma.proof.create({
-      data: {
+      if (keyResult.completionState !== 'completed') {
+        await transaction.keyResult.update({
+          where: { id: krId },
+          data: {
+            completionState: 'completed'
+          }
+        });
+      }
+
+      return {
         keyResultId: krId,
-        fileName: input.fileName,
-        fileUrl: input.storageKey,
-        fileSize: input.fileSize,
-        note: input.note
-      }
+        proof: this.toProofRecord(proof)
+      };
     });
-
-    return {
-      keyResultId: krId,
-      proof: this.toProofRecord(proof)
-    };
   }
 
   async getProofDownload(actor: AuthUser, proofId: string): Promise<ProofDownloadRecord> {
@@ -824,6 +855,7 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
 
   private toEmployeeQuarterSummary(employee: EmployeeWithQuarterData): EmployeeQuarterSummaryRecord {
     const keyResults = employee.ownedGoals.flatMap((goal) => goal.keyResults);
+    const missingProofKeyResultCount = keyResults.filter((keyResult) => keyResult.proofs.length === 0).length;
 
     return {
       id: employee.id,
@@ -833,12 +865,15 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
       goalCount: employee.ownedGoals.length,
       keyResultCount: keyResults.length,
       completedKeyResultCount: keyResults.filter((keyResult) => keyResult.completionState === 'completed').length,
+      missingProofKeyResultCount,
       proofCount: keyResults.reduce((sum, keyResult) => sum + keyResult.proofs.length, 0),
       quarterScore: scoreFromKeyResults(keyResults)
     };
   }
 
   private toGoalSummary(goal: GoalWithQuarterData): EmployeeGoalSummaryRecord {
+    const missingProofKeyResultCount = goal.keyResults.filter((keyResult) => keyResult.proofs.length === 0).length;
+
     return {
       id: goal.id,
       code: goal.code,
@@ -848,6 +883,7 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
       totalPoints: goal.totalPoints,
       keyResultCount: goal.keyResults.length,
       completedKeyResultCount: goal.keyResults.filter((keyResult) => keyResult.completionState === 'completed').length,
+      missingProofKeyResultCount,
       proofCount: goal.keyResults.reduce((sum, keyResult) => sum + keyResult.proofs.length, 0),
       currentScore: scoreFromKeyResults(goal.keyResults)
     };
@@ -874,6 +910,8 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
   }
 
   private toKeyResultRecord(keyResult: KeyResultWithProofs): EmployeeKeyResultRecord {
+    const latestProof = keyResult.proofs[0] ?? null;
+
     return {
       id: keyResult.id,
       code: keyResult.code,
@@ -884,7 +922,10 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
       completionState: keyResult.completionState,
       reviewScore: keyResult.reviewScore,
       reviewComment: keyResult.reviewComment,
+      hasProofs: keyResult.proofs.length > 0,
+      isProofMissing: keyResult.proofs.length === 0,
       proofCount: keyResult.proofs.length,
+      latestProofUploadedAt: latestProof?.uploadedAt.toISOString() ?? null,
       proofs: keyResult.proofs.map((proof) => this.toProofRecord(proof))
     };
   }
@@ -957,6 +998,23 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
         }
       });
     }
+  }
+
+  private async advanceQuarterGoalsToReviewIfNeeded(year: number, quarter: number) {
+    if (!shouldAdvanceGoalsToPendingReview(year, quarter)) {
+      return;
+    }
+
+    await this.prisma.goal.updateMany({
+      where: {
+        year,
+        quarter,
+        status: 'confirmed'
+      },
+      data: {
+        status: 'pending-review'
+      }
+    });
   }
 
   private async assertQuarterPointBudget(

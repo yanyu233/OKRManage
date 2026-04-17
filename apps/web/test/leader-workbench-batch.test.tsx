@@ -1,8 +1,9 @@
 import { App as AntApp } from 'antd';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LeaderWorkbenchPage } from '../src/modules/leader/LeaderWorkbenchPage';
+import { bulkLeaderKrScore } from '../src/shared/api/leader';
 
 const T = {
   batchTitle: '\u5ba2\u89c2\u9879\u6279\u91cf\u8bc4\u5206',
@@ -14,6 +15,9 @@ const T = {
   selectedGoals: '\u5df2\u9009\u76ee\u6807',
   selectedKrs: '\u5df2\u9009\u5173\u952e\u7ed3\u679c',
   batchSave: '\u6279\u91cf\u8d4b\u6ee1\u5206',
+  batchMissingProofTitle: '\u6709 1 \u6761\u5173\u952e\u7ed3\u679c\u672a\u63d0\u4ea4\u6750\u6599\uff0c\u9ed8\u8ba4\u4e0d\u4f1a\u53c2\u4e0e\u6279\u91cf\u8d4b\u6ee1\u5206',
+  batchAllowMissingProofs: '\u5141\u8bb8\u5bf9\u672a\u63d0\u4ea4\u6750\u6599\u7684\u5173\u952e\u7ed3\u679c\u7ee7\u7eed\u6279\u91cf\u8d4b\u6ee1\u5206',
+  removeTemplateKr: '\u79fb\u9664 KR1 \u6a21\u677f\u5ba2\u89c2\u9879',
   employeeName: '\u5f20\u6668',
   readonlyEmployee: '\u674e\u96f7',
   employeeGoal1: '\u5f20\u6668 / O1 \u5e73\u53f0\u6a21\u677f\u76ee\u6807',
@@ -55,6 +59,7 @@ vi.mock('../src/shared/api/leader', () => ({
         goalCount: 2,
         keyResultCount: 6,
         scoredKeyResultCount: 3,
+        missingProofKeyResultCount: 2,
         proofCount: 2,
         quarterScore: 63.6,
         status: 'in-progress'
@@ -70,6 +75,7 @@ vi.mock('../src/shared/api/leader', () => ({
         goalCount: 1,
         keyResultCount: 2,
         scoredKeyResultCount: 0,
+        missingProofKeyResultCount: 2,
         proofCount: 0,
         quarterScore: null,
         status: 'pending'
@@ -86,6 +92,7 @@ vi.mock('../src/shared/api/leader', () => ({
       goalCount: 2,
       keyResultCount: 6,
       scoredKeyResultCount: 3,
+      missingProofKeyResultCount: 2,
       proofCount: 2,
       quarterScore: 63.6,
       status: 'in-progress'
@@ -102,6 +109,7 @@ vi.mock('../src/shared/api/leader', () => ({
         isTemplateGoal: true,
         keyResultCount: 2,
         scoredKeyResultCount: 0,
+        missingProofKeyResultCount: 1,
         proofCount: 0,
         currentScore: null
       },
@@ -116,6 +124,7 @@ vi.mock('../src/shared/api/leader', () => ({
         isTemplateGoal: false,
         keyResultCount: 3,
         scoredKeyResultCount: 3,
+        missingProofKeyResultCount: 1,
         proofCount: 2,
         currentScore: 63.6
       }
@@ -131,6 +140,7 @@ vi.mock('../src/shared/api/leader', () => ({
       isTemplateGoal: false,
       keyResultCount: 3,
       scoredKeyResultCount: 3,
+      missingProofKeyResultCount: 1,
       proofCount: 2,
       currentScore: 63.6,
       keyResults: [
@@ -145,7 +155,10 @@ vi.mock('../src/shared/api/leader', () => ({
           completionState: 'completed',
           reviewScore: 30.1,
           reviewComment: '\u8868\u73b0\u7a33\u5b9a',
+          hasProofs: true,
+          isProofMissing: false,
           proofCount: 2,
+          latestProofUploadedAt: '2026-03-20T10:00:00.000Z',
           proofs: []
         },
         {
@@ -159,7 +172,10 @@ vi.mock('../src/shared/api/leader', () => ({
           completionState: 'incomplete',
           reviewScore: null,
           reviewComment: null,
+          hasProofs: false,
+          isProofMissing: true,
           proofCount: 0,
+          latestProofUploadedAt: null,
           proofs: []
         }
       ]
@@ -186,7 +202,10 @@ vi.mock('../src/shared/api/leader', () => ({
                 name: '\u6a21\u677f\u5ba2\u89c2\u9879',
                 points: 20,
                 scoreType: 'objective',
-                reviewScore: null
+                reviewScore: null,
+                proofCount: 0,
+                hasProofs: false,
+                isProofMissing: true
               }
             ]
           },
@@ -202,7 +221,10 @@ vi.mock('../src/shared/api/leader', () => ({
                 name: '\u5b8c\u6210 6 \u4e2a\u7248\u672c\u4ea4\u4ed8',
                 points: 35,
                 scoreType: 'objective',
-                reviewScore: 30.1
+                reviewScore: 30.1,
+                proofCount: 2,
+                hasProofs: true,
+                isProofMissing: false
               },
               {
                 id: 'kr-2',
@@ -210,7 +232,10 @@ vi.mock('../src/shared/api/leader', () => ({
                 name: '\u4e3b\u89c2\u8bc4\u4f30\u9879',
                 points: 20,
                 scoreType: 'subjective',
-                reviewScore: null
+                reviewScore: null,
+                proofCount: 0,
+                hasProofs: false,
+                isProofMissing: true
               }
             ]
           }
@@ -237,7 +262,10 @@ vi.mock('../src/shared/api/leader', () => ({
                 name: '\u8fd0\u8425\u8d44\u6599\u8865\u9f50',
                 points: 20,
                 scoreType: 'objective',
-                reviewScore: null
+                reviewScore: null,
+                proofCount: 0,
+                hasProofs: false,
+                isProofMissing: true
               }
             ]
           }
@@ -249,6 +277,15 @@ vi.mock('../src/shared/api/leader', () => ({
   bulkLeaderKrScore: vi.fn(),
   updateLeaderProofKnowledge: vi.fn()
 }));
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.mocked(bulkLeaderKrScore).mockResolvedValue({
+    updatedCount: 1,
+    skippedCount: 0,
+    skipped: []
+  });
+});
 
 describe('LeaderWorkbenchPage batch score modal', () => {
   it('filters the employee queue by section and review group with all selected by default', async () => {
@@ -322,5 +359,114 @@ describe('LeaderWorkbenchPage batch score modal', () => {
       expect(screen.getByRole('button', { name: T.batchSave })).toBeTruthy();
     },
     10000
+  );
+
+  it(
+    'allows removing a single key result after select all',
+    async () => {
+      ensureMatchMedia();
+
+      const bulkScoreMock = vi.mocked(bulkLeaderKrScore);
+
+      render(
+        <QueryClientProvider client={new QueryClient()}>
+          <AntApp>
+            <LeaderWorkbenchPage />
+          </AntApp>
+        </QueryClientProvider>
+      );
+
+      fireEvent.click(await screen.findByRole('button', { name: T.batchTitle }));
+      fireEvent.click(await screen.findByRole('button', { name: T.selectAllKrs }));
+
+      expect(screen.getAllByText(T.templateKr).length).toBeGreaterThan(0);
+      expect(screen.getByText('\u5df2\u9009\u5173\u952e\u7ed3\u679c')).toBeTruthy();
+
+      fireEvent.click(screen.getByRole('button', { name: T.removeTemplateKr }));
+
+      await waitFor(() => {
+        expect(screen.queryAllByText(T.templateKr)).toHaveLength(0);
+      });
+      expect(screen.getAllByText(T.deliveryKr).length).toBeGreaterThan(0);
+
+      fireEvent.click(screen.getByRole('button', { name: T.batchSave }));
+
+      await waitFor(() =>
+        expect(bulkScoreMock).toHaveBeenCalledWith(
+          expect.objectContaining({
+            keyResultIds: ['kr-1']
+          })
+        )
+      );
+    },
+    10000
+  );
+
+  it(
+    'shows missing-proof warnings and only passes override after explicit confirmation',
+    async () => {
+      ensureMatchMedia();
+
+      const bulkScoreMock = vi.mocked(bulkLeaderKrScore);
+      bulkScoreMock
+        .mockResolvedValueOnce({
+          updatedCount: 1,
+          skippedCount: 1,
+          skipped: [
+            {
+              keyResultId: 'g1-kr1',
+              reason: 'proof-missing'
+            }
+          ]
+        })
+        .mockResolvedValueOnce({
+          updatedCount: 2,
+          skippedCount: 0,
+          skipped: []
+        });
+
+      render(
+        <QueryClientProvider client={new QueryClient()}>
+          <AntApp>
+            <LeaderWorkbenchPage />
+          </AntApp>
+        </QueryClientProvider>
+      );
+
+      const batchButton = await screen.findByRole('button', { name: T.batchTitle });
+
+      fireEvent.click(batchButton);
+      fireEvent.click(await screen.findByRole('button', { name: T.selectAllKrs }));
+
+      expect(await screen.findByText(T.batchMissingProofTitle)).toBeTruthy();
+      expect(screen.getAllByText(T.templateKr).length).toBeGreaterThan(0);
+      expect((screen.getByRole('checkbox', { name: T.batchAllowMissingProofs }) as HTMLInputElement).checked).toBe(false);
+
+      fireEvent.click(screen.getByRole('button', { name: T.batchSave }));
+
+      await waitFor(() =>
+        expect(bulkScoreMock).toHaveBeenNthCalledWith(
+          1,
+          expect.objectContaining({
+            allowMissingProofs: false
+          })
+        )
+      );
+
+      fireEvent.click(await screen.findByRole('button', { name: T.batchTitle }));
+      fireEvent.click(await screen.findByRole('button', { name: T.selectAllKrs }));
+      fireEvent.click(await screen.findByRole('checkbox', { name: T.batchAllowMissingProofs }));
+      fireEvent.click(screen.getByRole('button', { name: T.batchSave }));
+
+      await waitFor(() =>
+        expect(bulkScoreMock).toHaveBeenNthCalledWith(
+          2,
+          expect.objectContaining({
+            allowMissingProofs: true
+          })
+        )
+      );
+    },
+    15000
   );
 });

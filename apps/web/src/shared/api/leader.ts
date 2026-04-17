@@ -1,4 +1,5 @@
 import type {
+  AllOkrResponse,
   LeaderAnnualRankingResponse,
   BulkLeaderKrScoreInput,
   BulkLeaderKrScoreResponse,
@@ -33,6 +34,12 @@ type AnnualRankingQuery = {
 
 export function getLeaderWorkbench(query: WorkbenchQuery) {
   return apiRequest<LeaderWorkbenchResponse>(`/leader/workbench${toQueryString(query)}`, {
+    method: 'GET'
+  });
+}
+
+export function getLeaderAllOkr(query: Pick<WorkbenchQuery, 'year' | 'quarter'>) {
+  return apiRequest<AllOkrResponse>(`/leader/all-okr${toQueryString(query)}`, {
     method: 'GET'
   });
 }

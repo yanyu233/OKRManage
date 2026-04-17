@@ -16,6 +16,7 @@ import {
 } from './org.repository';
 import { REVIEW_GRADE_CODES } from '../../../shared/constants/review-grade-codes';
 import { DomainValidationError } from '../../../shared/errors/domain-validation.error';
+import { shouldAdvanceGoalsToPendingReview } from '../../../shared/time/goal-review-window';
 
 @Injectable()
 export class PrismaOrgRepository implements OrgRepository {
@@ -31,6 +32,8 @@ export class PrismaOrgRepository implements OrgRepository {
   }
 
   async listGoalStatusControls(input: AdminGoalStatusControlQuery): Promise<AdminGoalStatusControlRecord[]> {
+    await this.advanceQuarterGoalsToReviewIfNeeded(input.year, input.quarter);
+
     const goals = await this.prisma.goal.findMany({
       where: {
         year: input.year,
@@ -94,6 +97,32 @@ export class PrismaOrgRepository implements OrgRepository {
     });
 
     return result.count;
+  }
+
+  private async advanceQuarterGoalsToReviewIfNeeded(year: number, quarter: number) {
+    if (!shouldAdvanceGoalsToPendingReview(year, quarter)) {
+      return;
+    }
+
+    await this.prisma.goal.updateMany({
+      where: {
+        year,
+        quarter,
+        status: 'confirmed',
+        owner: {
+          isActive: true,
+          roleAssignments: {
+            some: {
+              roleCode: 'employee',
+              isEnabled: true
+            }
+          }
+        }
+      },
+      data: {
+        status: 'pending-review'
+      }
+    });
   }
 
   async getAdminBootstrap(): Promise<AdminOrgBootstrap> {

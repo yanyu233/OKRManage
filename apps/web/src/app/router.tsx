@@ -10,6 +10,7 @@ const AdminOrgPage = lazy(async () => ({ default: (await import('../modules/admi
 const AuthEntryPage = lazy(async () => ({ default: (await import('../modules/auth/AuthEntryPage')).AuthEntryPage }));
 const LoginPage = lazy(async () => ({ default: (await import('../modules/auth/LoginPage')).LoginPage }));
 const UnauthorizedPage = lazy(async () => ({ default: (await import('../modules/auth/UnauthorizedPage')).UnauthorizedPage }));
+const AllOkrPage = lazy(async () => ({ default: (await import('../modules/overview/AllOkrPage')).AllOkrPage }));
 const EmployeeGoalPage = lazy(async () => ({ default: (await import('../modules/employee/EmployeeGoalPage')).EmployeeGoalPage }));
 const EmployeeOkrPage = lazy(async () => ({ default: (await import('../modules/employee/EmployeeOkrPage')).EmployeeOkrPage }));
 const ProofArchivePage = lazy(async () => ({ default: (await import('../modules/proofs/ProofArchivePage')).ProofArchivePage }));
@@ -52,6 +53,14 @@ export const router = createBrowserRouter([
     element: <AppShell />,
     children: [
       { index: true, element: <HomeRedirect /> },
+      {
+        path: 'okr/all',
+        element: (
+          <RoleRoute allow={['employee', 'department-head', 'section-leader', 'group-leader', 'system-admin']}>
+            {withSuspense(<AllOkrPage />)}
+          </RoleRoute>
+        )
+      },
       { path: 'admin/org', element: <RoleRoute allow={['system-admin']}>{withSuspense(<AdminOrgPage />)}</RoleRoute> },
       {
         path: 'leader/workbench',

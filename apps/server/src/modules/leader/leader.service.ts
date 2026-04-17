@@ -5,6 +5,7 @@ import { AuditService } from '../audit/audit.service';
 import { normalizeUploadedFileName } from '../../shared/http/upload-file-name';
 import { LocalProofStorageService } from '../../infrastructure/storage/local-proof-storage.service';
 import {
+  AllOkrRecord,
   LEADER_REPOSITORY,
   LeaderBulkScoreInput,
   LeaderRepository
@@ -21,6 +22,12 @@ export class LeaderService {
     private readonly auditService: AuditService,
     private readonly publicNoticeDocxService: LeaderPublicNoticeDocxService
   ) {}
+
+  getAllOkr(actor: AuthUser, year: number, quarter: number): Promise<AllOkrRecord> {
+    void actor;
+    this.validateQuarter(year, quarter);
+    return this.leaderRepository.getAllOkr(year, quarter);
+  }
 
   getWorkbench(actor: AuthUser, year: number, quarter: number, employeeId?: string, goalId?: string) {
     this.validateQuarter(year, quarter);

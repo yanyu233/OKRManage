@@ -1,8 +1,7 @@
-import { CalendarOutlined, EditOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
+import { CalendarOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, App, Button, Card, Col, Empty, Input, Popover, Row, Space, Statistic, Tag, Typography } from 'antd';
-import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Alert, App, Button, Card, Empty, Input, Popover, Segmented, Space, Statistic, Typography } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
 import {
   createEmployeeGoal,
   getEmployeeGoalDetail,
@@ -12,7 +11,7 @@ import {
   updateEmployeeGoal
 } from '../../shared/api/employee';
 import { ApiError } from '../../shared/api/http';
-import { formatQuarterLabel, formatNullableScore, getGoalStatusLabel } from '../../shared/i18n/labels';
+import { formatQuarterLabel, formatNullableScore } from '../../shared/i18n/labels';
 import { useSharedQuarterPeriod } from '../../shared/store/quarter-store';
 import type { CreateEmployeeGoalInput, EmployeeGoalDetail, UpdateEmployeeGoalInput } from '../../shared/types/employee';
 import {
@@ -20,9 +19,11 @@ import {
   filterEmployeeGoals,
   getDraftGoalPoints,
   getEmployeeQuarterAllocatedPoints,
+  isEmployeeGoalActionRequired,
   isQuarterPointLimitError
 } from './employee.helpers';
 import { EmployeeCreateGoalDialog } from './EmployeeCreateGoalDialog';
+import { EmployeeGoalAccordionItem } from './EmployeeGoalAccordionItem';
 import { EmployeePeriodPickerDialog } from './EmployeePeriodPickerDialog';
 import { EmployeeTemplateImportDialog } from './EmployeeTemplateImportDialog';
 import './employee.css';
@@ -30,39 +31,35 @@ import './employee.css';
 const START_YEAR = 2026;
 const YEAR_RANGE_FUTURE = 8;
 const TEXT = {
-  title: '\u6211\u7684 OKR',
-  loading: '\u6b63\u5728\u52a0\u8f7d\u6211\u7684 OKR...',
-  loadFailedTitle: '\u52a0\u8f7d\u5931\u8d25',
-  loadFailedDescription: '\u5458\u5de5 OKR \u52a0\u8f7d\u5931\u8d25\u3002',
-  refresh: '\u5237\u65b0',
-  searchPlaceholder: '\u641c\u7d22\u76ee\u6807\u540d\u79f0\u6216\u8bf4\u660e',
-  sectionFallback: '\u672a\u5206\u914d\u79d1\u5ba4',
-  groupFallback: '\u672a\u5206\u914d\u8bc4\u4ef7\u7ec4',
-  goalCount: '\u76ee\u6807\u6570',
-  keyResultCount: '\u5173\u952e\u7ed3\u679c\u6570',
-  completedKeyResultCount: '\u5df2\u5b8c\u6210\u5173\u952e\u7ed3\u679c',
-  proofCount: '\u8bc1\u660e\u6750\u6599',
-  quarterScore: '\u5f53\u524d\u5b63\u5ea6\u5f97\u5206',
-  createGoal: '\u65b0\u5efa\u76ee\u6807',
-  createSuccess: '\u76ee\u6807\u521b\u5efa\u6210\u529f\u3002',
-  importTemplates: '\u5bfc\u5165\u6a21\u677f\u76ee\u6807',
-  importSuccess: '\u6a21\u677f\u76ee\u6807\u5bfc\u5165\u6210\u529f\u3002',
-  goalsTitle: '\u672c\u5b63\u5ea6\u76ee\u6807',
-  goalsDescription:
-    '\u5728\u8fd9\u91cc\u67e5\u770b\u672c\u5b63\u5ea6\u7684\u76ee\u6807\u4e0e\u5173\u952e\u7ed3\u679c\u8fdb\u5c55\uff0c\u70b9\u51fb\u76ee\u6807\u540e\u53ef\u8fdb\u5165\u8be6\u60c5\u9875\u9762\u3002',
-  goalDescriptionFallback: '\u6682\u65e0\u76ee\u6807\u8bf4\u660e',
-  keyResultCountTag: '\u6761\u5173\u952e\u7ed3\u679c',
-  completedTag: '\u6761\u5df2\u5b8c\u6210',
-  proofTag: '\u4efd\u6750\u6599',
-  currentScoreTagPrefix: '\u5f53\u524d\u5f97\u5206',
-  editGoal: '\u7f16\u8f91\u76ee\u6807',
-  editLoadFailed: '\u76ee\u6807\u8be6\u60c5\u52a0\u8f7d\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002',
-  editSuccess: '\u76ee\u6807\u4fee\u6539\u5df2\u4fdd\u5b58\u3002',
-  editFailed: '\u76ee\u6807\u4fee\u6539\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002',
-  pointLimitExceeded: '\u5f53\u524d\u5b63\u5ea6\u6240\u6709\u76ee\u6807\u7684\u5173\u952e\u7ed3\u679c\u5206\u503c\u5408\u8ba1\u4e0d\u80fd\u8d85\u8fc7 100 \u5206\u3002',
-  viewGoalDetail: '\u67e5\u770b\u76ee\u6807\u8be6\u60c5',
-  emptyGoals: '\u5f53\u524d\u7b5b\u9009\u6761\u4ef6\u4e0b\u6ca1\u6709\u5339\u914d\u76ee\u6807',
-  selectPeriod: '\u9009\u62e9\u65f6\u95f4'
+  title: '我的 OKR',
+  loading: '正在加载我的 OKR...',
+  loadFailedTitle: '加载失败',
+  loadFailedDescription: '员工 OKR 加载失败。',
+  refresh: '刷新',
+  searchPlaceholder: '搜索目标名称或说明',
+  sectionFallback: '未分配科室',
+  groupFallback: '未分配评价组',
+  goalCount: '目标数',
+  keyResultCount: '关键结果数',
+  proofCount: '证明材料',
+  missingProofCount: '待上传材料 KR',
+  quarterScore: '当前季度得分',
+  createGoal: '新建目标',
+  createSuccess: '目标创建成功。',
+  importTemplates: '导入模板目标',
+  importSuccess: '模板目标导入成功。',
+  goalsTitle: '本季度目标',
+  goalsDescription: '在当前页直接展开目标并处理关键结果、上传证明材料。',
+  editGoal: '编辑目标',
+  editLoadFailed: '目标详情加载失败，请稍后重试。',
+  editSuccess: '目标修改已保存。',
+  editFailed: '目标修改失败，请稍后重试。',
+  pointLimitExceeded: '当前季度所有目标的关键结果分值合计不能超过 100 分。',
+  emptyGoals: '当前筛选条件下没有匹配目标',
+  selectPeriod: '选择时间',
+  allGoals: '全部目标',
+  actionGoals: '仅看待处理',
+  collapseAll: '全部收起'
 } as const;
 
 function canEditGoal(status: string) {
@@ -72,7 +69,6 @@ function canEditGoal(status: string) {
 export function EmployeeOkrPage() {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const { year, quarter, yearOptions, quarterOptions, setPeriod } = useSharedQuarterPeriod({
     startYear: START_YEAR,
     futureRange: YEAR_RANGE_FUTURE
@@ -84,6 +80,8 @@ export function EmployeeOkrPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
   const [editingGoal, setEditingGoal] = useState<EmployeeGoalDetail | null>(null);
+  const [expandedGoalIds, setExpandedGoalIds] = useState<string[]>([]);
+  const [onlyActionRequired, setOnlyActionRequired] = useState(false);
 
   const okrQuery = useQuery({
     queryKey: ['employee-okr', year, quarter],
@@ -94,23 +92,9 @@ export function EmployeeOkrPage() {
       })
   });
 
-  const summaryCards = useMemo(
-    () =>
-      okrQuery.data
-        ? [
-            [TEXT.goalCount, okrQuery.data.employee.goalCount],
-            [TEXT.keyResultCount, okrQuery.data.employee.keyResultCount],
-            [TEXT.completedKeyResultCount, okrQuery.data.employee.completedKeyResultCount],
-            [TEXT.proofCount, okrQuery.data.employee.proofCount]
-          ]
-        : [],
-    [okrQuery.data]
-  );
-
-  const filteredGoals = useMemo(
-    () => filterEmployeeGoals(okrQuery.data?.goals ?? [], keyword),
-    [keyword, okrQuery.data?.goals]
-  );
+  useEffect(() => {
+    setExpandedGoalIds([]);
+  }, [year, quarter]);
 
   const templatesQuery = useQuery({
     queryKey: ['employee-goal-templates', year, quarter],
@@ -206,16 +190,33 @@ export function EmployeeOkrPage() {
   }
 
   if (okrQuery.isError) {
-    const message = okrQuery.error instanceof ApiError ? okrQuery.error.message : TEXT.loadFailedDescription;
+    const description = okrQuery.error instanceof ApiError ? okrQuery.error.message : TEXT.loadFailedDescription;
     return (
       <Card className="employee-toolbar-card">
-        <Alert type="error" showIcon message={TEXT.loadFailedTitle} description={message} />
+        <Alert type="error" showIcon message={TEXT.loadFailedTitle} description={description} />
       </Card>
     );
   }
 
   const payload = okrQuery.data!;
   const quarterAllocatedPoints = getEmployeeQuarterAllocatedPoints(payload.goals);
+
+  const filteredGoals = useMemo(() => {
+    const matchedGoals = filterEmployeeGoals(payload.goals, keyword);
+
+    if (!onlyActionRequired) {
+      return matchedGoals;
+    }
+
+    return matchedGoals.filter((goal) => isEmployeeGoalActionRequired(goal));
+  }, [keyword, onlyActionRequired, payload.goals]);
+
+  const summaryCards = [
+    [TEXT.goalCount, payload.employee.goalCount],
+    [TEXT.keyResultCount, payload.employee.keyResultCount],
+    [TEXT.proofCount, payload.employee.proofCount],
+    [TEXT.missingProofCount, payload.employee.missingProofKeyResultCount]
+  ] as const;
 
   return (
     <Space direction="vertical" size={24} className="employee-page">
@@ -285,7 +286,7 @@ export function EmployeeOkrPage() {
       <div className="employee-summary-grid">
         {summaryCards.map(([title, value]) => (
           <Card key={title} className="employee-summary-card" variant="borderless">
-            <Statistic title={title} value={value as number} />
+            <Statistic title={title} value={value} />
           </Card>
         ))}
         <Card className="employee-summary-card" variant="borderless">
@@ -306,67 +307,41 @@ export function EmployeeOkrPage() {
             </div>
           </div>
 
+          <div className="employee-goal-toolbar">
+            <Segmented
+              value={onlyActionRequired ? TEXT.actionGoals : TEXT.allGoals}
+              options={[TEXT.allGoals, TEXT.actionGoals]}
+              onChange={(value) => setOnlyActionRequired(value === TEXT.actionGoals)}
+            />
+            <Button onClick={() => setExpandedGoalIds([])} disabled={!expandedGoalIds.length}>
+              {TEXT.collapseAll}
+            </Button>
+          </div>
+
           {filteredGoals.length ? (
-            <Row gutter={[20, 20]}>
-              {filteredGoals.map((goal) => {
-                const goalEditable = canEditGoal(goal.status);
+            <div className="employee-goal-accordion-list">
+              {filteredGoals.map((goal) => (
+                <EmployeeGoalAccordionItem
+                  key={goal.id}
+                  goal={goal}
+                  expanded={expandedGoalIds.includes(goal.id)}
+                  onlyActionRequired={onlyActionRequired}
+                  editing={editingGoalId === goal.id}
+                  onToggle={() =>
+                    setExpandedGoalIds((current) =>
+                      current.includes(goal.id) ? current.filter((entry) => entry !== goal.id) : [...current, goal.id]
+                    )
+                  }
+                  onEdit={() => {
+                    if (!canEditGoal(goal.status)) {
+                      return;
+                    }
 
-                return (
-                  <Col xs={24} xl={12} key={goal.id}>
-                    <Card className="employee-goal-card" variant="borderless" onClick={() => navigate(`/employee/goal/${goal.id}`)}>
-                      <Space direction="vertical" size={16} style={{ width: '100%' }}>
-                        <div className="employee-goal-card__header">
-                          <div className="employee-goal-card__content">
-                            <Typography.Title level={4} style={{ marginBottom: 8 }}>
-                              {goal.code} {goal.name}
-                            </Typography.Title>
-                            <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-                              {goal.description ?? TEXT.goalDescriptionFallback}
-                            </Typography.Paragraph>
-                          </div>
-                          <div className="employee-goal-card__actions" onClick={(event) => event.stopPropagation()}>
-                            <Button
-                              aria-label={TEXT.editGoal}
-                              size="small"
-                              icon={<EditOutlined aria-hidden />}
-                              className={[
-                                'employee-goal-card__edit-button',
-                                goalEditable
-                                  ? 'employee-goal-card__edit-button--editable'
-                                  : 'employee-goal-card__edit-button--readonly'
-                              ].join(' ')}
-                              disabled={!goalEditable}
-                              loading={editingGoalId === goal.id}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                void openEditDialog(goal.id);
-                              }}
-                            >
-                              {TEXT.editGoal}
-                            </Button>
-                            {goal.status === 'draft' ? null : (
-                              <Tag color={goal.status === 'completed' ? 'green' : 'blue'}>{getGoalStatusLabel(goal.status)}</Tag>
-                            )}
-                          </div>
-                        </div>
-
-                        <Space wrap size={[8, 8]}>
-                          <Tag>{`${goal.totalPoints} \u5206`}</Tag>
-                          <Tag>{`${goal.keyResultCount} ${TEXT.keyResultCountTag}`}</Tag>
-                          <Tag>{`${goal.completedKeyResultCount} ${TEXT.completedTag}`}</Tag>
-                          <Tag>{`${goal.proofCount} ${TEXT.proofTag}`}</Tag>
-                          <Tag>{`${TEXT.currentScoreTagPrefix} ${formatNullableScore(goal.currentScore)}`}</Tag>
-                        </Space>
-
-                        <Button type="link" style={{ paddingInline: 0 }}>
-                          {TEXT.viewGoalDetail}
-                        </Button>
-                      </Space>
-                    </Card>
-                  </Col>
-                );
-              })}
-            </Row>
+                    void openEditDialog(goal.id);
+                  }}
+                />
+              ))}
+            </div>
           ) : (
             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={TEXT.emptyGoals} />
           )}

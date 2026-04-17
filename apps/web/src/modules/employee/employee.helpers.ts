@@ -1,5 +1,11 @@
 import { ApiError } from '../../shared/api/http';
-import type { CreateEmployeeGoalInput, EmployeeOkrResponse, UpdateEmployeeGoalInput } from '../../shared/types/employee';
+import type {
+  CreateEmployeeGoalInput,
+  EmployeeGoalDetail,
+  EmployeeKeyResult,
+  EmployeeOkrResponse,
+  UpdateEmployeeGoalInput
+} from '../../shared/types/employee';
 import { normalizeKeyword } from '../../shared/ui/toolbar-options';
 
 export const EMPLOYEE_QUARTER_POINT_LIMIT = 100;
@@ -57,4 +63,22 @@ export function getDraftGoalPoints(payload: Pick<CreateEmployeeGoalInput, 'keyRe
 
 export function isQuarterPointLimitError(error: unknown) {
   return error instanceof ApiError && error.message === 'quarter total points cannot exceed 100';
+}
+
+export function isEmployeeKeyResultActionRequired(keyResult: Pick<EmployeeKeyResult, 'completionState' | 'isProofMissing'>) {
+  return keyResult.isProofMissing || keyResult.completionState !== 'completed';
+}
+
+export function isEmployeeGoalActionRequired(
+  goal: Pick<EmployeeOkrResponse['goals'][number], 'completedKeyResultCount' | 'keyResultCount' | 'missingProofKeyResultCount'>
+) {
+  return goal.missingProofKeyResultCount > 0 || goal.completedKeyResultCount < goal.keyResultCount;
+}
+
+export function filterEmployeeGoalKeyResults(keyResults: EmployeeGoalDetail['keyResults'], onlyActionRequired: boolean) {
+  if (!onlyActionRequired) {
+    return keyResults;
+  }
+
+  return keyResults.filter((keyResult) => isEmployeeKeyResultActionRequired(keyResult));
 }
