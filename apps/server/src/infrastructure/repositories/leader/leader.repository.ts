@@ -2,6 +2,7 @@ import { AuthUser } from '../../../shared/types/auth-user';
 
 export const LEADER_REPOSITORY = Symbol('LEADER_REPOSITORY');
 export type LeaderScoreType = 'objective' | 'subjective';
+export type LeaderKnowledgeEntryType = 'proof' | 'manual';
 
 export type LeaderProofRecord = {
   id: string;
@@ -12,6 +13,7 @@ export type LeaderProofRecord = {
   fileSize: number;
   note: string | null;
   isKnowledge: boolean;
+  canManageKnowledge: boolean;
   uploadedAt: string;
   updatedAt: string;
 };
@@ -241,7 +243,9 @@ export type LeaderAnnualQuarterScoreRecord = {
 export type LeaderAnnualRankingEntryRecord = {
   employeeId: string;
   employeeName: string;
+  sectionId: string | null;
   sectionName: string | null;
+  reviewGroupId: string | null;
   reviewGroupName: string | null;
   annualScore: number;
   quarterScores: LeaderAnnualQuarterScoreRecord[];
@@ -294,7 +298,8 @@ export type LeaderBulkScoreSkipReason =
   | 'already-scored'
   | 'subjective-only'
   | 'goal-status-blocked'
-  | 'proof-missing';
+  | 'proof-missing'
+  | 'score-exceeds-points';
 
 export type LeaderBulkScoreSkipRecord = {
   keyResultId: string;
@@ -309,6 +314,7 @@ export type LeaderBulkScoreInput = {
   employeeIds?: string[];
   goalIds?: string[];
   keyResultIds?: string[];
+  score?: number | null;
   comment: string | null;
   overwriteExisting: boolean;
   excludeTemplateGoals: boolean;
@@ -330,6 +336,8 @@ export type LeaderProofKnowledgeToggleResult = {
 };
 
 export type LeaderKnowledgeEntryRecord = {
+  entryKey: string;
+  entryType: LeaderKnowledgeEntryType;
   id: string;
   fileName: string;
   previewUrl: string;
@@ -338,34 +346,37 @@ export type LeaderKnowledgeEntryRecord = {
   fileSize: number;
   note: string | null;
   isKnowledge: boolean;
+  canManageKnowledge: boolean;
   uploadedAt: string;
   updatedAt: string;
-  employeeId: string;
-  employeeName: string;
+  uploaderName: string | null;
+  employeeId: string | null;
+  employeeName: string | null;
   sectionName: string | null;
   reviewGroupName: string | null;
-  goalId: string;
-  goalCode: string;
-  goalName: string;
-  keyResultId: string;
-  keyResultCode: string;
-  keyResultName: string;
+  goalId: string | null;
+  goalCode: string | null;
+  goalName: string | null;
+  keyResultId: string | null;
+  keyResultCode: string | null;
+  keyResultName: string | null;
 };
 
 export type LeaderKnowledgeBaseRecord = {
   entries: LeaderKnowledgeEntryRecord[];
 };
 
-export type LeaderKnowledgeProofUpdateInput = {
+export type LeaderKnowledgeEntryUpdateInput = {
   fileName?: string;
   storageKey?: string;
   fileSize?: number;
   note: string | null;
 };
 
-export type LeaderKnowledgeProofUpdateResult = {
+export type LeaderKnowledgeEntryUpdateResult = {
   before: {
     id: string;
+    entryType: LeaderKnowledgeEntryType;
     fileName: string;
     note: string | null;
     storageKey: string;
@@ -374,15 +385,31 @@ export type LeaderKnowledgeProofUpdateResult = {
   previousStorageKey: string | null;
 };
 
-export type LeaderKnowledgeProofDownloadRecord = {
+export type LeaderKnowledgeDownloadRecord = {
+  entryKey: string;
+  entryType: LeaderKnowledgeEntryType;
   id: string;
   fileName: string;
   storageKey: string;
-  employeeName: string;
-  goalCode: string;
-  goalName: string;
-  keyResultCode: string;
-  keyResultName: string;
+  uploaderName: string | null;
+  employeeName: string | null;
+  goalCode: string | null;
+  goalName: string | null;
+  keyResultCode: string | null;
+  keyResultName: string | null;
+};
+
+export type LeaderManualKnowledgeAssetCreateInput = {
+  fileName: string;
+  storageKey: string;
+  fileSize: number;
+  note: string | null;
+};
+
+export type LeaderKnowledgeAssetFileRecord = {
+  id: string;
+  fileName: string;
+  storageKey: string;
 };
 
 export interface LeaderRepository {
@@ -401,9 +428,20 @@ export interface LeaderRepository {
   updateKnowledgeProof(
     actor: AuthUser,
     proofId: string,
-    input: LeaderKnowledgeProofUpdateInput
-  ): Promise<LeaderKnowledgeProofUpdateResult>;
-  getKnowledgeProofDownloads(actor: AuthUser, proofIds: string[]): Promise<LeaderKnowledgeProofDownloadRecord[]>;
+    input: LeaderKnowledgeEntryUpdateInput
+  ): Promise<LeaderKnowledgeEntryUpdateResult>;
+  createManualKnowledgeAsset(
+    actor: AuthUser,
+    input: LeaderManualKnowledgeAssetCreateInput
+  ): Promise<LeaderKnowledgeEntryRecord>;
+  updateManualKnowledgeAsset(
+    actor: AuthUser,
+    assetId: string,
+    input: LeaderKnowledgeEntryUpdateInput
+  ): Promise<LeaderKnowledgeEntryUpdateResult>;
+  getKnowledgeEntryDownloads(actor: AuthUser, entryKeys: string[]): Promise<LeaderKnowledgeDownloadRecord[]>;
+  getManualKnowledgeAssetDownload(actor: AuthUser, assetId: string): Promise<LeaderKnowledgeAssetFileRecord>;
+  getManualKnowledgeAssetStorage(assetId: string): Promise<LeaderKnowledgeAssetFileRecord>;
   getRanking(
     actor: AuthUser,
     year: number,
@@ -418,5 +456,10 @@ export interface LeaderRepository {
     reviewGroupId?: string | null
   ): Promise<LeaderQuarterlyPublicNoticeRecord>;
   getAnnualRanking(actor: AuthUser, year: number, employeeId?: string | null): Promise<LeaderAnnualRankingRecord>;
-  getAnnualPublicNotice(actor: AuthUser, year: number): Promise<LeaderAnnualPublicNoticeRecord>;
+  getAnnualPublicNotice(
+    actor: AuthUser,
+    year: number,
+    sectionId?: string | null,
+    reviewGroupId?: string | null
+  ): Promise<LeaderAnnualPublicNoticeRecord>;
 }

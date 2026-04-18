@@ -3,38 +3,46 @@ import {
   DownloadOutlined,
   EditOutlined,
   FileTextOutlined,
+  InboxOutlined,
+  PlusOutlined,
   ReloadOutlined,
-  SearchOutlined,
-  UploadOutlined
+  SearchOutlined
 } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, Card, Checkbox, Empty, Input, Modal, Space, Tag, Typography, Upload } from 'antd';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { useEffect, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import { ApiError, resolveApiUrl } from '../../shared/api/http';
 import {
   downloadLeaderKnowledgeBase,
   getLeaderKnowledgeBase,
-  updateLeaderKnowledgeProof
+  updateLeaderKnowledgeProof,
+  updateLeaderManualKnowledgeAsset,
+  uploadLeaderManualKnowledgeAsset
 } from '../../shared/api/leader';
+import { useSessionStore } from '../../shared/store/session-store';
 import type { LeaderKnowledgeEntry } from '../../shared/types/leader';
 import { formatProofSize } from '../employee/employee.helpers';
 import './leader.css';
 
+const { Dragger } = Upload;
+
 const T = {
   title: '知识库',
-  desc: '集中收录被标记为知识的证明材料，可查看关联员工、目标与关键结果，并维护文件与说明。',
+  desc: '集中展示知识材料。已标记的 OKR 证明材料和自由上传的知识文件会一起在这里管理。',
   loading: '正在加载知识库...',
   loadFailed: '知识库加载失败。',
   refresh: '刷新',
-  search: '搜索文件名、员工、目标、关键结果或说明',
-  empty: '当前还没有被收录到知识库的证明材料。',
+  upload: '上传知识文件',
+  search: '搜索文件名、说明、上传人、员工、目标或关键结果',
+  empty: '当前还没有收录到知识库的文件。',
   preview: '预览',
   download: '下载',
   bulkDownload: '批量下载',
   selectAll: '全选',
   clearSelection: '取消全选',
-  bulkDownloadEmpty: '请先选择要下载的知识材料。',
+  bulkDownloadEmpty: '请先选择要下载的知识文件。',
   bulkDownloadSuccess: '知识库资料已开始下载。',
   bulkDownloadFailed: '知识库资料打包下载失败。',
   selectedCount: '已选',
@@ -45,19 +53,30 @@ const T = {
   employee: '关联员工',
   goal: '关联目标',
   keyResult: '关联关键结果',
+  uploader: '上传人',
+  source: '来源',
   updatedAt: '最近更新',
   updateTitle: '更新知识资料',
-  updateHint: '可只更新说明，也可以替换为新的证明文件，关联员工、目标和关键结果会保持不变。',
+  updateHint: '可只更新说明，也可以替换为新的文件。',
+  uploadTitle: '上传知识文件',
+  uploadHint: '仅科室负责人和小组负责人可自由上传，不关联目标和关键结果。',
   noteLabel: '说明',
-  notePlaceholder: '补充这份知识材料的说明或使用场景',
-  fileLabel: '替换文件',
+  notePlaceholder: '补充这份知识文件的用途、背景或使用方式',
+  fileLabel: '文件',
   fileHint: '不上传新文件时，会保留当前文件。',
   currentFile: '当前文件',
   save: '保存更新',
+  create: '确认上传',
   cancel: '取消',
   updateSuccess: '知识资料已更新。',
   updateFailed: '知识资料更新失败。',
+  uploadSuccess: '知识文件已上传。',
+  uploadFailed: '知识文件上传失败。',
+  uploadRequired: '请先选择要上传的文件。',
   knowledgeTag: '知识材料',
+  okrSourceTag: 'OKR材料',
+  manualSourceTag: '自由上传',
+  uploadSourceLabel: '自由上传文件',
   viewMore: '展开',
   unassignedSection: '未分配科室',
   unassignedGroup: '未分配小组'
@@ -66,11 +85,17 @@ const T = {
 export function LeaderKnowledgeBasePage() {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
+  const isKnowledgeEditor = useSessionStore((state) =>
+    (state.user?.roles ?? []).some((assignment) => assignment.role === 'section-leader' || assignment.role === 'group-leader')
+  );
   const [keyword, setKeyword] = useState('');
   const [editingEntry, setEditingEntry] = useState<LeaderKnowledgeEntry | null>(null);
-  const [draftNote, setDraftNote] = useState('');
-  const [draftFiles, setDraftFiles] = useState<UploadFile[]>([]);
-  const [selectedEntryIds, setSelectedEntryIds] = useState<string[]>([]);
+  const [editNote, setEditNote] = useState('');
+  const [editFiles, setEditFiles] = useState<UploadFile[]>([]);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploadNote, setUploadNote] = useState('');
+  const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([]);
+  const [selectedEntryKeys, setSelectedEntryKeys] = useState<string[]>([]);
 
   const knowledgeQuery = useQuery({
     queryKey: ['leader-knowledge-base'],
@@ -78,8 +103,10 @@ export function LeaderKnowledgeBasePage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ proofId, payload }: { proofId: string; payload: FormData }) =>
-      updateLeaderKnowledgeProof(proofId, payload),
+    mutationFn: ({ entry, payload }: { entry: LeaderKnowledgeEntry; payload: FormData }) =>
+      entry.entryType === 'manual'
+        ? updateLeaderManualKnowledgeAsset(entry.id, payload)
+        : updateLeaderKnowledgeProof(entry.id, payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['leader-knowledge-base'] });
       await queryClient.invalidateQueries({ queryKey: ['leader-workbench'] });
@@ -89,10 +116,20 @@ export function LeaderKnowledgeBasePage() {
     onError: (error) => message.error(error instanceof ApiError ? error.message : T.updateFailed)
   });
 
+  const uploadMutation = useMutation({
+    mutationFn: (payload: FormData) => uploadLeaderManualKnowledgeAsset(payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['leader-knowledge-base'] });
+      message.success(T.uploadSuccess);
+      closeUploader();
+    },
+    onError: (error) => message.error(error instanceof ApiError ? error.message : T.uploadFailed)
+  });
+
   const downloadMutation = useMutation({
-    mutationFn: (proofIds: string[]) => downloadLeaderKnowledgeBase(proofIds),
+    mutationFn: (entryKeys: string[]) => downloadLeaderKnowledgeBase(entryKeys),
     onSuccess: ({ blob, headers }) => {
-      downloadBlobFile(blob, resolveDownloadFileName(headers.get('content-disposition'), '知识库资料.zip'));
+      downloadBlobFile(blob, resolveDownloadFileName(headers.get('content-disposition'), 'knowledge-base.zip'));
       message.success(T.bulkDownloadSuccess);
     },
     onError: (error) => message.error(error instanceof ApiError ? error.message : T.bulkDownloadFailed)
@@ -101,8 +138,8 @@ export function LeaderKnowledgeBasePage() {
   const entries = knowledgeQuery.data?.entries ?? [];
 
   useEffect(() => {
-    const availableIds = new Set(entries.map((entry) => entry.id));
-    setSelectedEntryIds((current) => current.filter((proofId) => availableIds.has(proofId)));
+    const availableKeys = new Set(entries.map((entry) => entry.entryKey));
+    setSelectedEntryKeys((current) => current.filter((entryKey) => availableKeys.has(entryKey)));
   }, [entries]);
 
   const filteredEntries = useMemo(() => {
@@ -116,22 +153,26 @@ export function LeaderKnowledgeBasePage() {
       [
         entry.fileName,
         entry.note ?? '',
-        entry.employeeName,
+        entry.uploaderName ?? '',
+        entry.employeeName ?? '',
         entry.sectionName ?? '',
         entry.reviewGroupName ?? '',
-        `${entry.goalCode} ${entry.goalName}`,
-        `${entry.keyResultCode} ${entry.keyResultName}`
+        entry.goalCode ?? '',
+        entry.goalName ?? '',
+        entry.keyResultCode ?? '',
+        entry.keyResultName ?? '',
+        entry.entryType === 'manual' ? T.manualSourceTag : T.okrSourceTag
       ].some((value) => value.toLowerCase().includes(normalized))
     );
   }, [entries, keyword]);
 
-  const selectedEntryIdSet = useMemo(() => new Set(selectedEntryIds), [selectedEntryIds]);
-  const filteredEntryIds = useMemo(() => filteredEntries.map((entry) => entry.id), [filteredEntries]);
+  const selectedEntryKeySet = useMemo(() => new Set(selectedEntryKeys), [selectedEntryKeys]);
+  const filteredEntryKeys = useMemo(() => filteredEntries.map((entry) => entry.entryKey), [filteredEntries]);
   const selectedVisibleCount = useMemo(
-    () => filteredEntryIds.filter((entryId) => selectedEntryIdSet.has(entryId)).length,
-    [filteredEntryIds, selectedEntryIdSet]
+    () => filteredEntryKeys.filter((entryKey) => selectedEntryKeySet.has(entryKey)).length,
+    [filteredEntryKeys, selectedEntryKeySet]
   );
-  const allVisibleSelected = filteredEntryIds.length > 0 && selectedVisibleCount === filteredEntryIds.length;
+  const allVisibleSelected = filteredEntryKeys.length > 0 && selectedVisibleCount === filteredEntryKeys.length;
   const partiallyVisibleSelected = selectedVisibleCount > 0 && !allVisibleSelected;
 
   if (knowledgeQuery.isLoading) {
@@ -172,21 +213,23 @@ export function LeaderKnowledgeBasePage() {
               value={keyword}
               onChange={(event) => setKeyword(event.target.value)}
             />
-            <Button
-              onClick={() => toggleSelectVisibleEntries(!allVisibleSelected)}
-              disabled={!filteredEntryIds.length}
-            >
+            <Button onClick={() => toggleSelectVisibleEntries(!allVisibleSelected)} disabled={!filteredEntryKeys.length}>
               {allVisibleSelected ? T.clearSelection : T.selectAll}
             </Button>
             <Button
               type="primary"
               icon={<DownloadOutlined />}
-              disabled={!selectedEntryIds.length}
+              disabled={!selectedEntryKeys.length}
               loading={downloadMutation.isPending}
               onClick={() => void handleBulkDownload()}
             >
               {T.bulkDownload}
             </Button>
+            {isKnowledgeEditor ? (
+              <Button type="primary" ghost icon={<PlusOutlined />} onClick={openUploader}>
+                {T.upload}
+              </Button>
+            ) : null}
             <Button icon={<ReloadOutlined />} onClick={() => knowledgeQuery.refetch()}>
               {T.refresh}
             </Button>
@@ -198,7 +241,7 @@ export function LeaderKnowledgeBasePage() {
         <Space direction="vertical" size={16} style={{ width: '100%' }}>
           <div className="leader-knowledge-toolbar">
             <Typography.Text type="secondary">
-              {`${T.selectedCount} ${selectedEntryIds.length} ${T.selectedUnit}`}
+              {`${T.selectedCount} ${selectedEntryKeys.length} ${T.selectedUnit}`}
             </Typography.Text>
             {partiallyVisibleSelected ? <Tag color="blue">{T.selectAll}</Tag> : null}
           </div>
@@ -206,13 +249,13 @@ export function LeaderKnowledgeBasePage() {
           <div className="leader-knowledge-list">
             {filteredEntries.length ? (
               filteredEntries.map((entry) => (
-                <Card key={entry.id} className="leader-knowledge-card" variant="borderless" size="small">
+                <Card key={entry.entryKey} className="leader-knowledge-card" variant="borderless" size="small">
                   <div className="leader-knowledge-card__header">
                     <div className="leader-knowledge-card__leading">
                       <Checkbox
-                        checked={selectedEntryIdSet.has(entry.id)}
+                        checked={selectedEntryKeySet.has(entry.entryKey)}
                         aria-label={`${T.selectEntry} ${entry.fileName}`}
-                        onChange={(event) => toggleEntrySelection(entry.id, event.target.checked)}
+                        onChange={(event) => toggleEntrySelection(entry.entryKey, event.target.checked)}
                       />
                       <div className="leader-knowledge-card__title">
                         <Typography.Link
@@ -224,8 +267,11 @@ export function LeaderKnowledgeBasePage() {
                           {entry.fileName}
                         </Typography.Link>
                         <Space wrap size={[6, 6]} className="leader-knowledge-card__tags">
-                          <Tag color="blue" className="leader-knowledge-card__tag">
+                          <Tag color="blue" className="leader-knowledge-card__tag leader-knowledge-card__tag--label">
                             {T.knowledgeTag}
+                          </Tag>
+                          <Tag className="leader-knowledge-card__tag leader-knowledge-card__tag--label">
+                            {entry.entryType === 'manual' ? T.manualSourceTag : T.okrSourceTag}
                           </Tag>
                           <Tag icon={<FileTextOutlined />} className="leader-knowledge-card__tag">
                             {formatProofSize(entry.fileSize)}
@@ -240,36 +286,58 @@ export function LeaderKnowledgeBasePage() {
                       <Button type="link" size="small" href={resolveDownloadUrl(entry)} target="_blank" rel="noreferrer">
                         {T.download}
                       </Button>
-                      <Button size="small" type="primary" ghost icon={<EditOutlined />} onClick={() => openEditor(entry)}>
-                        {T.edit}
-                      </Button>
+                      {entry.canManageKnowledge ? (
+                        <Button size="small" type="primary" ghost icon={<EditOutlined />} onClick={() => openEditor(entry)}>
+                          {T.edit}
+                        </Button>
+                      ) : null}
                     </Space>
                   </div>
 
                   <div className="leader-knowledge-card__facts">
-                    <div className="leader-knowledge-card__fact">
-                      <Typography.Text type="secondary">{T.employee}</Typography.Text>
-                      <Typography.Text strong>{entry.employeeName}</Typography.Text>
-                      <Typography.Text type="secondary">
-                        {`${entry.sectionName ?? T.unassignedSection} / ${entry.reviewGroupName ?? T.unassignedGroup}`}
-                      </Typography.Text>
-                    </div>
-                    <div className="leader-knowledge-card__fact">
-                      <Typography.Text type="secondary">{T.goal}</Typography.Text>
-                      <Typography.Text strong>{`${entry.goalCode} ${entry.goalName}`}</Typography.Text>
-                    </div>
-                    <div className="leader-knowledge-card__fact">
-                      <Typography.Text type="secondary">{T.keyResult}</Typography.Text>
-                      <Typography.Text strong>{`${entry.keyResultCode} ${entry.keyResultName}`}</Typography.Text>
-                    </div>
-                    <div className="leader-knowledge-card__fact">
-                      <Typography.Text type="secondary">{T.updatedAt}</Typography.Text>
-                      <Typography.Text>{new Date(entry.updatedAt).toLocaleString()}</Typography.Text>
-                      <Typography.Text type="secondary">
-                        <ClockCircleOutlined style={{ marginRight: 6 }} />
-                        {`${new Date(entry.uploadedAt).toLocaleString()} · ${formatProofSize(entry.fileSize)}`}
-                      </Typography.Text>
-                    </div>
+                    {entry.entryType === 'manual' ? (
+                      <>
+                        <KnowledgeFact label={T.uploader} primary={entry.uploaderName ?? '-'} />
+                        <KnowledgeFact label={T.source} primary={T.uploadSourceLabel} />
+                        <KnowledgeFact
+                          label={T.updatedAt}
+                          primary={new Date(entry.updatedAt).toLocaleString()}
+                          secondary={
+                            <>
+                              <ClockCircleOutlined style={{ marginRight: 6 }} />
+                              {new Date(entry.uploadedAt).toLocaleString()}
+                            </>
+                          }
+                        />
+                        <KnowledgeFact label={T.fileLabel} primary={formatProofSize(entry.fileSize)} />
+                      </>
+                    ) : (
+                      <>
+                        <KnowledgeFact
+                          label={T.employee}
+                          primary={entry.employeeName ?? '-'}
+                          secondary={`${entry.sectionName ?? T.unassignedSection} / ${entry.reviewGroupName ?? T.unassignedGroup}`}
+                        />
+                        <KnowledgeFact
+                          label={T.goal}
+                          primary={formatCodeName(entry.goalCode, entry.goalName)}
+                        />
+                        <KnowledgeFact
+                          label={T.keyResult}
+                          primary={formatCodeName(entry.keyResultCode, entry.keyResultName)}
+                        />
+                        <KnowledgeFact
+                          label={T.updatedAt}
+                          primary={new Date(entry.updatedAt).toLocaleString()}
+                          secondary={
+                            <>
+                              <ClockCircleOutlined style={{ marginRight: 6 }} />
+                              {new Date(entry.uploadedAt).toLocaleString()}
+                            </>
+                          }
+                        />
+                      </>
+                    )}
                   </div>
 
                   <div className="leader-knowledge-card__note">
@@ -311,8 +379,8 @@ export function LeaderKnowledgeBasePage() {
               rows={4}
               style={{ marginTop: 8 }}
               placeholder={T.notePlaceholder}
-              value={draftNote}
-              onChange={(event) => setDraftNote(event.target.value)}
+              value={editNote}
+              onChange={(event) => setEditNote(event.target.value)}
             />
           </div>
           <div>
@@ -320,14 +388,58 @@ export function LeaderKnowledgeBasePage() {
             <Typography.Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 8 }}>
               {T.fileHint}
             </Typography.Paragraph>
-            <Upload
+            <Dragger
               beforeUpload={() => false}
               maxCount={1}
-              fileList={draftFiles}
-              onChange={({ fileList }) => setDraftFiles(fileList.slice(-1))}
+              fileList={editFiles}
+              onChange={({ fileList }) => setEditFiles(fileList.slice(-1))}
             >
-              <Button icon={<UploadOutlined />}>{T.fileLabel}</Button>
-            </Upload>
+              <p className="ant-upload-drag-icon">
+                <InboxOutlined />
+              </p>
+              <p className="ant-upload-text">{T.fileLabel}</p>
+            </Dragger>
+          </div>
+        </Space>
+      </Modal>
+
+      <Modal
+        open={uploadOpen}
+        title={T.uploadTitle}
+        okText={T.create}
+        cancelText={T.cancel}
+        okButtonProps={{ loading: uploadMutation.isPending }}
+        onOk={submitUpload}
+        onCancel={closeUploader}
+        destroyOnHidden
+      >
+        <Space direction="vertical" size={16} style={{ width: '100%' }}>
+          <Alert type="info" showIcon message={T.uploadHint} />
+          <div>
+            <Typography.Text strong>{T.noteLabel}</Typography.Text>
+            <Input.TextArea
+              rows={4}
+              style={{ marginTop: 8 }}
+              placeholder={T.notePlaceholder}
+              value={uploadNote}
+              onChange={(event) => setUploadNote(event.target.value)}
+            />
+          </div>
+          <div>
+            <Typography.Text strong>{T.fileLabel}</Typography.Text>
+            <div style={{ marginTop: 8 }}>
+              <Dragger
+                beforeUpload={() => false}
+                maxCount={1}
+                fileList={uploadFiles}
+                onChange={({ fileList }) => setUploadFiles(fileList.slice(-1))}
+              >
+                <p className="ant-upload-drag-icon">
+                  <InboxOutlined />
+                </p>
+                <p className="ant-upload-text">{T.upload}</p>
+              </Dragger>
+            </div>
           </div>
         </Space>
       </Modal>
@@ -335,35 +447,55 @@ export function LeaderKnowledgeBasePage() {
   );
 
   function openEditor(entry: LeaderKnowledgeEntry) {
+    if (!entry.canManageKnowledge) {
+      return;
+    }
+
     setEditingEntry(entry);
-    setDraftNote(entry.note ?? '');
-    setDraftFiles([]);
+    setEditNote(entry.note ?? '');
+    setEditFiles([]);
   }
 
   function closeEditor() {
     setEditingEntry(null);
-    setDraftNote('');
-    setDraftFiles([]);
+    setEditNote('');
+    setEditFiles([]);
   }
 
-  function toggleEntrySelection(entryId: string, checked: boolean) {
-    setSelectedEntryIds((current) => {
+  function openUploader() {
+    if (!isKnowledgeEditor) {
+      return;
+    }
+
+    setUploadOpen(true);
+    setUploadNote('');
+    setUploadFiles([]);
+  }
+
+  function closeUploader() {
+    setUploadOpen(false);
+    setUploadNote('');
+    setUploadFiles([]);
+  }
+
+  function toggleEntrySelection(entryKey: string, checked: boolean) {
+    setSelectedEntryKeys((current) => {
       if (checked) {
-        return current.includes(entryId) ? current : [...current, entryId];
+        return current.includes(entryKey) ? current : [...current, entryKey];
       }
 
-      return current.filter((currentId) => currentId !== entryId);
+      return current.filter((currentKey) => currentKey !== entryKey);
     });
   }
 
   function toggleSelectVisibleEntries(checked: boolean) {
-    setSelectedEntryIds((current) => {
+    setSelectedEntryKeys((current) => {
       if (checked) {
-        return Array.from(new Set([...current, ...filteredEntryIds]));
+        return Array.from(new Set([...current, ...filteredEntryKeys]));
       }
 
-      const visibleIdSet = new Set(filteredEntryIds);
-      return current.filter((entryId) => !visibleIdSet.has(entryId));
+      const visibleKeySet = new Set(filteredEntryKeys);
+      return current.filter((entryKey) => !visibleKeySet.has(entryKey));
     });
   }
 
@@ -373,25 +505,38 @@ export function LeaderKnowledgeBasePage() {
     }
 
     const payload = new FormData();
-    payload.append('note', draftNote);
-    const nextFile = draftFiles[0]?.originFileObj;
+    payload.append('note', editNote);
+    const nextFile = editFiles[0]?.originFileObj;
     if (nextFile instanceof File) {
       payload.append('file', nextFile);
     }
 
     updateMutation.mutate({
-      proofId: editingEntry.id,
+      entry: editingEntry,
       payload
     });
   }
 
+  function submitUpload() {
+    const nextFile = uploadFiles[0]?.originFileObj;
+    if (!(nextFile instanceof File)) {
+      message.warning(T.uploadRequired);
+      return;
+    }
+
+    const payload = new FormData();
+    payload.append('note', uploadNote);
+    payload.append('file', nextFile);
+    uploadMutation.mutate(payload);
+  }
+
   async function handleBulkDownload() {
-    if (!selectedEntryIds.length) {
+    if (!selectedEntryKeys.length) {
       message.warning(T.bulkDownloadEmpty);
       return;
     }
 
-    await downloadMutation.mutateAsync(selectedEntryIds);
+    await downloadMutation.mutateAsync(selectedEntryKeys);
   }
 
   function resolvePreviewUrl(entry: LeaderKnowledgeEntry) {
@@ -401,6 +546,27 @@ export function LeaderKnowledgeBasePage() {
   function resolveDownloadUrl(entry: LeaderKnowledgeEntry) {
     return resolveApiUrl(entry.downloadUrl ?? entry.fileUrl);
   }
+}
+
+type KnowledgeFactProps = {
+  label: string;
+  primary: string;
+  secondary?: ReactNode;
+};
+
+function KnowledgeFact({ label, primary, secondary }: KnowledgeFactProps) {
+  return (
+    <div className="leader-knowledge-card__fact">
+      <Typography.Text type="secondary">{label}</Typography.Text>
+      <Typography.Text strong>{primary}</Typography.Text>
+      {secondary ? <Typography.Text type="secondary">{secondary}</Typography.Text> : null}
+    </div>
+  );
+}
+
+function formatCodeName(code: string | null, name: string | null) {
+  const normalized = [code, name].filter(Boolean).join(' ');
+  return normalized || '-';
 }
 
 function resolveDownloadFileName(contentDisposition: string | null | undefined, fallback: string) {

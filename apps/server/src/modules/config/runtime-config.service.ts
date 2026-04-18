@@ -13,7 +13,11 @@ export class RuntimeConfigService {
   }
 
   get authMode(): AuthMode {
-    return this.getRequiredAllowedString('AUTH_MODE', ['local-debug', 'wecom-preferred']) as AuthMode;
+    return (this.getOptionalAllowedString('AUTH_MODE', ['local-debug', 'wecom-preferred']) ?? 'wecom-preferred') as AuthMode;
+  }
+
+  get shouldPreferWecomLogin(): boolean {
+    return this.authMode === 'wecom-preferred' && this.isWecomConfigured;
   }
 
   get sessionCookieName(): string {
@@ -167,6 +171,20 @@ export class RuntimeConfigService {
     }
 
     return value.trim();
+  }
+
+  private getOptionalAllowedString(key: string, allowedValues: string[]): string | null {
+    const value = this.getOptionalString(key);
+
+    if (value === null) {
+      return null;
+    }
+
+    if (!allowedValues.includes(value)) {
+      throw new Error(`Invalid ${key}: expected one of ${allowedValues.join(', ')}, got "${value}"`);
+    }
+
+    return value;
   }
 
   private getRequiredString(key: string): string {

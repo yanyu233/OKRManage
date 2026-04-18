@@ -1,4 +1,4 @@
-import { IsArray, IsBoolean, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsArray, IsBoolean, IsInt, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class BulkScoreDto {
   @IsInt()
@@ -33,6 +33,11 @@ export class BulkScoreDto {
   @IsArray()
   @IsString({ each: true })
   keyResultIds?: string[];
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  score?: number;
 
   @IsOptional()
   @IsString()

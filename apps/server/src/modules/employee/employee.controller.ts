@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   HttpCode,
@@ -134,13 +135,25 @@ export class EmployeeController {
     }
   }
 
-  @Post('goals/:goalId/submit-review')
-  @HttpCode(200)
-  async submitGoalForReview(@Req() request: Request, @Param('goalId') goalId: string) {
+  @Delete('goals/:goalId')
+  @HttpCode(204)
+  async deleteGoal(@Req() request: Request, @Param('goalId') goalId: string) {
     const actor = await this.requireEmployee(request);
 
     try {
-      return await this.employeeService.submitGoalForReview(actor, goalId);
+      await this.employeeService.deleteGoal(actor, goalId);
+    } catch (error) {
+      this.rethrowDomainError(error);
+    }
+  }
+
+  @Delete('key-results/:krId')
+  @HttpCode(204)
+  async deleteKeyResult(@Req() request: Request, @Param('krId') krId: string) {
+    const actor = await this.requireEmployee(request);
+
+    try {
+      await this.employeeService.deleteKeyResult(actor, krId);
     } catch (error) {
       this.rethrowDomainError(error);
     }

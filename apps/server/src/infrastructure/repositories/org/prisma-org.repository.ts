@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
-import bcrypt from 'bcryptjs';
+import * as bcrypt from 'bcryptjs';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import {
@@ -16,7 +16,6 @@ import {
 } from './org.repository';
 import { REVIEW_GRADE_CODES } from '../../../shared/constants/review-grade-codes';
 import { DomainValidationError } from '../../../shared/errors/domain-validation.error';
-import { shouldAdvanceGoalsToPendingReview } from '../../../shared/time/goal-review-window';
 
 @Injectable()
 export class PrismaOrgRepository implements OrgRepository {
@@ -32,8 +31,6 @@ export class PrismaOrgRepository implements OrgRepository {
   }
 
   async listGoalStatusControls(input: AdminGoalStatusControlQuery): Promise<AdminGoalStatusControlRecord[]> {
-    await this.advanceQuarterGoalsToReviewIfNeeded(input.year, input.quarter);
-
     const goals = await this.prisma.goal.findMany({
       where: {
         year: input.year,
@@ -73,14 +70,21 @@ export class PrismaOrgRepository implements OrgRepository {
   }
 
   async transitionGoalStatuses(input: AdminGoalStatusTransitionInput): Promise<number> {
-    const currentStatus = input.targetStatus === 'confirmed' ? 'draft' : 'confirmed';
+    const currentStatuses =
+      input.targetStatus === 'draft'
+        ? ['confirmed'] as const
+        : input.targetStatus === 'confirmed'
+          ? ['draft'] as const
+          : ['draft', 'confirmed'] as const;
 
     const result = await this.prisma.goal.updateMany({
       where: {
         year: input.year,
         quarter: input.quarter,
         ownerUserId: input.userId ?? undefined,
-        status: currentStatus,
+        status: {
+          in: [...currentStatuses]
+        },
         owner: {
           isActive: true,
           roleAssignments: {
@@ -97,32 +101,6 @@ export class PrismaOrgRepository implements OrgRepository {
     });
 
     return result.count;
-  }
-
-  private async advanceQuarterGoalsToReviewIfNeeded(year: number, quarter: number) {
-    if (!shouldAdvanceGoalsToPendingReview(year, quarter)) {
-      return;
-    }
-
-    await this.prisma.goal.updateMany({
-      where: {
-        year,
-        quarter,
-        status: 'confirmed',
-        owner: {
-          isActive: true,
-          roleAssignments: {
-            some: {
-              roleCode: 'employee',
-              isEnabled: true
-            }
-          }
-        }
-      },
-      data: {
-        status: 'pending-review'
-      }
-    });
   }
 
   async getAdminBootstrap(): Promise<AdminOrgBootstrap> {
@@ -395,21 +373,41 @@ export class PrismaOrgRepository implements OrgRepository {
             throw new DomainValidationError(`duplicate goal template name in department: ${template.name}`);
           }
 
+          if (
+            error instanceof Prisma.PrismaClientKnownRequestError &&
+            error.code === 'P2000' &&
+            String(error.meta?.column_name ?? '').includes('description')
+          ) {
+            throw new DomainValidationError('template description is too long');
+          }
+
           throw error;
         }
 
         if (template.keyResults.length > 0) {
-          await tx.goalTemplateKeyResult.createMany({
-            data: template.keyResults.map((keyResult) => ({
-              id: keyResult.id,
-              goalTemplateId: persistedTemplateId,
-              code: keyResult.code,
-              name: keyResult.name,
-              description: keyResult.description,
-              points: keyResult.points,
-              scoreType: keyResult.scoreType ?? 'subjective'
-            }))
-          });
+          try {
+            await tx.goalTemplateKeyResult.createMany({
+              data: template.keyResults.map((keyResult) => ({
+                id: keyResult.id,
+                goalTemplateId: persistedTemplateId,
+                code: keyResult.code,
+                name: keyResult.name,
+                description: keyResult.description,
+                points: keyResult.points,
+                scoreType: keyResult.scoreType ?? 'subjective'
+              }))
+            });
+          } catch (error) {
+            if (
+              error instanceof Prisma.PrismaClientKnownRequestError &&
+              error.code === 'P2000' &&
+              String(error.meta?.column_name ?? '').includes('description')
+            ) {
+              throw new DomainValidationError('template key result description is too long');
+            }
+
+            throw error;
+          }
         }
       }
 
@@ -437,20 +435,32 @@ export class PrismaOrgRepository implements OrgRepository {
       }
 
       for (const section of input.sections) {
-        await tx.section.upsert({
-          where: { id: section.id },
-          update: {
-            departmentId: section.departmentId,
-            name: section.name,
-            isActive: section.isActive
-          },
-          create: {
-            id: section.id,
-            departmentId: section.departmentId,
-            name: section.name,
-            isActive: section.isActive
+        try {
+          await tx.section.upsert({
+            where: { id: section.id },
+            update: {
+              departmentId: section.departmentId,
+              name: section.name,
+              isActive: section.isActive
+            },
+            create: {
+              id: section.id,
+              departmentId: section.departmentId,
+              name: section.name,
+              isActive: section.isActive
+            }
+          });
+        } catch (error) {
+          if (
+            error instanceof Prisma.PrismaClientKnownRequestError &&
+            error.code === 'P2002' &&
+            String(error.meta?.target ?? '').includes('Section_departmentId_name_key')
+          ) {
+            throw new DomainValidationError(`duplicate section name in department: ${section.name}`);
           }
-        });
+
+          throw error;
+        }
       }
 
       await tx.section.updateMany({
@@ -562,6 +572,66 @@ export class PrismaOrgRepository implements OrgRepository {
             scopeId: assignment.scopeId,
             isPrimary: assignment.isPrimary,
             isEnabled: assignment.isEnabled
+          }
+        });
+
+        persistedAssignmentIds.push(assignmentId);
+      }
+
+      const enabledRoleAssignmentsByUserId = new Map<string, Array<(typeof input.roleAssignments)[number]>>();
+      for (const assignment of input.roleAssignments) {
+        if (!assignment.isEnabled) {
+          continue;
+        }
+
+        const current = enabledRoleAssignmentsByUserId.get(assignment.userId);
+        if (current) {
+          current.push(assignment);
+          continue;
+        }
+
+        enabledRoleAssignmentsByUserId.set(assignment.userId, [assignment]);
+      }
+
+      for (const user of input.users) {
+        if (!user.isActive) {
+          continue;
+        }
+
+        const enabledAssignments = enabledRoleAssignmentsByUserId.get(user.id) ?? [];
+        const hasEmployeeRole = enabledAssignments.some((assignment) => assignment.roleCode === 'employee');
+        const isDebugSystemAdmin =
+          user.employeeNo?.trim().toUpperCase().startsWith('DEBUG-') &&
+          enabledAssignments.length > 0 &&
+          enabledAssignments.every((assignment) => assignment.roleCode === 'system-admin');
+
+        if (hasEmployeeRole || isDebugSystemAdmin) {
+          continue;
+        }
+
+        const employeeCompositeKey = `${user.id}|employee|user|${user.id}`;
+        const existingEmployeeAssignment = existingAssignmentsByComposite.get(employeeCompositeKey);
+        const assignmentId = existingEmployeeAssignment?.id ?? randomUUID();
+        const isPrimary = !enabledAssignments.some((assignment) => assignment.isPrimary);
+
+        await tx.userRoleAssignment.upsert({
+          where: { id: assignmentId },
+          update: {
+            userId: user.id,
+            roleCode: 'employee',
+            scopeType: 'user',
+            scopeId: user.id,
+            isPrimary,
+            isEnabled: true
+          },
+          create: {
+            id: assignmentId,
+            userId: user.id,
+            roleCode: 'employee',
+            scopeType: 'user',
+            scopeId: user.id,
+            isPrimary,
+            isEnabled: true
           }
         });
 

@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { AuditService } from '../audit/audit.service';
+import { GoalReviewTransitionService } from '../goal-review-transition/goal-review-transition.service';
 import { DomainValidationError } from '../../shared/errors/domain-validation.error';
 import { REVIEW_GRADE_CODES } from '../../shared/constants/review-grade-codes';
 import {
@@ -25,6 +26,7 @@ export class AdminConfigService {
   constructor(
     @Inject(REVIEW_GROUPS_REPOSITORY) private readonly reviewGroupsRepository: ReviewGroupsRepository,
     @Inject(ORG_REPOSITORY) private readonly orgRepository: OrgRepository,
+    private readonly goalReviewTransitionService: GoalReviewTransitionService,
     private readonly auditService: AuditService
   ) {}
 
@@ -52,6 +54,14 @@ export class AdminConfigService {
       targetStatus: input.targetStatus
     };
     const affectedGoalCount = await this.orgRepository.transitionGoalStatuses(normalized);
+    const autoAdvancedGoalCount =
+      normalized.targetStatus === 'confirmed'
+        ? await this.goalReviewTransitionService.advanceQuarterGoalsToPendingReviewIfEligible(
+            normalized.year,
+            normalized.quarter,
+            normalized.userId
+          )
+        : 0;
 
     await this.auditService.write({
       actorUserId: actor.id,
@@ -62,7 +72,7 @@ export class AdminConfigService {
       afterJson: normalized
     });
 
-    return { affectedGoalCount };
+    return { affectedGoalCount, autoAdvancedGoalCount };
   }
 
   async saveBootstrap(input: AdminOrgBootstrapInput, actor: AuthUser) {

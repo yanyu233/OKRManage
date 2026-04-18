@@ -9,6 +9,7 @@ export type LeaderProof = {
   fileSize: number;
   note: string | null;
   isKnowledge: boolean;
+  canManageKnowledge: boolean;
   uploadedAt: string;
   updatedAt: string;
 };
@@ -183,6 +184,7 @@ export type BulkLeaderKrScoreInput = {
   employeeIds?: string[];
   goalIds?: string[];
   keyResultIds?: string[];
+  score?: number;
   comment?: string;
   overwriteExisting?: boolean;
   excludeTemplateGoals?: boolean;
@@ -194,7 +196,13 @@ export type BulkLeaderKrScoreResponse = {
   skippedCount: number;
   skipped: Array<{
     keyResultId: string;
-    reason: 'out-of-scope' | 'already-scored' | 'subjective-only' | 'goal-status-blocked' | 'proof-missing';
+    reason:
+      | 'out-of-scope'
+      | 'already-scored'
+      | 'subjective-only'
+      | 'goal-status-blocked'
+      | 'proof-missing'
+      | 'score-exceeds-points';
   }>;
 };
 
@@ -266,7 +274,9 @@ export type LeaderAnnualQuarterScore = {
 export type LeaderAnnualRankingEntry = {
   employeeId: string;
   employeeName: string;
+  sectionId: string | null;
   sectionName: string | null;
+  reviewGroupId: string | null;
   reviewGroupName: string | null;
   annualScore: number;
   quarterScores: LeaderAnnualQuarterScore[];
@@ -285,6 +295,8 @@ export type UpdateLeaderProofKnowledgeInput = {
 };
 
 export type LeaderKnowledgeEntry = {
+  entryKey: string;
+  entryType: 'proof' | 'manual';
   id: string;
   fileName: string;
   previewUrl?: string;
@@ -293,18 +305,20 @@ export type LeaderKnowledgeEntry = {
   fileSize: number;
   note: string | null;
   isKnowledge: boolean;
+  canManageKnowledge: boolean;
   uploadedAt: string;
   updatedAt: string;
-  employeeId: string;
-  employeeName: string;
+  uploaderName: string | null;
+  employeeId: string | null;
+  employeeName: string | null;
   sectionName: string | null;
   reviewGroupName: string | null;
-  goalId: string;
-  goalCode: string;
-  goalName: string;
-  keyResultId: string;
-  keyResultCode: string;
-  keyResultName: string;
+  goalId: string | null;
+  goalCode: string | null;
+  goalName: string | null;
+  keyResultId: string | null;
+  keyResultCode: string | null;
+  keyResultName: string | null;
 };
 
 export type LeaderKnowledgeBaseResponse = {

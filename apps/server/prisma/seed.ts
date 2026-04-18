@@ -1,19 +1,49 @@
 import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
+import * as bcrypt from 'bcryptjs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
+import { seedCurrentDemoProfile } from './current-demo-profile';
 
 const prisma = new PrismaClient();
 
 const GRADE_CODES = ['A+', 'A', 'B', 'C', 'D'] as const;
 const QUARTER_YEAR = 2026;
 const QUARTER_NUMBER = 1;
+const MINIMAL_DEPARTMENT_NAME = '数字科技管理事业部';
+const MINIMAL_SECTION_NAMES = [
+  '智慧园区中心',
+  '数字基建中心',
+  '数字业务中心',
+  '工业互联网中心',
+  '综合管理部',
+  '数字生产力中心',
+  '运营中心'
+] as const;
+const SYSADMIN_SECTION_NAME = '综合管理部';
 const proofStorageRoot = resolve(process.cwd(), process.env.PROOF_STORAGE_DIR?.trim() || 'storage/proofs');
 
 async function main(): Promise<void> {
   const loginName = envOrDefault('DEBUG_SYSADMIN_LOGIN', 'sysadmin.local');
   const password = envOrDefault('DEBUG_SYSADMIN_PASSWORD', 'Admin123!');
   const sysadminName = envOrDefault('DEBUG_SYSADMIN_NAME', '\u4e25\u4e3b\u4efb');
+  const seedProfile = envOrDefault('OKR_SEED_PROFILE', 'minimal').trim().toLowerCase();
+
+  if (seedProfile === 'current-demo') {
+    await seedCurrentDemoProfile(prisma, {
+      proofStorageRoot,
+      defaultLocalPassword: password
+    });
+    return;
+  }
+
+  if (seedProfile !== 'demo') {
+    await seedMinimalBaseline({
+      loginName,
+      password,
+      sysadminName
+    });
+    return;
+  }
 
   const department = await upsertDepartment('\u5de5\u4e1a\u4e92\u8054\u7f51\u4e2d\u5fc3');
   const sectionPlatform = await upsertSection(department.id, '\u5e73\u53f0\u4ea7\u54c1\u79d1');
@@ -186,6 +216,117 @@ function envOrDefault(key: string, fallback: string): string {
   return value;
 }
 
+async function seedMinimalBaseline(input: { loginName: string; password: string; sysadminName: string }) {
+  const department = await ensureSingleDepartment(MINIMAL_DEPARTMENT_NAME);
+
+  const sysadmin = await upsertUser({
+    employeeNo: 'DEBUG-SYSADMIN',
+    name: input.sysadminName,
+    positionName: '系统管理员',
+    wecomUserId: 'sysadmin.routec',
+    departmentId: department.id,
+    sectionId: null,
+    reviewGroupId: null
+  });
+
+  await prisma.user.deleteMany({
+    where: {
+      id: {
+        not: sysadmin.id
+      }
+    }
+  });
+
+  await prisma.department.deleteMany({
+    where: {
+      id: {
+        not: department.id
+      }
+    }
+  });
+
+  const sections = await syncDepartmentSections(department.id, [...MINIMAL_SECTION_NAMES]);
+  const sysadminSection = sections.find((section) => section.name === SYSADMIN_SECTION_NAME) ?? sections[0] ?? null;
+
+  await prisma.user.update({
+    where: { id: sysadmin.id },
+    data: {
+      name: input.sysadminName,
+      positionName: '系统管理员',
+      wecomUserId: 'sysadmin.routec',
+      departmentId: department.id,
+      sectionId: sysadminSection?.id ?? null,
+      reviewGroupId: null,
+      isActive: true
+    }
+  });
+
+  await upsertLocalAccount(sysadmin.id, input.loginName, await bcrypt.hash(input.password, 10), true);
+  await upsertRoleAssignment(sysadmin.id, 'system-admin', 'system', 'system', true);
+  await prisma.userRoleAssignment.deleteMany({
+    where: {
+      userId: sysadmin.id,
+      NOT: {
+        roleCode: 'system-admin',
+        scopeType: 'system',
+        scopeId: 'system'
+      }
+    }
+  });
+}
+
+async function ensureSingleDepartment(name: string) {
+  const existingDepartment = await prisma.department.findUnique({
+    where: { name }
+  });
+
+  if (existingDepartment) {
+    return prisma.department.update({
+      where: { id: existingDepartment.id },
+      data: {
+        isActive: true
+      }
+    });
+  }
+
+  const firstDepartment = await prisma.department.findFirst({
+    orderBy: {
+      createdAt: 'asc'
+    }
+  });
+
+  if (!firstDepartment) {
+    return upsertDepartment(name);
+  }
+
+  return prisma.department.update({
+    where: { id: firstDepartment.id },
+    data: {
+      name,
+      isActive: true
+    }
+  });
+}
+
+async function syncDepartmentSections(departmentId: string, names: string[]) {
+  await prisma.section.deleteMany({
+    where: {
+      departmentId,
+      name: {
+        notIn: names
+      }
+    }
+  });
+
+  const sections: Array<Awaited<ReturnType<typeof upsertSection>>> = [];
+
+  for (const name of names) {
+    sections.push(await upsertSection(departmentId, name));
+  }
+
+  return sections;
+}
+
 async function upsertDepartment(name: string) {
   return prisma.department.upsert({
     where: { name },
@@ -246,8 +387,8 @@ async function upsertUser(input: {
   positionName?: string | null;
   wecomUserId: string;
   departmentId: string;
-  sectionId: string;
-  reviewGroupId: string;
+  sectionId: string | null;
+  reviewGroupId: string | null;
 }) {
   return prisma.user.upsert({
     where: { employeeNo: input.employeeNo },

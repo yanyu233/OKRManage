@@ -11,6 +11,7 @@ import {
   Input,
   InputNumber,
   Modal,
+  Radio,
   Row,
   Select,
   Space,
@@ -31,6 +32,7 @@ import {
   getScoreTypeLabel
 } from '../../shared/i18n/labels';
 import { useSharedQuarterPeriod } from '../../shared/store/quarter-store';
+import { useSessionStore } from '../../shared/store/session-store';
 import type { LeaderKeyResult } from '../../shared/types/leader';
 import { YearQuarterPickerPopover } from '../../shared/ui/PeriodPickerPopover';
 import {
@@ -48,12 +50,14 @@ import {
   resolveObjectiveBulkEmployeeIds,
   resolveWorkbenchSelection,
   selectAllBulkEmployeeIds,
-  selectAllObjectiveKeyResultIds,
+  selectAllBulkKeyResultIds,
+  selectAllUnscoredBulkKeyResultIds,
   type ScoreDraft
 } from './leader-workbench.helpers';
 import './leader.css';
 
 const START_YEAR = 2026;
+const SHOW_WORKBENCH_HINT_TAGS = false;
 const T = {
   onlyWithProofs: '仅看有材料',
   title: '评分工作台',
@@ -96,18 +100,31 @@ const T = {
   employeeFilter: '选择员工',
   employeeFilterPlaceholder: '可多选要批量评分的员工',
   selectAllKrs: '全选客观项关键结果',
-  batchHint: '点击“全选客观项关键结果”后，会按当前科室、小组与员工筛选范围生成批量预览。',
+  selectAllUnscoredKrs: '全选未评价关键结果',
+  batchHint: '点击快捷按钮后，会按当前科室、小组与员工筛选范围生成批量预览。',
   batchObjectiveOnly: '批量评分仅处理客观评分项，主观评分项会保留在工作台中逐条评分。',
   batchFullScore: '本次会将命中的客观评分项直接赋为各自配置的满分分值。',
-  batchMissingProofTitle: (count: number) => `有 ${count} 条关键结果未提交材料，默认不会参与批量赋满分`,
-  batchMissingProofDesc: '以下关键结果还没有上传证明材料；若确需直接赋满分，请勾选下方强制放行。',
-  batchAllowMissingProofs: '允许对未提交材料的关键结果继续批量赋满分',
+  batchCustomScoreSummary: (score: number | null) =>
+    score === null ? '请为本次批量评分输入统一分值。' : `本次会将命中的客观评分项统一赋分为 ${score} 分。`,
+  batchModeLabel: '赋分方式',
+  batchModeFull: '按满分赋分',
+  batchModeCustom: '按自定义分数',
+  batchCustomScoreLabel: '自定义分数',
+  batchCustomScorePlaceholder: '输入统一赋分',
+  batchCustomScoreHint: (maxScore: number | null) =>
+    maxScore === null ? '请先生成批量预览，再输入自定义分数。' : `当前已选范围内，统一赋分最高可输入 ${maxScore} 分。`,
+  batchCustomScoreRequired: '请先输入自定义分数。',
+  batchCustomScoreExceeded: (score: number, maxScore: number) =>
+    `自定义分数 ${score} 分已超过当前已选关键结果的最低分值 ${maxScore} 分，请调整后再批量赋分。`,
+  batchMissingProofTitle: (count: number) => `有 ${count} 条关键结果未提交材料，默认不会参与批量赋分`,
+  batchMissingProofDesc: '以下关键结果还没有上传证明材料；若确需继续批量赋分，请勾选下方强制放行。',
+  batchAllowMissingProofs: '允许对未提交材料的关键结果继续批量赋分',
   batchSkippedMissingProofs: (updatedCount: number, skippedCount: number) =>
     `批量评分已完成，已更新 ${updatedCount} 项，${skippedCount} 项因未提交材料被自动跳过`,
   noScopedEmployees: '当前筛选范围内没有匹配员工',
   overwrite: '覆盖已有评分',
   batchCommentPlaceholder: '输入批量评分备注',
-  batchSave: '批量赋满分',
+  batchSave: '批量赋分',
   batchNeedScope: '请先选择员工，或使用全选按钮生成批量范围。',
   batchSaved: '批量评分已保存',
   batchSavedSkip: '批量评分完成，已更新',
@@ -123,7 +140,7 @@ const T = {
   selectedGoals: '已选目标',
   selectedKrs: '已选关键结果',
   removeSelectedKr: (code: string, name: string) => `移除 ${code} ${name}`,
-  previewEmpty: '当前范围内暂无可批量赋满分的客观评分项',
+  previewEmpty: '当前范围内暂无可批量赋分的客观评分项',
   templateGoal: '模板目标',
   readonlyRows: '预览列表仅展示你有评分权限的客观项，其他员工可在主界面继续查看。',
   readonlySuffix: '（只读）',
@@ -135,9 +152,25 @@ const T = {
   missingProofTag: (count: number) => `待补材料 ${count} 项`
 } as const;
 
+const BATCH_UI = {
+  title: '关键结果批量评分',
+  desc: '先按科室、小组和员工过滤评分对象，再用快捷按钮快速选中需要批量处理的关键结果。',
+  selectAll: '全选客观项关键结果',
+  selectAllUnscored: '全选未评价关键结果',
+  scopeNote: '左侧快捷按钮仅选客观项；右侧会选中当前范围内所有未评价关键结果。是否覆盖已有评分可在下方单独控制。',
+  fullScore: '本次会将命中的关键结果直接赋为各自配置的满分分值。',
+  customScoreSummary: (score: number | null) =>
+    score === null ? '请为本次批量评分输入统一分值。' : `本次会将命中的关键结果统一赋分为 ${score} 分。`,
+  previewEmpty: '当前范围内暂无可批量赋分的关键结果',
+  readonlyRows: '预览列表仅展示你有评分权限的关键结果，其他员工可在主界面中继续查看。'
+} as const;
+
 export function LeaderWorkbenchPage() {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
+  const isKnowledgeEditor = useSessionStore((state) =>
+    (state.user?.roles ?? []).some((assignment) => assignment.role === 'section-leader' || assignment.role === 'group-leader')
+  );
   const { year, quarter, yearOptions, quarterOptions, setPeriod } = useSharedQuarterPeriod({
     startYear: START_YEAR,
     futureRange: 8
@@ -154,6 +187,8 @@ export function LeaderWorkbenchPage() {
   const [bulkEmployeeIds, setBulkEmployeeIds] = useState<string[]>([]);
   const [bulkGoalIds, setBulkGoalIds] = useState<string[]>([]);
   const [bulkKrIds, setBulkKrIds] = useState<string[] | null>(null);
+  const [bulkScoreMode, setBulkScoreMode] = useState<'full' | 'custom'>('full');
+  const [bulkCustomScore, setBulkCustomScore] = useState<number | null>(null);
   const [bulkComment, setBulkComment] = useState('');
   const [bulkOverwrite, setBulkOverwrite] = useState(false);
   const [bulkExcludeTemplates, setBulkExcludeTemplates] = useState(false);
@@ -200,6 +235,7 @@ export function LeaderWorkbenchPage() {
         employeeIds: bulkEmployeeIds.length ? bulkEmployeeIds : undefined,
         goalIds: bulkGoalIds.length ? bulkGoalIds : undefined,
         keyResultIds: bulkKrIds !== null ? bulkKrIds : undefined,
+        score: bulkScoreMode === 'custom' ? bulkCustomScore ?? undefined : undefined,
         comment: bulkComment.trim() || undefined,
         overwriteExisting: bulkOverwrite,
         excludeTemplateGoals: bulkExcludeTemplates,
@@ -370,6 +406,20 @@ export function LeaderWorkbenchPage() {
     () => bulkPreview.rows.filter((entry) => entry.isProofMissing),
     [bulkPreview.rows]
   );
+  const bulkCustomScoreMax = useMemo(() => {
+    if (!bulkPreview.rows.length) {
+      return null;
+    }
+
+    return bulkPreview.rows.reduce((min, entry) => Math.min(min, entry.points), bulkPreview.rows[0].points);
+  }, [bulkPreview.rows]);
+  const bulkCustomScoreExceeded =
+    bulkScoreMode === 'custom' &&
+    bulkCustomScore !== null &&
+    bulkCustomScoreMax !== null &&
+    bulkCustomScore > bulkCustomScoreMax;
+  const isBulkSubmitDisabled =
+    !bulkPreview.rows.length || (bulkScoreMode === 'custom' && (bulkCustomScore === null || bulkCustomScoreExceeded));
   const isReadonlyEmployee = Boolean(displaySelectedEmployee && !displaySelectedEmployee.canScore);
   const selectedEmployeeCount = bulkPreview.employees.length;
 
@@ -503,7 +553,7 @@ export function LeaderWorkbenchPage() {
                         <Tag>{`${employee.keyResultCount} ${T.employeeKrsTag}`}</Tag>
                         <Tag>{`${T.employeeScoredTag} ${employee.scoredKeyResultCount} 条`}</Tag>
                         <Tag>{`${employee.proofCount} ${T.employeeProofTag}`}</Tag>
-                        {employee.missingProofKeyResultCount > 0 ? (
+                        {SHOW_WORKBENCH_HINT_TAGS && employee.missingProofKeyResultCount > 0 ? (
                           <Tag color="gold">{T.missingProofTag(employee.missingProofKeyResultCount)}</Tag>
                         ) : null}
                       </Space>
@@ -533,7 +583,7 @@ export function LeaderWorkbenchPage() {
                 </div>
                 <Space size={10} wrap className="leader-detail-card__hero-tags">
                   <Button type="primary" onClick={openBulkModal} disabled={!workbenchQuery.data?.employees.length}>
-                    {T.batchTitle}
+                    {BATCH_UI.title}
                   </Button>
                   <Tag color="blue">{getLeaderEmployeeStatusLabel(displaySelectedEmployee?.status ?? 'pending')}</Tag>
                   <Tag icon={<TrophyOutlined />}>{`${T.quarterScore} ${formatNullableScore(displaySelectedEmployee?.quarterScore ?? null)}`}</Tag>
@@ -553,9 +603,11 @@ export function LeaderWorkbenchPage() {
                 <Card variant="borderless" className="leader-summary-card">
                   <Statistic title={T.proofCount} value={displaySelectedEmployee?.proofCount ?? 0} />
                 </Card>
-                <Card variant="borderless" className="leader-summary-card">
-                  <Statistic title={T.missingProofCount} value={displaySelectedEmployee?.missingProofKeyResultCount ?? 0} />
-                </Card>
+                {SHOW_WORKBENCH_HINT_TAGS ? (
+                  <Card variant="borderless" className="leader-summary-card">
+                    <Statistic title={T.missingProofCount} value={displaySelectedEmployee?.missingProofKeyResultCount ?? 0} />
+                  </Card>
+                ) : null}
               </div>
             </Card>
 
@@ -587,7 +639,7 @@ export function LeaderWorkbenchPage() {
                       <Tag>{`${displaySelectedGoal.totalPoints} 分`}</Tag>
                       <Tag>{`${displaySelectedGoal.keyResultCount} ${T.goalKrsTag}`}</Tag>
                       <Tag>{`${displaySelectedGoal.proofCount} ${T.goalProofTag}`}</Tag>
-                      {displaySelectedGoal.missingProofKeyResultCount > 0 ? (
+                      {SHOW_WORKBENCH_HINT_TAGS && displaySelectedGoal.missingProofKeyResultCount > 0 ? (
                         <Tag color="gold">{T.missingProofTag(displaySelectedGoal.missingProofKeyResultCount)}</Tag>
                       ) : null}
                       <Tag>{`${T.currentScore} ${formatNullableScore(displaySelectedGoal.currentScore)}`}</Tag>
@@ -605,7 +657,9 @@ export function LeaderWorkbenchPage() {
                         return (
                           <Card
                             key={keyResult.id}
-                            className={`leader-kr-card${keyResult.isProofMissing ? ' leader-kr-card--warning' : ''}`}
+                            className={`leader-kr-card${
+                              SHOW_WORKBENCH_HINT_TAGS && keyResult.isProofMissing ? ' leader-kr-card--warning' : ''
+                            }`}
                             variant="borderless"
                           >
                             <Space direction="vertical" size={12} style={{ width: '100%' }} className="leader-kr-card__content">
@@ -623,12 +677,16 @@ export function LeaderWorkbenchPage() {
                                   <Tag color={keyResult.scoreType === 'objective' ? 'blue' : 'purple'}>
                                     {getScoreTypeLabel(keyResult.scoreType)}
                                   </Tag>
-                                  <Tag color={keyResult.completionState === 'completed' ? 'green' : 'red'}>
-                                    {getCompletionStateLabel(keyResult.completionState)}
-                                  </Tag>
-                                  <Tag color={keyResult.isProofMissing ? 'gold' : 'blue'}>
-                                    {keyResult.isProofMissing ? T.proofMissing : T.proofReady}
-                                  </Tag>
+                                  {SHOW_WORKBENCH_HINT_TAGS ? (
+                                    <Tag color={keyResult.completionState === 'completed' ? 'green' : 'red'}>
+                                      {getCompletionStateLabel(keyResult.completionState)}
+                                    </Tag>
+                                  ) : null}
+                                  {SHOW_WORKBENCH_HINT_TAGS ? (
+                                    <Tag color={keyResult.isProofMissing ? 'gold' : 'blue'}>
+                                      {keyResult.isProofMissing ? T.proofMissing : T.proofReady}
+                                    </Tag>
+                                  ) : null}
                                   <Tag icon={<FileTextOutlined />}>{`${keyResult.proofCount} ${T.goalProofTag}`}</Tag>
                                   {keyResult.latestProofUploadedAt ? <Tag>{formatDateTime(keyResult.latestProofUploadedAt)}</Tag> : null}
                                 </Space>
@@ -684,13 +742,15 @@ export function LeaderWorkbenchPage() {
                                           <Typography.Text type="secondary">{formatDateTime(proof.uploadedAt)}</Typography.Text>
                                         </div>
                                         <Space size={8} className="leader-proof-actions">
-                                          <Checkbox
-                                            checked={proof.isKnowledge}
-                                            disabled={knowledgeMutation.isPending}
-                                            onChange={(event) => toggleProofKnowledge(proof.id, event.target.checked)}
-                                          >
-                                            {T.markKnowledge}
-                                          </Checkbox>
+                                          {isKnowledgeEditor && proof.canManageKnowledge ? (
+                                            <Checkbox
+                                              checked={proof.isKnowledge}
+                                              disabled={knowledgeMutation.isPending}
+                                              onChange={(event) => toggleProofKnowledge(proof.id, event.target.checked)}
+                                            >
+                                              {T.markKnowledge}
+                                            </Checkbox>
+                                          ) : null}
                                           <Button type="link" size="small" href={resolveProofPreviewUrl(proof)} target="_blank" rel="noreferrer">
                                             {T.previewFile}
                                           </Button>
@@ -724,11 +784,11 @@ export function LeaderWorkbenchPage() {
 
       <Modal
         open={isBulkOpen}
-        title={T.batchTitle}
+        title={BATCH_UI.title}
         okText={T.batchSave}
         cancelText={T.cancel}
         onOk={submitBulkScore}
-        okButtonProps={{ loading: bulkMutation.isPending, disabled: !bulkPreview.rows.length }}
+        okButtonProps={{ loading: bulkMutation.isPending, disabled: isBulkSubmitDisabled }}
         onCancel={() => {
           setIsBulkOpen(false);
           resetBulk();
@@ -738,10 +798,46 @@ export function LeaderWorkbenchPage() {
       >
         <Space direction="vertical" size={18} style={{ width: '100%' }}>
           <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-            {T.batchDesc}
+            {BATCH_UI.desc}
           </Typography.Paragraph>
-          <Alert type="info" showIcon message={T.batchObjectiveOnly} />
-          <Alert type="success" showIcon message={T.batchFullScore} />
+          <Alert type="info" showIcon message={BATCH_UI.scopeNote} />
+          <Alert
+            type="success"
+            showIcon
+            message={bulkScoreMode === 'custom' ? BATCH_UI.customScoreSummary(bulkCustomScore) : BATCH_UI.fullScore}
+          />
+
+          <Row gutter={[16, 16]}>
+            <Col xs={24} md={12}>
+              <Typography.Text strong>{T.batchModeLabel}</Typography.Text>
+              <Radio.Group
+                style={{ display: 'flex', marginTop: 8 }}
+                value={bulkScoreMode}
+                onChange={(event) => setBulkScoreMode(event.target.value)}
+              >
+                <Radio.Button value="full">{T.batchModeFull}</Radio.Button>
+                <Radio.Button value="custom">{T.batchModeCustom}</Radio.Button>
+              </Radio.Group>
+            </Col>
+            <Col xs={24} md={12}>
+              <Typography.Text strong>{T.batchCustomScoreLabel}</Typography.Text>
+              <InputNumber
+                style={{ width: '100%', marginTop: 8 }}
+                min={0}
+                step={0.5}
+                aria-label={T.batchCustomScoreLabel}
+                disabled={bulkScoreMode !== 'custom'}
+                placeholder={T.batchCustomScorePlaceholder}
+                value={bulkCustomScore ?? undefined}
+                onChange={(value) => setBulkCustomScore(typeof value === 'number' ? value : null)}
+              />
+              <Typography.Paragraph type={bulkCustomScoreExceeded ? 'danger' : 'secondary'} style={{ marginTop: 8, marginBottom: 0 }}>
+                {bulkCustomScoreExceeded && bulkCustomScore !== null && bulkCustomScoreMax !== null
+                  ? T.batchCustomScoreExceeded(bulkCustomScore, bulkCustomScoreMax)
+                  : T.batchCustomScoreHint(bulkCustomScoreMax)}
+              </Typography.Paragraph>
+            </Col>
+          </Row>
 
           <Row gutter={[16, 16]}>
             <Col xs={24} md={12}>
@@ -803,7 +899,10 @@ export function LeaderWorkbenchPage() {
 
           <Space wrap>
             <Button onClick={handleSelectAllKeyResults} disabled={!bulkScorableEmployeeIds.length}>
-              {T.selectAllKrs}
+              {BATCH_UI.selectAll}
+            </Button>
+            <Button onClick={handleSelectAllUnscoredKeyResults} disabled={!bulkScorableEmployeeIds.length}>
+              {BATCH_UI.selectAllUnscored}
             </Button>
           </Space>
 
@@ -855,7 +954,7 @@ export function LeaderWorkbenchPage() {
                   ))}
                 </Space>
               ) : (
-                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={T.previewEmpty} />
+                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={BATCH_UI.previewEmpty} />
               )}
             </Card>
 
@@ -869,7 +968,7 @@ export function LeaderWorkbenchPage() {
                   ))}
                 </Space>
               ) : (
-                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={T.previewEmpty} />
+                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={BATCH_UI.previewEmpty} />
               )}
             </Card>
           </div>
@@ -911,11 +1010,11 @@ export function LeaderWorkbenchPage() {
                 ))}
               </div>
             ) : (
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={T.previewEmpty} />
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={BATCH_UI.previewEmpty} />
             )}
           </Card>
 
-          {bulkPreview.readonlyRows > 0 ? <Alert type="warning" showIcon message={T.readonlyRows} /> : null}
+          {bulkPreview.readonlyRows > 0 ? <Alert type="warning" showIcon message={BATCH_UI.readonlyRows} /> : null}
 
           <div>
             <Typography.Text strong>{T.comment}</Typography.Text>
@@ -977,6 +1076,8 @@ export function LeaderWorkbenchPage() {
     setBulkEmployeeIds([]);
     setBulkGoalIds([]);
     setBulkKrIds(null);
+    setBulkScoreMode('full');
+    setBulkCustomScore(null);
     setBulkComment('');
     setBulkOverwrite(false);
     setBulkExcludeTemplates(false);
@@ -991,6 +1092,8 @@ export function LeaderWorkbenchPage() {
     setBulkEmployeeIds([]);
     setBulkGoalIds([]);
     setBulkKrIds(null);
+    setBulkScoreMode('full');
+    setBulkCustomScore(null);
     setBulkComment('');
     setBulkOverwrite(false);
     setBulkExcludeTemplates(false);
@@ -1008,7 +1111,28 @@ export function LeaderWorkbenchPage() {
 
     setBulkEmployeeIds(nextEmployeeIds);
     setBulkKrIds(
-      selectAllObjectiveKeyResultIds(workbenchQuery.data?.bulkCatalog ?? [], {
+      selectAllBulkKeyResultIds(workbenchQuery.data?.bulkCatalog ?? [], {
+        sectionId: bulkSectionId,
+        reviewGroupId: bulkReviewGroupId,
+        employeeIds: nextEmployeeIds,
+        goalIds: bulkGoalIds,
+        excludeTemplateGoals: bulkExcludeTemplates
+      })
+    );
+  }
+
+  function handleSelectAllUnscoredKeyResults() {
+    const nextEmployeeIds = resolveObjectiveBulkEmployeeIds(
+      bulkEmployeeIds.length ? bulkEmployeeIds : bulkScopedEmployeeIds,
+      bulkScorableEmployeeIds
+    );
+    if (!nextEmployeeIds.length) {
+      return;
+    }
+
+    setBulkEmployeeIds(nextEmployeeIds);
+    setBulkKrIds(
+      selectAllUnscoredBulkKeyResultIds(workbenchQuery.data?.bulkCatalog ?? [], {
         sectionId: bulkSectionId,
         reviewGroupId: bulkReviewGroupId,
         employeeIds: nextEmployeeIds,
@@ -1038,6 +1162,16 @@ export function LeaderWorkbenchPage() {
   function submitBulkScore() {
     if (!bulkPreview.rows.length) {
       message.warning(T.batchNeedScope);
+      return;
+    }
+
+    if (bulkScoreMode === 'custom' && bulkCustomScore === null) {
+      message.warning(T.batchCustomScoreRequired);
+      return;
+    }
+
+    if (bulkCustomScoreExceeded && bulkCustomScore !== null && bulkCustomScoreMax !== null) {
+      message.warning(T.batchCustomScoreExceeded(bulkCustomScore, bulkCustomScoreMax));
       return;
     }
 

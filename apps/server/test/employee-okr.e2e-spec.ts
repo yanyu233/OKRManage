@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { closeTestDatabase, resetTestDatabase } from './support/test-db';
 import { createTestApp, loginAsEmployee } from './support/test-app';
+import { CURRENT_DEMO_EMPLOYEES, CURRENT_DEMO_GOALS } from './support/current-demo-data';
 
 describe('Employee OKR list', () => {
   let app: INestApplication;
@@ -22,7 +23,7 @@ describe('Employee OKR list', () => {
 
     expect(response.body.employee).toEqual(
       expect.objectContaining({
-        name: '张晨',
+        name: CURRENT_DEMO_EMPLOYEES.employeeLeader.name,
         goalCount: 2,
         keyResultCount: 6
       })
@@ -30,12 +31,12 @@ describe('Employee OKR list', () => {
     expect(response.body.goals).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          code: 'O1',
-          name: '张晨 2026 年一季度 OKR'
+          code: CURRENT_DEMO_GOALS.employeeQuarterOnePrimary.code,
+          name: CURRENT_DEMO_GOALS.employeeQuarterOnePrimary.name
         }),
         expect.objectContaining({
-          code: 'O4',
-          name: '张晨 知识库沉淀专项'
+          code: CURRENT_DEMO_GOALS.employeeQuarterOneSecondary.code,
+          name: CURRENT_DEMO_GOALS.employeeQuarterOneSecondary.name
         })
       ])
     );

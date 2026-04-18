@@ -118,6 +118,20 @@ export function defaultPathForRole(role: UserRole) {
   }
 }
 
+export function resolvePostAuthPath(user: SessionUser, returnTo?: string | null) {
+  const normalizedReturnTo = normalizeReturnTo(returnTo);
+  if (!normalizedReturnTo) {
+    return defaultPathForRole(user.activeRole);
+  }
+
+  const targetRole = resolveTargetRoleForPath(user, normalizedReturnTo);
+  if (targetRole && canAccessRoute(user, [targetRole])) {
+    return normalizedReturnTo;
+  }
+
+  return defaultPathForRole(user.activeRole);
+}
+
 export function buildNavigationSections(user: SessionUser): NavigationSection[] {
   const roles = getAssignedRoles(user);
   const sections: NavigationSection[] = [];
@@ -224,7 +238,31 @@ export function resolveTargetRoleForPath(user: SessionUser, pathname: string): U
     return roles.includes('system-admin') ? 'system-admin' : null;
   }
 
-  if (pathname.startsWith('/okr/all') || pathname.startsWith('/knowledge-base') || pathname.startsWith('/leader/knowledge-base')) {
+  if (pathname.startsWith('/knowledge-base') || pathname.startsWith('/leader/knowledge-base')) {
+    if (user.activeRole === 'section-leader' || user.activeRole === 'group-leader') {
+      return user.activeRole;
+    }
+
+    if (roles.includes('section-leader')) {
+      return 'section-leader';
+    }
+
+    if (roles.includes('group-leader')) {
+      return 'group-leader';
+    }
+
+    if (roles.includes('department-head')) {
+      return 'department-head';
+    }
+
+    if (roles.includes('employee')) {
+      return 'employee';
+    }
+
+    return roles.includes('system-admin') ? 'system-admin' : user.activeRole;
+  }
+
+  if (pathname.startsWith('/okr/all')) {
     return user.activeRole;
   }
 
@@ -273,6 +311,19 @@ function getAssignedRoles(user: SessionUser): UserRole[] {
   }
 
   return Array.from(new Set(roles));
+}
+
+function normalizeReturnTo(value?: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const normalized = value.trim();
+  if (!normalized.startsWith('/') || normalized.startsWith('//')) {
+    return null;
+  }
+
+  return normalized;
 }
 
 function hasLeaderCapability(roles: UserRole[]) {

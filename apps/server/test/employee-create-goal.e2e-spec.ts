@@ -21,7 +21,7 @@ describe('Employee create goal', () => {
     const response = await agent
       .post('/api/employee/goals')
       .send({
-        year: 2026,
+        year: 2028,
         quarter: 2,
         name: '员工自建目标',
         description: '验证默认评分类型',

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
 import { SessionModule } from '../session/session.module';
+import { GoalReviewTransitionModule } from '../goal-review-transition/goal-review-transition.module';
 import { AdminConfigController } from './admin-config.controller';
 import { AdminConfigService } from './admin-config.service';
 import { AdminConfigExcelService } from './admin-config-excel.service';
@@ -12,7 +13,7 @@ import {
 import { PrismaReviewGroupsRepository } from '../../infrastructure/repositories/review-groups/prisma-review-groups.repository';
 
 @Module({
-  imports: [SessionModule, AuditModule],
+  imports: [SessionModule, AuditModule, GoalReviewTransitionModule],
   controllers: [AdminConfigController],
   providers: [
     AdminConfigService,

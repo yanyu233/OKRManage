@@ -29,7 +29,7 @@ describe('Employee goal template import', () => {
           {
             id: 'template-onboarding',
             departmentId,
-            name: '平台科新人入项目标模板',
+            name: '新员工入项模板',
             description: '用于校验模板 KR 评分类型继承',
             isActive: true,
             keyResults: [
@@ -59,8 +59,8 @@ describe('Employee goal template import', () => {
     const imported = await employee
       .post('/api/employee/goal-templates/import')
       .send({
-        year: 2026,
-        quarter: 2,
+        year: 2028,
+        quarter: 3,
         templateIds: ['template-onboarding']
       })
       .expect(201);

@@ -1,0 +1,1073 @@
+{
+  "departments": [
+    {
+      "id": "cmo34mr0p0000ijo0t9t756li",
+      "name": "数字科技管理事业部",
+      "isActive": true
+    }
+  ],
+  "sections": [
+    {
+      "id": "cmo34mr130004ijo0t4i49go7",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "name": "智慧园区中心",
+      "isActive": true
+    },
+    {
+      "id": "cmo34mr170006ijo0yimswmq9",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "name": "数字基建中心",
+      "isActive": true
+    },
+    {
+      "id": "cmo34mr190008ijo03845snm2",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "name": "数字业务中心",
+      "isActive": true
+    },
+    {
+      "id": "cmo34mr1c000aijo0qsykp17p",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "name": "工业互联网中心",
+      "isActive": true
+    },
+    {
+      "id": "cmo34mr1g000cijo0fkljgqbr",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "name": "综合管理部",
+      "isActive": true
+    },
+    {
+      "id": "cmo34mr1j000eijo01oo1q80h",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "name": "数字生产力中心",
+      "isActive": true
+    },
+    {
+      "id": "cmo34mr1m000gijo00mz0mxlc",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "name": "运营中心",
+      "isActive": true
+    },
+    {
+      "id": "section-ab65kk",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "name": "虚拟科室",
+      "isActive": true
+    }
+  ],
+  "users": [
+    {
+      "id": "cmo34mr0u0002ijo0q62vwa9e",
+      "employeeNo": "DEBUG-SYSADMIN",
+      "name": "System Admin",
+      "positionName": "系统管理员",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "section-ab65kk",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9su0001ijkghpvbv7hu",
+      "employeeNo": null,
+      "name": "张艺耀",
+      "positionName": "信息系统工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr130004ijo0t4i49go7",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9sv0003ijkg2lgo3g81",
+      "employeeNo": null,
+      "name": "陈福松",
+      "positionName": "终端设备工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr130004ijo0t4i49go7",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9sw0005ijkg9u4qcpy3",
+      "employeeNo": null,
+      "name": "陈帝",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr130004ijo0t4i49go7",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9sx0007ijkg0bty37x7",
+      "employeeNo": null,
+      "name": "龚世铖",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr130004ijo0t4i49go7",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9sy0009ijkg43l5o353",
+      "employeeNo": null,
+      "name": "游娣",
+      "positionName": "办公电子设备管理岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr130004ijo0t4i49go7",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9sz000bijkgyefzmctz",
+      "employeeNo": null,
+      "name": "聂小驰",
+      "positionName": "终端设备工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr130004ijo0t4i49go7",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9t0000dijkg3zlkun2i",
+      "employeeNo": null,
+      "name": "聂星宇",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr130004ijo0t4i49go7",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9t0000fijkg2f46y0z9",
+      "employeeNo": null,
+      "name": "张正奕",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr130004ijo0t4i49go7",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9t1000hijkgpz6ouit7",
+      "employeeNo": null,
+      "name": "李春山",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr170006ijo0yimswmq9",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9t2000jijkg5oigs3jn",
+      "employeeNo": null,
+      "name": "王晨",
+      "positionName": "网络安全工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr170006ijo0yimswmq9",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9t2000lijkgtgpnb2da",
+      "employeeNo": null,
+      "name": "全俊",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr170006ijo0yimswmq9",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9t3000nijkgy56mqeis",
+      "employeeNo": null,
+      "name": "陈均",
+      "positionName": "网络安全工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr170006ijo0yimswmq9",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9t3000pijkg8x3t269h",
+      "employeeNo": null,
+      "name": "吕扬",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr170006ijo0yimswmq9",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9t4000rijkgpick57ul",
+      "employeeNo": null,
+      "name": "骆书宇",
+      "positionName": "网络工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr170006ijo0yimswmq9",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9t5000tijkgfbqsppzj",
+      "employeeNo": null,
+      "name": "田绍礼",
+      "positionName": "云技术工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr170006ijo0yimswmq9",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9t5000vijkgqdvalqaw",
+      "employeeNo": null,
+      "name": "程支猛",
+      "positionName": "云技术工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr170006ijo0yimswmq9",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9t6000xijkgq8u40vd8",
+      "employeeNo": null,
+      "name": "刘渊",
+      "positionName": "网络工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr170006ijo0yimswmq9",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9t6000zijkg3iodawl4",
+      "employeeNo": null,
+      "name": "胡晓",
+      "positionName": "网络安全工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr170006ijo0yimswmq9",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9t70011ijkg46qgaj2o",
+      "employeeNo": null,
+      "name": "余浪",
+      "positionName": "网络安全工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr170006ijo0yimswmq9",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9t80013ijkgpok22skg",
+      "employeeNo": null,
+      "name": "杨旭东",
+      "positionName": "云技术工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr170006ijo0yimswmq9",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9t80015ijkgbsoexfu9",
+      "employeeNo": "1700066",
+      "name": "陈美果",
+      "positionName": "负责人",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr190008ijo03845snm2",
+      "reviewGroupId": "review-group-l1wxk9",
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9t90017ijkg8mmtviss",
+      "employeeNo": null,
+      "name": "谢胡林",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr190008ijo03845snm2",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9ta0019ijkg5c8k9xqh",
+      "employeeNo": null,
+      "name": "姜峰",
+      "positionName": "信息系统工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr190008ijo03845snm2",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tb001bijkgti2arzsn",
+      "employeeNo": null,
+      "name": "熊贞兰",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr190008ijo03845snm2",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tb001dijkg8pi0a3ez",
+      "employeeNo": null,
+      "name": "丁醇",
+      "positionName": "信息系统工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr190008ijo03845snm2",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tc001fijkg8sd8ow95",
+      "employeeNo": null,
+      "name": "赵坚",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr190008ijo03845snm2",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9td001hijkg4m9s2tvq",
+      "employeeNo": null,
+      "name": "杨增禄",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr190008ijo03845snm2",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9te001jijkgaptmz8p7",
+      "employeeNo": null,
+      "name": "李朝江",
+      "positionName": "业务流程与系统架构师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr190008ijo03845snm2",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tf001lijkgrnfpo27e",
+      "employeeNo": null,
+      "name": "蒲雪映",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr190008ijo03845snm2",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tf001nijkgdt1tfn8w",
+      "employeeNo": null,
+      "name": "汪跃",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr190008ijo03845snm2",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tg001pijkgod3xi4cv",
+      "employeeNo": null,
+      "name": "方墨",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1c000aijo0qsykp17p",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9th001rijkgveot94ii",
+      "employeeNo": null,
+      "name": "赵庆",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1c000aijo0qsykp17p",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9th001tijkg2eq78ajm",
+      "employeeNo": null,
+      "name": "袁波",
+      "positionName": "信息系统工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1c000aijo0qsykp17p",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9ti001vijkg1ggnahw5",
+      "employeeNo": null,
+      "name": "赵琨",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1c000aijo0qsykp17p",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9ti001xijkgdthldvzl",
+      "employeeNo": null,
+      "name": "涂宗强",
+      "positionName": "信息系统工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1c000aijo0qsykp17p",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tj001zijkgpihbvj2c",
+      "employeeNo": null,
+      "name": "陈磊",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1c000aijo0qsykp17p",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tk0021ijkgmzwdzpta",
+      "employeeNo": null,
+      "name": "何颖",
+      "positionName": "信息系统工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1c000aijo0qsykp17p",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tk0023ijkg4aqlc74m",
+      "employeeNo": null,
+      "name": "严翔",
+      "positionName": "信息系统工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1c000aijo0qsykp17p",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tl0025ijkgli90cz43",
+      "employeeNo": null,
+      "name": "冯林",
+      "positionName": "信息系统工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1c000aijo0qsykp17p",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tl0027ijkgzi3vms6a",
+      "employeeNo": null,
+      "name": "安小波",
+      "positionName": "信息系统工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1c000aijo0qsykp17p",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tm0029ijkgpikbqq1h",
+      "employeeNo": null,
+      "name": "曾开燚",
+      "positionName": "业务流程与系统架构师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1c000aijo0qsykp17p",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tm002bijkgtdxi1c2g",
+      "employeeNo": null,
+      "name": "袁江远",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1c000aijo0qsykp17p",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tn002dijkgo649t5w2",
+      "employeeNo": null,
+      "name": "周婷",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1c000aijo0qsykp17p",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9to002fijkgb0pjrrlu",
+      "employeeNo": null,
+      "name": "孙攀",
+      "positionName": "综合管理岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1g000cijo0fkljgqbr",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9to002hijkguonj18j7",
+      "employeeNo": null,
+      "name": "仇爱",
+      "positionName": "综合管理岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1g000cijo0fkljgqbr",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tp002jijkgqbgh12am",
+      "employeeNo": null,
+      "name": "刘园",
+      "positionName": "综合管理岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1g000cijo0fkljgqbr",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tp002lijkg6xsivway",
+      "employeeNo": null,
+      "name": "钟小玉",
+      "positionName": "财务管理岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1g000cijo0fkljgqbr",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tq002nijkgxppmw2ac",
+      "employeeNo": null,
+      "name": "刘雨垚",
+      "positionName": "财务管理岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1g000cijo0fkljgqbr",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tq002pijkg3h7q4kqh",
+      "employeeNo": null,
+      "name": "李吉瑜",
+      "positionName": "综合管理岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1g000cijo0fkljgqbr",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tr002rijkgec4pak9v",
+      "employeeNo": null,
+      "name": "杜文闻",
+      "positionName": "综合管理岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1g000cijo0fkljgqbr",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9ts002tijkgs6zllgin",
+      "employeeNo": null,
+      "name": "周银波",
+      "positionName": "商务管理岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1g000cijo0fkljgqbr",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tt002vijkg4cej2j24",
+      "employeeNo": null,
+      "name": "杨凡",
+      "positionName": "综合管理岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1g000cijo0fkljgqbr",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tu002xijkgdgbjsk75",
+      "employeeNo": null,
+      "name": "李健",
+      "positionName": "产品技术经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1j000eijo01oo1q80h",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tv002zijkg9saa1htr",
+      "employeeNo": null,
+      "name": "陈曦",
+      "positionName": "产品技术经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1j000eijo01oo1q80h",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tv0031ijkg3s3kegd3",
+      "employeeNo": null,
+      "name": "万远阳",
+      "positionName": "内控管理岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1j000eijo01oo1q80h",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tw0033ijkgs8g8oofc",
+      "employeeNo": null,
+      "name": "刘然",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1j000eijo01oo1q80h",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tw0035ijkgdtixdntv",
+      "employeeNo": null,
+      "name": "谭诗镇",
+      "positionName": "数据工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1j000eijo01oo1q80h",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tx0037ijkgugeomeka",
+      "employeeNo": null,
+      "name": "罗钰琛",
+      "positionName": "业务流程与系统架构师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1j000eijo01oo1q80h",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9ty0039ijkgvtpsrmvp",
+      "employeeNo": null,
+      "name": "张维维",
+      "positionName": "业务流程与系统架构师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1j000eijo01oo1q80h",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9ty003bijkgbp424ji1",
+      "employeeNo": null,
+      "name": "李俊宏",
+      "positionName": "云技术架构师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr170006ijo0yimswmq9",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tz003dijkgo0peucgu",
+      "employeeNo": null,
+      "name": "王川川",
+      "positionName": "云技术工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr170006ijo0yimswmq9",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tz003fijkgu3d05zex",
+      "employeeNo": null,
+      "name": "曹辉罡",
+      "positionName": "营销运营岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1m000gijo00mz0mxlc",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9u0003hijkgyp5pug98",
+      "employeeNo": null,
+      "name": "周洪池",
+      "positionName": "新媒体运营岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1m000gijo00mz0mxlc",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9u0003jijkgytr1s92d",
+      "employeeNo": null,
+      "name": "李昌慧颖",
+      "positionName": "新媒体运营岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1m000gijo00mz0mxlc",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9u1003lijkgj6oltzeg",
+      "employeeNo": null,
+      "name": "程怡",
+      "positionName": "内容运营岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1m000gijo00mz0mxlc",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9u2003nijkgy14mafz8",
+      "employeeNo": null,
+      "name": "李世遥",
+      "positionName": "业务管理岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1m000gijo00mz0mxlc",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9u2003pijkgwkupfvrv",
+      "employeeNo": null,
+      "name": "谭清梅",
+      "positionName": "客服管理岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1m000gijo00mz0mxlc",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9u3003rijkg7wq8ula3",
+      "employeeNo": null,
+      "name": "吴霜",
+      "positionName": "内容运营岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1m000gijo00mz0mxlc",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9u3003tijkgflvhfnmt",
+      "employeeNo": null,
+      "name": "邹波",
+      "positionName": "门店管理岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1m000gijo00mz0mxlc",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9u4003vijkgof6yruqv",
+      "employeeNo": null,
+      "name": "吴莉莉",
+      "positionName": "平面设计师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1m000gijo00mz0mxlc",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9u4003xijkgtnfbgyd7",
+      "employeeNo": null,
+      "name": "王利",
+      "positionName": "商品运营岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1m000gijo00mz0mxlc",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9u5003zijkgdw0x3vw1",
+      "employeeNo": null,
+      "name": "和紫萱",
+      "positionName": "商品运营岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1m000gijo00mz0mxlc",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9u50041ijkgapx71t63",
+      "employeeNo": null,
+      "name": "钟显阳",
+      "positionName": "平面设计师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1m000gijo00mz0mxlc",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9u60043ijkg5ukp1pl3",
+      "employeeNo": null,
+      "name": "姚磬馨",
+      "positionName": "产品运营岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1m000gijo00mz0mxlc",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9u60045ijkgbqrmtaan",
+      "employeeNo": null,
+      "name": "李路瑶",
+      "positionName": "商品运营岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1m000gijo00mz0mxlc",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9u70047ijkgu084zfz2",
+      "employeeNo": null,
+      "name": "潘红",
+      "positionName": "内容运营岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1m000gijo00mz0mxlc",
+      "reviewGroupId": null,
+      "isActive": true
+    }
+  ],
+  "localAccounts": [
+    {
+      "userId": "cmo34mr0u0002ijo0q62vwa9e",
+      "loginName": "sysadmin.local",
+      "localLoginEnabled": true
+    },
+    {
+      "userId": "cmo34n9t80015ijkgbsoexfu9",
+      "loginName": "1700066",
+      "localLoginEnabled": true
+    }
+  ],
+  "roleAssignments": [
+    {
+      "id": "cmo34mr39000kijo04cebl6nq",
+      "userId": "cmo34mr0u0002ijo0q62vwa9e",
+      "roleCode": "system-admin",
+      "scopeType": "system",
+      "scopeId": "system",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "cmo34tns60001ij5kd04nyflg",
+      "userId": "cmo34n9t80015ijkgbsoexfu9",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9t80015ijkgbsoexfu9",
+      "isPrimary": false,
+      "isEnabled": true
+    },
+    {
+      "id": "role-irvgq8",
+      "userId": "cmo34n9t80015ijkgbsoexfu9",
+      "roleCode": "group-leader",
+      "scopeType": "review-group",
+      "scopeId": "managed-group:cmo34n9t80015ijkgbsoexfu9",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "role-eer94c",
+      "userId": "cmo34n9t80015ijkgbsoexfu9",
+      "roleCode": "section-leader",
+      "scopeType": "section",
+      "scopeId": "managed-section:cmo34n9t80015ijkgbsoexfu9",
+      "isPrimary": true,
+      "isEnabled": true
+    }
+  ],
+  "sectionLeaderBindings": [
+    {
+      "id": "section-leader-1mix08",
+      "leaderUserId": "cmo34n9t80015ijkgbsoexfu9",
+      "sectionId": "cmo34mr190008ijo03845snm2"
+    }
+  ],
+  "groupLeaderBindings": [
+    {
+      "id": "group-leader-1jfy8q",
+      "leaderUserId": "cmo34n9t80015ijkgbsoexfu9",
+      "reviewGroupId": "review-group-l1wxk9"
+    }
+  ],
+  "reviewGroups": [
+    {
+      "id": "review-group-l1wxk9",
+      "name": "信息化组",
+      "isActive": true,
+      "quotas": [
+        {
+          "gradeCode": "A+",
+          "seatCount": 0
+        },
+        {
+          "gradeCode": "A",
+          "seatCount": 0
+        },
+        {
+          "gradeCode": "B",
+          "seatCount": 0
+        },
+        {
+          "gradeCode": "C",
+          "seatCount": 0
+        },
+        {
+          "gradeCode": "D",
+          "seatCount": 0
+        }
+      ]
+    },
+    {
+      "id": "review-group-0nn5ya",
+      "name": "运营组",
+      "isActive": true,
+      "quotas": [
+        {
+          "gradeCode": "A+",
+          "seatCount": 0
+        },
+        {
+          "gradeCode": "A",
+          "seatCount": 0
+        },
+        {
+          "gradeCode": "B",
+          "seatCount": 0
+        },
+        {
+          "gradeCode": "C",
+          "seatCount": 0
+        },
+        {
+          "gradeCode": "D",
+          "seatCount": 0
+        }
+      ]
+    },
+    {
+      "id": "review-group-lrphw3",
+      "name": "综合组",
+      "isActive": true,
+      "quotas": [
+        {
+          "gradeCode": "A+",
+          "seatCount": 0
+        },
+        {
+          "gradeCode": "A",
+          "seatCount": 0
+        },
+        {
+          "gradeCode": "B",
+          "seatCount": 0
+        },
+        {
+          "gradeCode": "C",
+          "seatCount": 0
+        },
+        {
+          "gradeCode": "D",
+          "seatCount": 0
+        }
+      ]
+    },
+    {
+      "id": "review-group-8t4pbk",
+      "name": "新员工组",
+      "isActive": true,
+      "quotas": [
+        {
+          "gradeCode": "A+",
+          "seatCount": 0
+        },
+        {
+          "gradeCode": "A",
+          "seatCount": 0
+        },
+        {
+          "gradeCode": "B",
+          "seatCount": 0
+        },
+        {
+          "gradeCode": "C",
+          "seatCount": 0
+        },
+        {
+          "gradeCode": "D",
+          "seatCount": 0
+        }
+      ]
+    }
+  ],
+  "goalTemplates": [
+    {
+      "id": "goal-template-ywtsdo",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "name": "工作态度与能力",
+      "description": "用于快速导入季度模板目标",
+      "isActive": true,
+      "keyResults": [
+        {
+          "id": "goal-template-kr-twfr4x",
+          "code": "KR1",
+          "name": "活动与会议、5S管理出勤",
+          "description": null,
+          "points": 5,
+          "scoreType": "objective"
+        },
+        {
+          "id": "goal-template-kr-262ijn",
+          "code": "KR2",
+          "name": "学习分享",
+          "description": null,
+          "points": 5,
+          "scoreType": "objective"
+        },
+        {
+          "id": "goal-template-kr-qdztos",
+          "code": "KR3",
+          "name": "创新能力",
+          "description": null,
+          "points": 5,
+          "scoreType": "objective"
+        },
+        {
+          "id": "goal-template-kr-aqnkzx",
+          "code": "KR4",
+          "name": "工作态度表现",
+          "description": "员工在团队中经常表现出个人主义和独来独往的行为，缺乏与团队成员的合作精神，缺乏工作责任心和积极性，对团队目标和工作任务缺乏关注和投入，经常表现出消极和不配合的态度，或经常出现失误和错误，需要经常督促和监督，赋0-2分。员工在团队中有时表现出个人主义的行为，与团队成员的合作精神需要进一步提升，对团队目标和工作任务有一定的关注和投入，但还需要更加努力，在工作中偶尔会出现失误和错误，需要适当的督促和监督，赋2-4分。员工能够积极参与团队的协作，对团队目标任务和工作业绩有一定的关注和贡献。在承担工作任务时，能够尽责尽力，但还需要进一步提升工作责任心和工作积极性，赋4-6分。员工有较好的团队精神，能够积极主动地参与团队的协作，对团队的目标任务和工作业绩有较多关注和贡献。在承担工作任务时，能够尽责尽力，取得良好的工作质量和效果，在团队中发挥着积极作用，但还需要进一步提升领导能力，赋6-8分。员工表现出极强的团队精神，全力以赴地参与团队的协作，对团队的目标任务和工作业绩非常关注和贡献突出，勇于承担工作任务，主动投入大量时间精力，取得优秀工作质量和效果，并在团队中发挥领导作用和模范带头作用，赋8-10分。",
+          "points": 10,
+          "scoreType": "subjective"
+        },
+        {
+          "id": "goal-template-kr-eeugy3",
+          "code": "KR5",
+          "name": "工作能力表现",
+          "description": "员工沟通协调能力有一定欠缺，无法清晰表达自己的观点，无法与他人协调解决问题，造成工作进度滞后或错误频出，对团队工作带来较大负面影响，赋0-1分。员工能够清晰表达自己的观点，但沟通协调能力有待提高，在与他人协调解决问题时仍存在一些困难，导致工作进度缓慢或偶有错误，对团队工作有一定负面影响，赋1-2分。员工具备一般的沟通协调能力，能够参与协调解决问题，对团队工作有一定的贡献，赋2-3分。员工具备较好的沟通协调能力，能够积极、主动地参与跨部门、跨科室的沟通和协调工作，在解决问题时发挥积极作用，得到相关部门、科室的认可，赋3-4分。员工具备出色的沟通和组织协调能力，能够积极、主动、有效地组织跨部门、跨科室的沟通和协调工作，在解决问题时发挥关键作用，得到相关部门、科室的高度认可，赋4-5分。",
+          "points": 5,
+          "scoreType": "subjective"
+        }
+      ]
+    },
+    {
+      "id": "goal-template-s63zcc",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "name": "目标任务综合评价",
+      "description": "用于快速导入季度模板目标",
+      "isActive": true,
+      "keyResults": [
+        {
+          "id": "goal-template-kr-wmw42l",
+          "code": "KR1",
+          "name": "目标任务综合评价",
+          "description": "1.工作量评估：根据个人所承担的目标任务规模、工作耗时、对成果的贡献度进行评估。较低工作量：承担的目标任务规模很小，主要是一些简单、重复性的工作，工作耗时很短，对整体成果的贡献度非常有限，赋1分。基础工作量：承担的目标任务规模较小，工作耗时相对较短，工作效率较为稳定，对整体成果的贡献度有限，赋2分。标准工作量：承担的目标任务规模适中，工作耗时适中，需要一定努力和时间管理来完成任务，对整体成果有一定的贡献，能够按照要求完成分配的任务，赋3分。较高工作量：承担的目标任务规模较大，工作耗时较长，需要投入更多的时间和精力来确保任务完成，对整体成果有较大贡献，能够承担重要任务并产生积极影响，赋4分。高工作量：承担的目标任务规模非常大，工作耗时非常长，需要超出常规的时间和精力，对整体成果有显著贡献，能够承担重大任务并推动项目成功，赋5分。\n2.工作难度评估：根据个人所承担的目标任务的挑战性、创新性、业务复杂度、协作难度、技术难度进行评估。较低难度：目标任务简单，能够轻松应对，业务范围窄，协作需求低，无技术要求，赋1分。基础难度：目标任务较为简单，具备一定难度，业务范围较窄，协作需求较低，技术要求基础，赋2分。标准难度：目标任务具有一定的挑战性，整体难度适中，业务范围适中，协作需求适中，技术要求适中，赋3分。较高难度：目标任务具有较高的挑战性，需要克服重重困难，业务范围较为复杂，协作需求较高，技术要求较高，赋4分。高难度：目标任务极具挑战性，需克服重大难题，业务范围极为复杂，协作需求极高，技术要求极高，赋5分。",
+          "points": 0,
+          "scoreType": "subjective"
+        }
+      ]
+    }
+  ]
+}

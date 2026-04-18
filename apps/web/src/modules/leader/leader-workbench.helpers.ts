@@ -228,7 +228,6 @@ export function buildBulkScorePreview(
       })
       .flatMap((goal) =>
         goal.keyResults
-          .filter((keyResult) => keyResult.scoreType === 'objective')
           .filter((keyResult) => selection.keyResultIds === null || selectedKeyResultIds.has(keyResult.id))
           .map((keyResult) => ({
             employeeId: employee.id,
@@ -277,7 +276,7 @@ export function buildBulkScorePreview(
   };
 }
 
-export function selectAllObjectiveKeyResultIds(
+export function selectAllBulkKeyResultIds(
   catalog: LeaderWorkbenchResponse['bulkCatalog'],
   selection: {
     sectionId?: string | null;
@@ -300,7 +299,44 @@ export function selectAllObjectiveKeyResultIds(
         employee.goals
           .filter((goal) => !(selection.excludeTemplateGoals && goal.isTemplateGoal))
           .filter((goal) => selectedGoalIds.size === 0 || selectedGoalIds.has(goal.id))
-          .flatMap((goal) => goal.keyResults.filter((keyResult) => keyResult.scoreType === 'objective').map((keyResult) => keyResult.id))
+          .flatMap((goal) =>
+            goal.keyResults
+              .filter((keyResult) => keyResult.scoreType === 'objective')
+              .map((keyResult) => keyResult.id)
+          )
+      ),
+    (entry) => entry
+  );
+}
+
+export function selectAllUnscoredBulkKeyResultIds(
+  catalog: LeaderWorkbenchResponse['bulkCatalog'],
+  selection: {
+    sectionId?: string | null;
+    reviewGroupId?: string | null;
+    employeeIds: string[];
+    goalIds: string[];
+    excludeTemplateGoals: boolean;
+  }
+) {
+  const selectedEmployeeIds = new Set(selection.employeeIds);
+  const selectedGoalIds = new Set(selection.goalIds);
+
+  return uniqueBy(
+    filterBulkCatalogEmployees(catalog, {
+      sectionId: selection.sectionId,
+      reviewGroupId: selection.reviewGroupId
+    })
+      .filter((employee) => selectedEmployeeIds.has(employee.id))
+      .flatMap((employee) =>
+        employee.goals
+          .filter((goal) => !(selection.excludeTemplateGoals && goal.isTemplateGoal))
+          .filter((goal) => selectedGoalIds.size === 0 || selectedGoalIds.has(goal.id))
+          .flatMap((goal) =>
+            goal.keyResults
+              .filter((keyResult) => keyResult.reviewScore === null)
+              .map((keyResult) => keyResult.id)
+          )
       ),
     (entry) => entry
   );

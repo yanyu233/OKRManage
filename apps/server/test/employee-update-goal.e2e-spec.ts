@@ -20,7 +20,7 @@ describe('Employee update goal', () => {
     const createdResponse = await agent
       .post('/api/employee/goals')
       .send({
-        year: 2026,
+        year: 2028,
         quarter: 2,
         name: 'Draft goal for update',
         description: 'Created inside update-goal test',

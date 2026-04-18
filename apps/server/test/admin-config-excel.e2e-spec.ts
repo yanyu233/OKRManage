@@ -2,6 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import * as ExcelJS from 'exceljs';
 import { closeTestDatabase, resetTestDatabase } from './support/test-db';
 import { createTestApp, loginAsSysadmin } from './support/test-app';
+import { CURRENT_DEMO_EMPLOYEES } from './support/current-demo-data';
 
 describe('Admin config excel import/export', () => {
   let app: INestApplication;
@@ -109,7 +110,7 @@ describe('Admin config excel import/export', () => {
 
     const targetRow = userSheet!
       .getRows(4, userSheet!.rowCount - 3)
-      ?.find((row) => row.getCell(2).text === 'EMP-0001');
+      ?.find((row) => row.getCell(2).text === CURRENT_DEMO_EMPLOYEES.employeeLeader.employeeNo);
     expect(targetRow).toBeDefined();
 
     targetRow!.getCell(4).value = '测试岗位';
@@ -122,7 +123,9 @@ describe('Admin config excel import/export', () => {
       .expect(200);
 
     const refreshed = await agent.get('/api/admin/org/bootstrap').expect(200);
-    const targetUser = refreshed.body.users.find((entry: { employeeNo: string }) => entry.employeeNo === 'EMP-0001');
+    const targetUser = refreshed.body.users.find(
+      (entry: { employeeNo: string }) => entry.employeeNo === CURRENT_DEMO_EMPLOYEES.employeeLeader.employeeNo
+    );
 
     expect(targetUser.positionName).toBe('测试岗位');
   });

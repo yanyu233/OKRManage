@@ -34,7 +34,7 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
   const body = isJson ? await response.json() : null;
 
   if (!response.ok) {
-    const message = body && typeof body.message === 'string' ? body.message : `Request failed: ${response.status}`;
+    const message = extractApiErrorMessage(body, response.status);
     throw new ApiError(message, response.status);
   }
 
@@ -58,9 +58,7 @@ export async function apiRequestBlob(path: string, init?: RequestInit) {
 
     try {
       const body = await response.json();
-      if (body && typeof body.message === 'string') {
-        message = body.message;
-      }
+      message = extractApiErrorMessage(body, response.status);
     } catch {
       // ignore non-json bodies
     }
@@ -72,4 +70,26 @@ export async function apiRequestBlob(path: string, init?: RequestInit) {
     blob: await response.blob(),
     headers: response.headers
   };
+}
+
+function extractApiErrorMessage(body: unknown, status: number) {
+  if (body && typeof body === 'object' && 'message' in body) {
+    const message = (body as { message?: unknown }).message;
+
+    if (typeof message === 'string' && message.trim().length > 0) {
+      return message;
+    }
+
+    if (Array.isArray(message)) {
+      const text = message
+        .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+        .join('\n');
+
+      if (text) {
+        return text;
+      }
+    }
+  }
+
+  return `Request failed: ${status}`;
 }

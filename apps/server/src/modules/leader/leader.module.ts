@@ -5,12 +5,13 @@ import { LEADER_REPOSITORY } from '../../infrastructure/repositories/leader/lead
 import { AuditModule } from '../audit/audit.module';
 import { SessionModule } from '../session/session.module';
 import { LeaderController } from './leader.controller';
+import { LeaderPreviewController } from './leader-preview.controller';
 import { LeaderPublicNoticeDocxService } from './leader-public-notice-docx.service';
 import { LeaderService } from './leader.service';
 
 @Module({
   imports: [SessionModule, AuditModule],
-  controllers: [LeaderController],
+  controllers: [LeaderController, LeaderPreviewController],
   providers: [
     LeaderService,
     LeaderPublicNoticeDocxService,

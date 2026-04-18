@@ -4,6 +4,8 @@ import { Alert, App, Button, Card, Empty, Input, Popover, Segmented, Space, Stat
 import { useEffect, useMemo, useState } from 'react';
 import {
   createEmployeeGoal,
+  deleteEmployeeGoal,
+  deleteEmployeeKeyResult,
   getEmployeeGoalDetail,
   getEmployeeGoalTemplates,
   getEmployeeOkr,
@@ -166,6 +168,32 @@ export function EmployeeOkrPage() {
       message.error(description);
     }
   });
+  const deleteGoalMutation = useMutation({
+    mutationFn: (goalId: string) => deleteEmployeeGoal(goalId),
+    onSuccess: async (_data, goalId) => {
+      setExpandedGoalIds((current) => current.filter((entry) => entry !== goalId));
+      await queryClient.invalidateQueries({ queryKey: ['employee-okr'] });
+      message.success('目标已删除');
+    },
+    onError: (error) => {
+      const description = error instanceof ApiError ? error.message : '目标删除失败，请稍后重试。';
+      message.error(description);
+    }
+  });
+  const deleteKeyResultMutation = useMutation({
+    mutationFn: ({ krId }: { goalId: string; krId: string }) => deleteEmployeeKeyResult(krId),
+    onSuccess: async (_data, variables) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['employee-goal', variables.goalId] }),
+        queryClient.invalidateQueries({ queryKey: ['employee-okr'] })
+      ]);
+      message.success('关键结果已删除');
+    },
+    onError: (error) => {
+      const description = error instanceof ApiError ? error.message : '关键结果删除失败，请稍后重试。';
+      message.error(description);
+    }
+  });
 
   async function openEditDialog(goalId: string) {
     setEditingGoalId(goalId);
@@ -185,11 +213,24 @@ export function EmployeeOkrPage() {
     }
   }
 
+  const payload = okrQuery.data;
+  const goalList = payload?.goals ?? [];
+
+  const filteredGoals = useMemo(() => {
+    const matchedGoals = filterEmployeeGoals(goalList, keyword);
+
+    if (!onlyActionRequired) {
+      return matchedGoals;
+    }
+
+    return matchedGoals.filter((goal) => isEmployeeGoalActionRequired(goal));
+  }, [goalList, keyword, onlyActionRequired]);
+
   if (okrQuery.isLoading) {
     return <Card className="employee-toolbar-card">{TEXT.loading}</Card>;
   }
 
-  if (okrQuery.isError) {
+  if (okrQuery.isError || !payload) {
     const description = okrQuery.error instanceof ApiError ? okrQuery.error.message : TEXT.loadFailedDescription;
     return (
       <Card className="employee-toolbar-card">
@@ -198,18 +239,7 @@ export function EmployeeOkrPage() {
     );
   }
 
-  const payload = okrQuery.data!;
   const quarterAllocatedPoints = getEmployeeQuarterAllocatedPoints(payload.goals);
-
-  const filteredGoals = useMemo(() => {
-    const matchedGoals = filterEmployeeGoals(payload.goals, keyword);
-
-    if (!onlyActionRequired) {
-      return matchedGoals;
-    }
-
-    return matchedGoals.filter((goal) => isEmployeeGoalActionRequired(goal));
-  }, [keyword, onlyActionRequired, payload.goals]);
 
   const summaryCards = [
     [TEXT.goalCount, payload.employee.goalCount],
@@ -327,6 +357,12 @@ export function EmployeeOkrPage() {
                   expanded={expandedGoalIds.includes(goal.id)}
                   onlyActionRequired={onlyActionRequired}
                   editing={editingGoalId === goal.id}
+                  deleting={deleteGoalMutation.isPending && deleteGoalMutation.variables === goal.id}
+                  deletingKeyResultId={
+                    deleteKeyResultMutation.isPending && deleteKeyResultMutation.variables?.goalId === goal.id
+                      ? deleteKeyResultMutation.variables.krId
+                      : null
+                  }
                   onToggle={() =>
                     setExpandedGoalIds((current) =>
                       current.includes(goal.id) ? current.filter((entry) => entry !== goal.id) : [...current, goal.id]
@@ -338,6 +374,20 @@ export function EmployeeOkrPage() {
                     }
 
                     void openEditDialog(goal.id);
+                  }}
+                  onDelete={() => {
+                    if (!window.confirm(`确认删除目标“${goal.name}”吗？`)) {
+                      return;
+                    }
+
+                    deleteGoalMutation.mutate(goal.id);
+                  }}
+                  onDeleteKeyResult={(keyResult) => {
+                    if (!window.confirm(`确认删除关键结果“${keyResult.name}”吗？`)) {
+                      return;
+                    }
+
+                    deleteKeyResultMutation.mutate({ goalId: goal.id, krId: keyResult.id });
                   }}
                 />
               ))}
@@ -353,6 +403,8 @@ export function EmployeeOkrPage() {
         loading={templatesQuery.isLoading}
         confirmLoading={importMutation.isPending}
         departmentName={templatesQuery.data?.departmentName ?? payload.employee.sectionName ?? null}
+        allocatedPoints={quarterAllocatedPoints}
+        maxQuarterPoints={EMPLOYEE_QUARTER_POINT_LIMIT}
         templates={templatesQuery.data?.templates ?? []}
         onCancel={() => setImportDialogOpen(false)}
         onConfirm={(templateIds) => {

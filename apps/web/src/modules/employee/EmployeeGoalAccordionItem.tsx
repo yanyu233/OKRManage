@@ -1,10 +1,10 @@
-import { DownOutlined, EditOutlined, UpOutlined } from '@ant-design/icons';
+import { DeleteOutlined, DownOutlined, EditOutlined, UpOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { Alert, Button, Card, Space, Spin, Tag, Typography } from 'antd';
 import { getEmployeeGoalDetail } from '../../shared/api/employee';
 import { ApiError } from '../../shared/api/http';
 import { formatNullableScore, getGoalStatusLabel } from '../../shared/i18n/labels';
-import type { EmployeeGoalSummary } from '../../shared/types/employee';
+import type { EmployeeGoalSummary, EmployeeKeyResult } from '../../shared/types/employee';
 import { EmployeeGoalKeyResultWorkspace } from './EmployeeGoalKeyResultWorkspace';
 
 const TEXT = {
@@ -21,7 +21,11 @@ type EmployeeGoalAccordionItemProps = {
   onlyActionRequired: boolean;
   onToggle: () => void;
   onEdit: () => void;
+  onDelete: () => void;
+  onDeleteKeyResult: (keyResult: EmployeeKeyResult) => void;
   editing: boolean;
+  deleting: boolean;
+  deletingKeyResultId: string | null;
 };
 
 export function EmployeeGoalAccordionItem({
@@ -30,7 +34,11 @@ export function EmployeeGoalAccordionItem({
   onlyActionRequired,
   onToggle,
   onEdit,
-  editing
+  onDelete,
+  onDeleteKeyResult,
+  editing,
+  deleting,
+  deletingKeyResultId
 }: EmployeeGoalAccordionItemProps) {
   const detailQuery = useQuery({
     queryKey: ['employee-goal', goal.id],
@@ -69,6 +77,11 @@ export function EmployeeGoalAccordionItem({
               {TEXT.editGoal}
             </Button>
           ) : null}
+          {goalEditable ? (
+            <Button size="small" danger icon={<DeleteOutlined />} loading={deleting} onClick={onDelete}>
+              删除目标
+            </Button>
+          ) : null}
           <Button size="small" type="text" onClick={onToggle}>
             {expanded ? <UpOutlined /> : <DownOutlined />}
           </Button>
@@ -90,7 +103,12 @@ export function EmployeeGoalAccordionItem({
               description={detailQuery.error instanceof ApiError ? detailQuery.error.message : undefined}
             />
           ) : detailQuery.data ? (
-            <EmployeeGoalKeyResultWorkspace goal={detailQuery.data} onlyActionRequired={onlyActionRequired} />
+            <EmployeeGoalKeyResultWorkspace
+              goal={detailQuery.data}
+              onlyActionRequired={onlyActionRequired}
+              deletingKeyResultId={deletingKeyResultId}
+              onDeleteKeyResult={onDeleteKeyResult}
+            />
           ) : null}
         </div>
       ) : null}

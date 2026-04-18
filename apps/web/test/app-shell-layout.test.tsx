@@ -12,8 +12,9 @@ vi.mock('../src/shared/api/auth', () => ({
       id: 'user-1',
       name: '\u5f20\u6668',
       loginName: 'zhang.chen',
+      role: 'employee',
       activeRole: 'employee',
-      roles: ['employee']
+      roles: [{ role: 'employee', isPrimary: true }]
     }
   }),
   logout: vi.fn(),

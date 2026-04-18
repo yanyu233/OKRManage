@@ -265,7 +265,6 @@ export class SaveOrgBootstrapDto {
   groupLeaderBindings!: GroupLeaderBindingSnapshotDto[];
 
   @IsArray()
-  @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => ReviewGroupSnapshotDto)
   reviewGroups!: ReviewGroupSnapshotDto[];

@@ -17,7 +17,7 @@ describe('Leader bulk score', () => {
   });
 
   it('scores regular key results and leaves template goals untouched when excluded', async () => {
-    const employee = await loginAsLocalEmployee(app, 'wang.min');
+    const employee = await loginAsEmployee(app);
     const targetYear = 2025;
     const targetQuarter = 4;
 
@@ -141,7 +141,7 @@ describe('Leader bulk score', () => {
     expect(refreshedTemplateGoal.body.selectedGoal.keyResults[0].reviewScore).toBeNull();
   });
 
-  it('skips subjective key results during objective bulk scoring', async () => {
+  it('supports scoring both objective and subjective key results in bulk', async () => {
     const employee = await loginAsEmployee(app);
     const targetYear = 2025;
     const targetQuarter = 3;
@@ -152,7 +152,7 @@ describe('Leader bulk score', () => {
         year: targetYear,
         quarter: targetQuarter,
         name: 'Objective and subjective mix',
-        description: 'Validates that bulk scoring ignores subjective items',
+        description: 'Validates that bulk scoring supports subjective items too',
         keyResults: [
           {
             code: 'KR1',
@@ -188,6 +188,11 @@ describe('Leader bulk score', () => {
       .attach('file', Buffer.from('objective-proof', 'utf8'), 'objective-proof.txt')
       .expect(201);
 
+    await employee
+      .post(`/api/employee/key-results/${created.body.keyResults[1].id}/proofs`)
+      .attach('file', Buffer.from('subjective-proof', 'utf8'), 'subjective-proof.txt')
+      .expect(201);
+
     const leader = await loginAsSectionLeader(app);
     await leader
       .get(
@@ -201,20 +206,13 @@ describe('Leader bulk score', () => {
         quarter: targetQuarter,
         employeeIds: [created.body.owner.id],
         keyResultIds: created.body.keyResults.map((entry: { id: string }) => entry.id),
-        comment: 'Objective-only bulk full score',
+        comment: 'Bulk full score for all key result types',
         overwriteExisting: true,
         excludeTemplateGoals: false
       })
       .expect(200);
 
-    expect(response.body.updatedCount).toBe(1);
-    expect(response.body.skipped).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          reason: 'subjective-only'
-        })
-      ])
-    );
+    expect(response.body.updatedCount).toBe(2);
 
     const refreshed = await leader
       .get(
@@ -225,11 +223,88 @@ describe('Leader bulk score', () => {
     const subjectiveKr = refreshed.body.selectedGoal.keyResults.find((entry: { code: string }) => entry.code === 'KR2');
 
     expect(objectiveKr.reviewScore).toBe(objectiveKr.points);
-    expect(subjectiveKr.reviewScore).toBeNull();
+    expect(subjectiveKr.reviewScore).toBe(subjectiveKr.points);
+  });
+
+  it('supports assigning a custom score to selected objective key results', async () => {
+    const employee = await loginAsEmployee(app);
+    const targetYear = 2025;
+    const targetQuarter = 1;
+
+    const created = await employee
+      .post('/api/employee/goals')
+      .send({
+        year: targetYear,
+        quarter: targetQuarter,
+        name: 'Custom batch score goal',
+        description: 'Validates custom bulk score behavior',
+        keyResults: [
+          {
+            code: 'KR1',
+            name: 'Objective KR 1',
+            description: null,
+            points: 20,
+            scoreType: 'objective'
+          },
+          {
+            code: 'KR2',
+            name: 'Objective KR 2',
+            description: null,
+            points: 15,
+            scoreType: 'objective'
+          }
+        ]
+      })
+      .expect(201);
+
+    const sysadmin = await loginAsSysadmin(app);
+    await sysadmin
+      .post('/api/admin/goal-status-control/transition')
+      .send({
+        year: targetYear,
+        quarter: targetQuarter,
+        userId: created.body.owner.id,
+        targetStatus: 'confirmed'
+      })
+      .expect(200);
+
+    for (const keyResult of created.body.keyResults) {
+      await employee
+        .post(`/api/employee/key-results/${keyResult.id}/proofs`)
+        .attach('file', Buffer.from(`proof-${keyResult.id}`, 'utf8'), `${keyResult.code}.txt`)
+        .expect(201);
+    }
+
+    const leader = await loginAsSectionLeader(app);
+    const response = await leader
+      .post('/api/leader/bulk-score')
+      .send({
+        year: targetYear,
+        quarter: targetQuarter,
+        employeeIds: [created.body.owner.id],
+        keyResultIds: created.body.keyResults.map((entry: { id: string }) => entry.id),
+        score: 10,
+        comment: 'Custom batch score',
+        overwriteExisting: true,
+        excludeTemplateGoals: false
+      })
+      .expect(200);
+
+    expect(response.body.updatedCount).toBe(2);
+
+    const refreshed = await leader
+      .get(
+        `/api/leader/workbench?year=${targetYear}&quarter=${targetQuarter}&employeeId=${created.body.owner.id}&goalId=${created.body.id}`
+      )
+      .expect(200);
+
+    expect(
+      refreshed.body.selectedGoal.keyResults.every((entry: { reviewScore: number }) => entry.reviewScore === 10)
+    ).toBe(true);
   });
 
   it('skips key results without proofs by default and allows override when explicitly requested', async () => {
-    const employee = await loginAsLocalEmployee(app, 'wang.min');
+    const employee = await loginAsEmployee(app);
     const targetYear = 2025;
     const targetQuarter = 2;
 
@@ -349,14 +424,3 @@ describe('Leader bulk score', () => {
     expect(forcedKr.reviewScore).toBe(forcedKr.points);
   });
 });
-
-async function loginAsLocalEmployee(app: INestApplication, loginName: string) {
-  const agent = request.agent(app.getHttpServer());
-
-  await agent.post('/api/auth/manual-login').send({
-    loginName,
-    password: 'Employee123!'
-  }).expect(200);
-
-  return agent;
-}

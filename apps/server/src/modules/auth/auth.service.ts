@@ -33,21 +33,26 @@ export class AuthService {
       };
     }
 
-    if (this.runtimeConfig.authMode === 'local-debug') {
+    if (this.runtimeConfig.shouldPreferWecomLogin) {
       return {
-        action: 'manual-login',
-        redirectTo: this.buildLoginRedirect(returnTo)
+        action: 'wecom',
+        redirectTo: this.buildWecomStartRedirect(returnTo)
       };
     }
 
     return {
-      action: 'wecom',
-      redirectTo: this.buildWecomStartRedirect(returnTo)
+      action: 'manual-login',
+      redirectTo: this.buildLoginRedirect(returnTo)
     };
   }
 
   wecomStart(request: Request, response: Response) {
     const returnTo = this.readReturnTo(request);
+
+    if (!this.runtimeConfig.isWecomConfigured) {
+      return response.redirect(this.buildFrontendLoginRedirect(returnTo, 'wecom-unavailable'));
+    }
+
     const location = this.buildWecomAuthorizeUrl(returnTo);
     return response.redirect(location);
   }

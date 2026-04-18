@@ -10,6 +10,7 @@ import {
   buildAdminBootstrapSaveInput,
   createEmptyBootstrap,
   rollbackAdminBootstrapDraft,
+  sanitizeBootstrapDraft,
   sectionForCollectionKey,
   summarizeBootstrap,
   toAdminBootstrapInput,
@@ -203,7 +204,17 @@ export function AdminOrgPage() {
           size="large"
           items={[
             { key: 'structure', label: TEXT.structureTab, children: <StructureSections draft={draft} updateCollection={updateCollection} /> },
-            { key: 'access', label: TEXT.accessTab, children: <AccessSections draft={draft} updateCollection={updateCollection} /> },
+            {
+              key: 'access',
+              label: TEXT.accessTab,
+              children: (
+                <AccessSections
+                  draft={draft}
+                  updateCollection={updateCollection}
+                  persistedLocalAccountUserIds={new Set(bootstrapQuery.data?.localAccounts.map((account) => account.userId) ?? [])}
+                />
+              )
+            },
             { key: 'leaders', label: TEXT.leaderTab, children: <LeaderSections draft={draft} updateCollection={updateCollection} /> },
             { key: 'goal-status', label: TEXT.goalStatusTab, children: <AdminGoalStatusSection draft={draft} /> },
             {
@@ -254,7 +265,7 @@ export function AdminOrgPage() {
     key: Key,
     updater: (items: AdminOrgBootstrapInput[Key]) => AdminOrgBootstrapInput[Key]
   ) {
-    setDraft((current) => ({ ...current, [key]: updater(current[key]) }));
+    setDraft((current) => sanitizeBootstrapDraft({ ...current, [key]: updater(current[key]) }));
     setIsDirty(true);
     markSectionDirty(sectionForCollectionKey(key));
   }

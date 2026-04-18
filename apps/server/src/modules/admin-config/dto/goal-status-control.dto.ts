@@ -20,6 +20,6 @@ export class GoalStatusControlQueryDto {
 }
 
 export class GoalStatusTransitionDto extends GoalStatusControlQueryDto {
-  @IsIn(['draft', 'confirmed'])
-  targetStatus!: 'draft' | 'confirmed';
+  @IsIn(['draft', 'confirmed', 'pending-review'])
+  targetStatus!: 'draft' | 'confirmed' | 'pending-review';
 }

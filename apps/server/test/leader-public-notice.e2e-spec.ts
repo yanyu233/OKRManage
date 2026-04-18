@@ -2,6 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import * as JSZip from 'jszip';
 import { closeTestDatabase, resetTestDatabase } from './support/test-db';
 import { createTestApp, loginAsSectionLeader } from './support/test-app';
+import { CURRENT_DEMO_EMPLOYEES, CURRENT_DEMO_PUBLIC_NOTICE } from './support/current-demo-data';
 
 describe('Leader public notice export', () => {
   let app: INestApplication;
@@ -30,13 +31,14 @@ describe('Leader public notice export', () => {
     expect(response.headers['content-disposition']).toContain('.docx');
 
     const documentXml = await readWordDocumentXml(response.body);
-    expect(documentXml).toContain('工业互联网中心一般员工2026年一季度绩效考评结果表');
+    expect(documentXml).toContain(CURRENT_DEMO_PUBLIC_NOTICE.quarterlyTitle);
     expect(documentXml).toContain('部门内绩效考核等级');
-    expect(documentXml).toContain('张晨');
-    expect(documentXml).toContain('EMP-0001');
-    expect(documentXml).toContain('平台产品经理');
+    expect(documentXml).toContain(CURRENT_DEMO_EMPLOYEES.employeeLeader.name);
+    expect(documentXml).toContain('1700066');
+    expect(documentXml).toContain('负责人');
+    expect(documentXml).toContain(CURRENT_DEMO_EMPLOYEES.topRankEmployee.name);
     expect(documentXml).toContain('A+');
-    expect(documentXml).toContain('B');
+    expect(documentXml).toContain('A');
   });
 
   it('exports annual public notice as a docx document', async () => {
@@ -52,10 +54,11 @@ describe('Leader public notice export', () => {
     );
 
     const documentXml = await readWordDocumentXml(response.body);
-    expect(documentXml).toContain('工业互联网中心一般员工2026年年度绩效考评结果表');
-    expect(documentXml).toContain('王敏');
-    expect(documentXml).toContain('EMP-0002');
-    expect(documentXml).toContain('平台研发工程师');
+    expect(documentXml).toContain(CURRENT_DEMO_PUBLIC_NOTICE.annualTitle);
+    expect(documentXml).toContain(CURRENT_DEMO_EMPLOYEES.topRankEmployee.name);
+    expect(documentXml).toContain(CURRENT_DEMO_EMPLOYEES.employeeLeader.name);
+    expect(documentXml).toContain('1700066');
+    expect(documentXml).toContain('负责人');
     expect(documentXml).toContain('A+');
   });
 });

@@ -1,0 +1,18 @@
+[
+  {
+    "id": "server",
+    "label": "server",
+    "runtimeDirectCount": 13,
+    "devDirectCount": 17,
+    "installedPackageCount": 704,
+    "packagePathCount": 743
+  },
+  {
+    "id": "web",
+    "label": "web",
+    "runtimeDirectCount": 7,
+    "devDirectCount": 16,
+    "installedPackageCount": 368,
+    "packagePathCount": 371
+  }
+]

@@ -158,7 +158,7 @@ export function AppShell() {
                 {currentUser.name}
               </Typography.Title>
               <Typography.Text type="secondary">
-                {'\u5f53\u524d\u89d2\u8272\uff1a'}
+                {'\u5df2\u542f\u7528\u89d2\u8272\uff1a'}
                 {assignedRoleSummary}
               </Typography.Text>
             </div>

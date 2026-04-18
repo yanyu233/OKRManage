@@ -25,9 +25,8 @@ const TEXT = {
   addRole: '\u65b0\u589e\u89d2\u8272',
   rolesTipTitle: '\u540c\u4e00\u5458\u5de5\u53ef\u4ee5\u5206\u914d\u591a\u4e2a\u89d2\u8272',
   rolesTipDescription:
-    '\u4f8b\u5982\u540c\u4e00\u4e2a\u4eba\u53ef\u4ee5\u540c\u65f6\u5177\u5907\u201c\u5458\u5de5\u201d\u548c\u201c\u5c0f\u7ec4\u8d1f\u8d23\u4eba\u201d\u4e24\u6761\u89d2\u8272\u8bb0\u5f55\uff0c\u524d\u53f0\u4f1a\u6309\u89d2\u8272\u5206\u7ec4\u5c55\u793a\u529f\u80fd\u83dc\u5355\u3002\u89d2\u8272\u8303\u56f4\u7531\u7cfb\u7edf\u81ea\u52a8\u63a8\u5bfc\uff0c\u8bc4\u5206\u6743\u9650\u4ee5\u201c\u8d1f\u8d23\u4eba\u7ed1\u5b9a\u201d\u9875\u4e3a\u51c6\u3002',
+    '\u53ea\u8981\u4e3a\u540c\u4e00\u5458\u5de5\u6dfb\u52a0\u5e76\u542f\u7528\u5bf9\u5e94\u89d2\u8272\uff0c7cfb\u7edf\u5c31\u4f1a\u81ea\u52a8\u5f00\u653e\u76f8\u5e94\u529f\u80fd\u83dc\u5355\u548c\u6743\u9650\uff0c\u4e0d\u9700\u8981\u518d\u989d\u5916\u7ef4\u62a4\u4e3b\u89d2\u8272\u3002',
   role: '\u89d2\u8272',
-  primaryRole: '\u4e3b\u89d2\u8272',
   enabled: '\u542f\u7528'
 } as const;
 
@@ -41,54 +40,70 @@ const ROLE_OPTIONS: Array<{ label: string; value: UserRoleCode }> = [
 
 export function AccessSections({
   draft,
-  updateCollection
+  updateCollection,
+  persistedLocalAccountUserIds = new Set<string>()
 }: {
   draft: AdminOrgBootstrapInput;
   updateCollection: UpdateCollection;
+  persistedLocalAccountUserIds?: Set<string>;
 }) {
-  const userOptions = draft.users.map((user) => ({ label: user.name || user.id, value: user.id }));
+  const sectionNameById = new Map(draft.sections.map((section) => [section.id, section.name]));
+  const firstAvailableUserId =
+    draft.users.find((user) => !draft.localAccounts.some((account) => account.userId === user.id))?.id ?? null;
+  const userOptions = draft.users.map((user) => {
+    const extras = [user.employeeNo, sectionNameById.get(user.sectionId ?? '') ?? null].filter(
+      (value): value is string => Boolean(value)
+    );
+
+    return {
+      label: extras.length ? `${user.name || user.id} (${extras.join(' / ')})` : user.name || user.id,
+      value: user.id
+    };
+  });
+  const assignedLocalAccountUserIds = new Set(draft.localAccounts.map((account) => account.userId).filter((userId) => Boolean(userId)));
 
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
       <SectionCard
         title={TEXT.localAccountTitle}
         actionLabel={TEXT.addLocalAccount}
-        onAdd={() =>
-          updateCollection('localAccounts', (items) => [...items, createLocalAccountRecord(draft.users.at(0)?.id ?? null)])
-        }
+        onAdd={() => updateCollection('localAccounts', (items) => [...items, createLocalAccountRecord(firstAvailableUserId)])}
       >
         <Table
-          rowKey={(record) => `${record.userId}:${record.loginName}`}
+          rowKey={(record) => `local-account:${resolveLocalAccountRowIndex(draft.localAccounts, record)}`}
           pagination={false}
           scroll={{ x: 1080 }}
           dataSource={draft.localAccounts}
           columns={[
             {
               title: TEXT.linkedUser,
-              render: (_value, record) => (
+              render: (_value, record, rowIndex) => (
                 <Select
                   value={record.userId || undefined}
-                  options={userOptions}
+                  options={userOptions.map((option) => ({
+                    ...option,
+                    disabled: option.value !== record.userId && assignedLocalAccountUserIds.has(option.value)
+                  }))}
+                  disabled={Boolean(record.userId) && persistedLocalAccountUserIds.has(record.userId)}
                   placeholder={TEXT.selectUser}
                   onChange={(value) =>
-                    updateCollection('localAccounts', (items) =>
-                      items.map((item) => (item.userId === record.userId ? { ...item, userId: value } : item))
-                    )
+                    updateCollection('localAccounts', (items) => updateLocalAccountsByIndex(items, rowIndex, (item) => ({ ...item, userId: value })))
                   }
                 />
               )
             },
             {
               title: TEXT.loginName,
-              render: (_value, record) => (
+              render: (_value, record, rowIndex) => (
                 <Input
                   value={record.loginName}
                   placeholder={TEXT.loginNamePlaceholder}
                   onChange={(event) =>
                     updateCollection('localAccounts', (items) =>
-                      items.map((item) =>
-                        item.userId === record.userId ? { ...item, loginName: event.target.value.toLowerCase() } : item
-                      )
+                      updateLocalAccountsByIndex(items, rowIndex, (item) => ({
+                        ...item,
+                        loginName: event.target.value.toLowerCase()
+                      }))
                     )
                   }
                 />
@@ -96,13 +111,13 @@ export function AccessSections({
             },
             {
               title: TEXT.resetPassword,
-              render: (_value, record) => (
+              render: (_value, record, rowIndex) => (
                 <Input.Password
                   value={record.password ?? ''}
                   placeholder={TEXT.passwordPlaceholder}
                   onChange={(event) =>
                     updateCollection('localAccounts', (items) =>
-                      items.map((item) => (item.userId === record.userId ? { ...item, password: event.target.value } : item))
+                      updateLocalAccountsByIndex(items, rowIndex, (item) => ({ ...item, password: event.target.value }))
                     )
                   }
                 />
@@ -111,12 +126,12 @@ export function AccessSections({
             {
               title: TEXT.enableLocalLogin,
               width: 160,
-              render: (_value, record) => (
+              render: (_value, record, rowIndex) => (
                 <Switch
                   checked={record.localLoginEnabled}
                   onChange={(checked) =>
                     updateCollection('localAccounts', (items) =>
-                      items.map((item) => (item.userId === record.userId ? { ...item, localLoginEnabled: checked } : item))
+                      updateLocalAccountsByIndex(items, rowIndex, (item) => ({ ...item, localLoginEnabled: checked }))
                     )
                   }
                 />
@@ -125,14 +140,12 @@ export function AccessSections({
             {
               title: TEXT.actions,
               width: 100,
-              render: (_value, record) => (
+              render: (_value, _record, rowIndex) => (
                 <Button
                   danger
                   type="text"
                   icon={<DeleteOutlined />}
-                  onClick={() =>
-                    updateCollection('localAccounts', (items) => items.filter((item) => item.userId !== record.userId))
-                  }
+                  onClick={() => updateCollection('localAccounts', (items) => items.filter((_item, itemIndex) => itemIndex !== rowIndex))}
                 >
                   {TEXT.remove}
                 </Button>
@@ -196,20 +209,6 @@ export function AccessSections({
               )
             },
             {
-              title: TEXT.primaryRole,
-              width: 110,
-              render: (_value, record) => (
-                <Switch
-                  checked={record.isPrimary}
-                  onChange={(checked) =>
-                    updateCollection('roleAssignments', (items) =>
-                      items.map((item) => (item.id === record.id ? { ...item, isPrimary: checked } : item))
-                    )
-                  }
-                />
-              )
-            },
-            {
               title: TEXT.enabled,
               width: 110,
               render: (_value, record) => (
@@ -244,6 +243,26 @@ export function AccessSections({
       </SectionCard>
     </Space>
   );
+}
+
+function updateLocalAccountsByIndex(
+  items: AdminOrgBootstrapInput['localAccounts'],
+  rowIndex: number | undefined,
+  updater: (item: AdminOrgBootstrapInput['localAccounts'][number]) => AdminOrgBootstrapInput['localAccounts'][number]
+) {
+  if (typeof rowIndex !== 'number' || rowIndex < 0) {
+    return items;
+  }
+
+  return items.map((item, itemIndex) => (itemIndex === rowIndex ? updater(item) : item));
+}
+
+function resolveLocalAccountRowIndex(
+  items: AdminOrgBootstrapInput['localAccounts'],
+  record: AdminOrgBootstrapInput['localAccounts'][number]
+) {
+  const index = items.indexOf(record);
+  return index >= 0 ? index : `${record.userId}:${record.loginName}`;
 }
 
 function SectionCard({

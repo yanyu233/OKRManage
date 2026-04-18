@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { closeTestDatabase, resetTestDatabase } from './support/test-db';
 import { createTestApp, loginAsSysadmin } from './support/test-app';
+import { CURRENT_DEMO_EMPLOYEES } from './support/current-demo-data';
 
 describe('Admin org bootstrap save', () => {
   let app: INestApplication;
@@ -178,7 +179,9 @@ describe('Admin org bootstrap save', () => {
   it('persists user position name through bootstrap save', async () => {
     const agent = await loginAsSysadmin(app);
     const bootstrap = await agent.get('/api/admin/org/bootstrap').expect(200);
-    const targetUser = bootstrap.body.users.find((entry: { employeeNo: string }) => entry.employeeNo === 'EMP-0001');
+    const targetUser = bootstrap.body.users.find(
+      (entry: { employeeNo: string }) => entry.employeeNo === CURRENT_DEMO_EMPLOYEES.employeeLeader.employeeNo
+    );
 
     expect(targetUser).toBeDefined();
 
@@ -201,6 +204,35 @@ describe('Admin org bootstrap save', () => {
     const refreshedUser = refreshed.body.users.find((entry: { id: string }) => entry.id === targetUser.id);
 
     expect(refreshedUser.positionName).toBe('架构工程师');
+  });
+
+  it('restores employee role for active users during bootstrap save', async () => {
+    const agent = await loginAsSysadmin(app);
+    const bootstrap = await agent.get('/api/admin/org/bootstrap').expect(200);
+    const targetUser = bootstrap.body.users.find(
+      (entry: { employeeNo: string }) => entry.employeeNo === CURRENT_DEMO_EMPLOYEES.employeeLeader.employeeNo
+    );
+
+    expect(targetUser).toBeDefined();
+
+    await agent
+      .put('/api/admin/org/bootstrap')
+      .send({
+        ...bootstrap.body,
+        roleAssignments: bootstrap.body.roleAssignments.filter(
+          (entry: { userId: string; roleCode: string }) => !(entry.userId === targetUser.id && entry.roleCode === 'employee')
+        )
+      })
+      .expect(200);
+
+    const refreshed = await agent.get('/api/admin/org/bootstrap').expect(200);
+
+    expect(
+      refreshed.body.roleAssignments.some(
+        (entry: { userId: string; roleCode: string; isEnabled: boolean }) =>
+          entry.userId === targetUser.id && entry.roleCode === 'employee' && entry.isEnabled
+      )
+    ).toBe(true);
   });
 
   it('rejects bootstrap review group quotas when total seats exceed active member count', async () => {
@@ -233,5 +265,51 @@ describe('Admin org bootstrap save', () => {
         )
       })
       .expect(400);
+  });
+  it('persists a newly added local account with a password through bootstrap save', async () => {
+    const agent = await loginAsSysadmin(app);
+    const bootstrap = await agent.get('/api/admin/org/bootstrap').expect(200);
+    const departmentId = bootstrap.body.departments[0].id as string;
+    const sectionId = bootstrap.body.sections.find((entry: { departmentId: string }) => entry.departmentId === departmentId)?.id as
+      | string
+      | undefined;
+    const newUserId = 'user-local-backup';
+
+    await agent
+      .put('/api/admin/org/bootstrap')
+      .send({
+        ...bootstrap.body,
+        users: [
+          ...bootstrap.body.users,
+          {
+            id: newUserId,
+            employeeNo: 'EMP-LOCAL-001',
+            name: 'Local Backup User',
+            positionName: 'Test Position',
+            departmentId,
+            sectionId: sectionId ?? null,
+            reviewGroupId: null,
+            isActive: true
+          }
+        ],
+        localAccounts: [
+          ...bootstrap.body.localAccounts,
+          {
+            userId: newUserId,
+            loginName: 'local.backup.user',
+            localLoginEnabled: true,
+            password: 'Employee123!'
+          }
+        ]
+      })
+      .expect(200);
+
+    const refreshed = await agent.get('/api/admin/org/bootstrap').expect(200);
+    expect(
+      refreshed.body.localAccounts.some(
+        (entry: { userId: string; loginName: string; localLoginEnabled: boolean }) =>
+          entry.userId === newUserId && entry.loginName === 'local.backup.user' && entry.localLoginEnabled === true
+      )
+    ).toBe(true);
   });
 });

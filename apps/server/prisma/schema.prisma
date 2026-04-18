@@ -38,6 +38,7 @@ model User {
   ownedGoals         Goal[]                 @relation("GoalOwner")
   reviewedKeyResults KeyResult[]            @relation("KeyResultReviewer")
   importedTemplates  ImportedGoalTemplate[] @relation("ImportedTemplateOwner")
+  knowledgeAssets    KnowledgeAsset[]       @relation("KnowledgeAssetUploader")
 }
 
 model LocalAccount {
@@ -179,7 +180,7 @@ model Goal {
   quarter     Int
   code        String
   name        String
-  description String?
+  description String?     @db.Text
   status      String
   totalPoints Int
   createdAt   DateTime    @default(now())
@@ -195,7 +196,7 @@ model GoalTemplate {
   id           String                 @id @default(cuid())
   departmentId String
   name         String
-  description  String?
+  description  String?                @db.Text
   isActive     Boolean                @default(true)
   createdAt    DateTime               @default(now())
   updatedAt    DateTime               @updatedAt
@@ -211,7 +212,7 @@ model GoalTemplateKeyResult {
   goalTemplateId String
   code           String
   name           String
-  description    String?
+  description    String?      @db.Text
   points         Int
   scoreType      ScoreType    @default(subjective)
   createdAt      DateTime     @default(now())
@@ -241,7 +242,7 @@ model KeyResult {
   goalId           String
   code             String
   name             String
-  description      String?
+  description      String?   @db.Text
   points           Int
   scoreType        ScoreType @default(objective)
   completionState  String
@@ -270,4 +271,17 @@ model Proof {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   keyResult   KeyResult @relation(fields: [keyResultId], references: [id], onDelete: Cascade)
+}
+
+model KnowledgeAsset {
+  id               String   @id @default(cuid())
+  fileName         String
+  fileUrl          String
+  fileSize         Int
+  note             String?
+  uploadedByUserId String
+  uploadedAt       DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  uploadedBy       User     @relation("KnowledgeAssetUploader", fields: [uploadedByUserId], references: [id], onDelete: Cascade)
 }

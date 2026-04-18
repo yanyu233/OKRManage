@@ -124,16 +124,16 @@ describe('auth entry and login fallback', () => {
     renderWithProviders(<LoginPage />);
 
     expect(await screen.findByText('企业微信账号未识别')).toBeInTheDocument();
-    expect(screen.getByText(/请使用系统管理员分配的本地兜底账号登录/)).toBeInTheDocument();
+    expect(screen.getByText(/请使用系统管理员分配的账号密码登录/)).toBeInTheDocument();
   });
 
-  it('shows local debug guidance without implying manual login is the primary entry', async () => {
+  it('shows password-login guidance while keeping WeCom as the preferred option', async () => {
     mockSearch = '';
 
     renderWithProviders(<LoginPage />);
 
-    expect(await screen.findByText('本地调试登录')).toBeInTheDocument();
-    expect(screen.getByText(/企业微信仍然是正式入口/)).toBeInTheDocument();
+    expect(await screen.findByText('账号密码登录')).toBeInTheDocument();
+    expect(screen.getByText(/系统会优先尝试企业微信认证/)).toBeInTheDocument();
   });
 });
 

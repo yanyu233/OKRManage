@@ -2,6 +2,7 @@ import * as request from 'supertest';
 import { INestApplication } from '@nestjs/common';
 import { closeTestDatabase, readAuditRows, readSessionRows, resetTestDatabase } from './support/test-db';
 import { createTestApp } from './support/test-app';
+import { CURRENT_DEMO_EMPLOYEES, CURRENT_DEMO_LOGIN } from './support/current-demo-data';
 
 describe('WeCom auth skeleton', () => {
   const originalEnv = {
@@ -29,7 +30,7 @@ describe('WeCom auth skeleton', () => {
     await closeTestDatabase();
   });
 
-  it('rejects missing WeCom config in wecom-preferred mode', async () => {
+  it('redirects to manual login when WeCom config is missing in wecom-preferred mode', async () => {
     process.env.AUTH_MODE = 'wecom-preferred';
     process.env.APP_BASE_URL = 'http://127.0.0.1:3000';
     process.env.WEB_BASE_URL = 'http://127.0.0.1:5173';
@@ -41,9 +42,12 @@ describe('WeCom auth skeleton', () => {
     await resetTestDatabase();
     app = await createTestApp();
 
-    const response = await request(app.getHttpServer()).get('/api/auth/wecom/start').expect(503);
+    const response = await request(app.getHttpServer())
+      .get('/api/auth/wecom/start?returnTo=%2Femployee%2Fokr')
+      .redirects(0)
+      .expect(302);
 
-    expect(response.body.message).toContain('WeCom configuration is incomplete');
+    expect(response.headers.location).toBe('http://127.0.0.1:5173/login?reason=wecom-unavailable&returnTo=%2Femployee%2Fokr');
   });
 
   it('redirects an unmapped mock identity to the manual-login fallback', async () => {
@@ -75,7 +79,7 @@ describe('WeCom auth skeleton', () => {
     const agent = request.agent(app.getHttpServer());
 
     const response = await agent
-      .get('/api/auth/wecom/callback?code=mock:zhangchen&state=%2Femployee%2Fokr')
+      .get('/api/auth/wecom/callback?code=mock:1700066&state=%2Femployee%2Fokr')
       .redirects(0)
       .expect(302);
 
@@ -83,14 +87,32 @@ describe('WeCom auth skeleton', () => {
 
     const me = await agent.get('/api/me').expect(200);
     expect(me.body.authenticated).toBe(true);
-    expect(me.body.user.name).toBe('\u5f20\u6668');
-    expect(me.body.user.activeRole).toBe('employee');
+    expect(me.body.user.name).toBe(CURRENT_DEMO_EMPLOYEES.employeeLeader.name);
+    expect(me.body.user.activeRole).toBe('section-leader');
 
     const auditRows = await readAuditRows('auth.wecom.login.success');
     expect(auditRows.length).toBeGreaterThan(0);
 
     const sessionRows = await readSessionRows();
     expect(sessionRows.length).toBeGreaterThan(0);
+  });
+
+  it('still allows account-password login in wecom-preferred mode', async () => {
+    process.env.AUTH_MODE = 'wecom-preferred';
+    process.env.APP_BASE_URL = 'http://127.0.0.1:3000';
+    process.env.WEB_BASE_URL = 'http://127.0.0.1:5173';
+
+    await resetTestDatabase();
+    app = await createTestApp();
+    const agent = request.agent(app.getHttpServer());
+
+    const login = await agent.post('/api/auth/manual-login').send(CURRENT_DEMO_LOGIN.sysadmin).expect(200);
+
+    expect(login.body.ok).toBe(true);
+
+    const me = await agent.get('/api/me').expect(200);
+    expect(me.body.authenticated).toBe(true);
+    expect(me.body.user.loginName).toBe(CURRENT_DEMO_LOGIN.sysadmin.loginName);
   });
 
   function restoreEnv() {

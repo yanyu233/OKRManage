@@ -1,6 +1,6 @@
 import { Inject, Injectable, StreamableFile } from '@nestjs/common';
 import { extname } from 'node:path';
-import JSZip from 'jszip';
+import JSZip = require('jszip');
 import { AuditService } from '../audit/audit.service';
 import { normalizeUploadedFileName } from '../../shared/http/upload-file-name';
 import { LocalProofStorageService } from '../../infrastructure/storage/local-proof-storage.service';
@@ -12,6 +12,8 @@ import {
 } from '../../infrastructure/repositories/leader/leader.repository';
 import { AuthUser } from '../../shared/types/auth-user';
 import { DomainValidationError } from '../../shared/errors/domain-validation.error';
+import { buildSafeProofPreviewFileName, classifyProofPreview } from '../../shared/proof/proof-links';
+import { RuntimeConfigService } from '../config/runtime-config.service';
 import { LeaderPublicNoticeDocxService } from './leader-public-notice-docx.service';
 
 @Injectable()
@@ -20,6 +22,7 @@ export class LeaderService {
     @Inject(LEADER_REPOSITORY) private readonly leaderRepository: LeaderRepository,
     private readonly proofStorage: LocalProofStorageService,
     private readonly auditService: AuditService,
+    private readonly runtimeConfig: RuntimeConfigService,
     private readonly publicNoticeDocxService: LeaderPublicNoticeDocxService
   ) {}
 
@@ -53,6 +56,11 @@ export class LeaderService {
 
   async batchScore(actor: AuthUser, input: LeaderBulkScoreInput) {
     this.validateQuarter(input.year, input.quarter);
+    if (input.score !== null && input.score !== undefined) {
+      if (!Number.isFinite(input.score) || input.score < 0) {
+        throw new DomainValidationError('invalid bulk score');
+      }
+    }
 
     const result = await this.leaderRepository.batchScore(actor, {
       ...input,
@@ -68,6 +76,7 @@ export class LeaderService {
       afterJson: {
         year: input.year,
         quarter: input.quarter,
+        appliedScore: input.score ?? 'full',
         updatedCount: result.updatedCount,
         skippedCount: result.skippedCount
       }
@@ -101,10 +110,10 @@ export class LeaderService {
   async downloadKnowledgeProofs(actor: AuthUser, proofIds: string[]) {
     const normalizedIds = Array.from(new Set(proofIds.map((proofId) => proofId.trim()).filter((proofId) => proofId.length > 0)));
     if (!normalizedIds.length) {
-      throw new DomainValidationError('at least one knowledge proof must be selected');
+      throw new DomainValidationError('at least one knowledge entry must be selected');
     }
 
-    const proofs = await this.leaderRepository.getKnowledgeProofDownloads(actor, normalizedIds);
+    const proofs = await this.leaderRepository.getKnowledgeEntryDownloads(actor, normalizedIds);
     const zip = new JSZip();
     const usedPaths = new Set<string>();
 
@@ -209,6 +218,154 @@ export class LeaderService {
     }
   }
 
+  async uploadManualKnowledgeAsset(
+    actor: AuthUser,
+    file: { originalname: string; buffer: Buffer } | undefined,
+    note?: string | null
+  ) {
+    if (!file || !file.originalname || !Buffer.isBuffer(file.buffer)) {
+      throw new DomainValidationError('knowledge file is required');
+    }
+
+    const fileName = normalizeUploadedFileName(file.originalname);
+    const stored = await this.proofStorage.save(fileName, file.buffer);
+
+    try {
+      const result = await this.leaderRepository.createManualKnowledgeAsset(actor, {
+        fileName,
+        storageKey: stored.storageKey,
+        fileSize: stored.fileSize,
+        note: note?.trim() || null
+      });
+
+      await this.auditService.write({
+        actorUserId: actor.id,
+        actorRoleCode: actor.role,
+        action: 'leader.knowledge-asset.upload',
+        entityType: 'knowledge-asset',
+        entityId: result.id,
+        afterJson: {
+          fileName: result.fileName,
+          fileSize: result.fileSize
+        }
+      });
+
+      return result;
+    } catch (error) {
+      await this.proofStorage.delete(stored.storageKey);
+      throw error;
+    }
+  }
+
+  async updateManualKnowledgeAsset(
+    actor: AuthUser,
+    assetId: string,
+    file?: { originalname: string; buffer: Buffer } | undefined,
+    note?: string | null
+  ) {
+    let stored:
+      | {
+          storageKey: string;
+          fileSize: number;
+          fileName: string;
+        }
+      | undefined;
+
+    if (file?.originalname && Buffer.isBuffer(file.buffer)) {
+      const fileName = normalizeUploadedFileName(file.originalname);
+      const saved = await this.proofStorage.save(fileName, file.buffer);
+      stored = {
+        ...saved,
+        fileName
+      };
+    }
+
+    try {
+      const result = await this.leaderRepository.updateManualKnowledgeAsset(actor, assetId, {
+        fileName: stored?.fileName,
+        storageKey: stored?.storageKey,
+        fileSize: stored?.fileSize,
+        note: note?.trim() || null
+      });
+
+      if (result.previousStorageKey) {
+        await this.proofStorage.delete(result.previousStorageKey);
+      }
+
+      await this.auditService.write({
+        actorUserId: actor.id,
+        actorRoleCode: actor.role,
+        action: 'leader.knowledge-asset.update',
+        entityType: 'knowledge-asset',
+        entityId: assetId,
+        beforeJson: {
+          fileName: result.before.fileName,
+          note: result.before.note
+        },
+        afterJson: {
+          fileName: result.after.fileName,
+          note: result.after.note
+        }
+      });
+
+      return result.after;
+    } catch (error) {
+      if (stored?.storageKey) {
+        await this.proofStorage.delete(stored.storageKey);
+      }
+
+      throw error;
+    }
+  }
+
+  async downloadManualKnowledgeAsset(actor: AuthUser, assetId: string) {
+    const asset = await this.leaderRepository.getManualKnowledgeAssetDownload(actor, assetId);
+    const stream = await this.proofStorage.open(asset.storageKey);
+
+    return {
+      fileName: asset.fileName,
+      file: new StreamableFile(stream)
+    };
+  }
+
+  async resolveManualKnowledgeAssetDirectPreviewUrl(assetId: string) {
+    const asset = await this.leaderRepository.getManualKnowledgeAssetStorage(assetId);
+    const previewFileName = buildSafeProofPreviewFileName(asset.fileName, `knowledge:${assetId}`);
+    const classification = classifyProofPreview(asset.fileName, {
+      allowArchive: false
+    });
+
+    if (classification.mode === 'kkfileview') {
+      return buildKnowledgeAssetKkFileViewPreviewUrl({
+        assetId,
+        fileName: asset.fileName,
+        previewFileName,
+        sourceBaseUrl: this.runtimeConfig.kkFileViewSourceBaseUrl,
+        previewBaseUrl: this.runtimeConfig.kkFileViewPublicBaseUrl,
+        previewToken: this.runtimeConfig.kkFileViewPreviewToken,
+        officePreviewType: classification.officePreviewType
+      });
+    }
+
+    return buildKnowledgeAssetSourceUrl({
+      assetId,
+      fileName: asset.fileName,
+      previewFileName,
+      sourceBaseUrl: this.runtimeConfig.kkFileViewSourceBaseUrl,
+      previewToken: this.runtimeConfig.kkFileViewPreviewToken
+    });
+  }
+
+  async getManualKnowledgeAssetPreviewSource(assetId: string) {
+    const asset = await this.leaderRepository.getManualKnowledgeAssetStorage(assetId);
+    const stream = await this.proofStorage.open(asset.storageKey);
+
+    return {
+      fileName: asset.fileName,
+      file: new StreamableFile(stream)
+    };
+  }
+
   getRanking(actor: AuthUser, year: number, quarter: number, reviewGroupId?: string, employeeId?: string) {
     this.validateQuarter(year, quarter);
     return this.leaderRepository.getRanking(actor, year, quarter, reviewGroupId, employeeId);
@@ -244,9 +401,14 @@ export class LeaderService {
     return this.leaderRepository.getAnnualRanking(actor, year, employeeId);
   }
 
-  async downloadAnnualPublicNotice(actor: AuthUser, year: number) {
+  async downloadAnnualPublicNotice(
+    actor: AuthUser,
+    year: number,
+    sectionId?: string | null,
+    reviewGroupId?: string | null
+  ) {
     this.validateYear(year);
-    const notice = await this.leaderRepository.getAnnualPublicNotice(actor, year);
+    const notice = await this.leaderRepository.getAnnualPublicNotice(actor, year, sectionId, reviewGroupId);
     const result = await this.publicNoticeDocxService.buildAnnualNotice(notice);
 
     await this.auditService.write({
@@ -257,6 +419,8 @@ export class LeaderService {
       entityId: null,
       afterJson: {
         year,
+        sectionId: sectionId ?? null,
+        reviewGroupId: reviewGroupId ?? null,
         rowCount: notice.entries.length
       }
     });
@@ -282,8 +446,8 @@ export class LeaderService {
   }
 }
 
-function sanitizeZipSegment(value: string, fallback: string) {
-  const normalized = value
+function sanitizeZipSegment(value: string | null | undefined, fallback: string) {
+  const normalized = (value ?? '')
     .trim()
     .replace(/[\\/:*?"<>|]+/g, '_')
     .replace(/\s+/g, ' ')
@@ -311,6 +475,46 @@ function ensureUniqueZipPath(initialPath: string, usedPaths: Set<string>) {
 
   usedPaths.add(candidate);
   return candidate;
+}
+
+function buildKnowledgeAssetSourceUrl(options: {
+  assetId: string;
+  fileName: string;
+  previewFileName?: string;
+  sourceBaseUrl: string;
+  previewToken: string;
+}) {
+  const sourceUrl = new URL(`/api/internal/knowledge-assets/${options.assetId}/source`, options.sourceBaseUrl);
+  sourceUrl.searchParams.set('accessToken', options.previewToken);
+  sourceUrl.searchParams.set('fullfilename', options.previewFileName ?? options.fileName);
+  return sourceUrl.toString();
+}
+
+function buildKnowledgeAssetKkFileViewPreviewUrl(options: {
+  assetId: string;
+  fileName: string;
+  previewFileName?: string;
+  sourceBaseUrl: string;
+  previewBaseUrl: string;
+  previewToken: string;
+  officePreviewType?: 'pdf' | 'image' | 'html';
+}) {
+  const sourceUrl = buildKnowledgeAssetSourceUrl({
+    assetId: options.assetId,
+    fileName: options.fileName,
+    previewFileName: options.previewFileName,
+    sourceBaseUrl: options.sourceBaseUrl,
+    previewToken: options.previewToken
+  });
+  const encodedSourceUrl = Buffer.from(sourceUrl, 'utf8').toString('base64');
+  const normalizedPreviewBaseUrl = options.previewBaseUrl.replace(/\/+$/, '');
+  const params = new URLSearchParams();
+  params.set('url', encodedSourceUrl);
+  if (options.officePreviewType) {
+    params.set('officePreviewType', options.officePreviewType);
+  }
+
+  return `${normalizedPreviewBaseUrl}/onlinePreview?${params.toString()}`;
 }
 
 function buildKnowledgeArchiveFileName(date: Date) {

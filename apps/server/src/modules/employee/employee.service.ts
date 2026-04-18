@@ -135,6 +135,25 @@ export class EmployeeService {
     return result;
   }
 
+  async deleteGoal(actor: AuthUser, goalId: string) {
+    const result = await this.employeeRepository.deleteGoal(actor, goalId);
+    await this.deleteStoredProofs(result.removedProofStorageKeys);
+
+    await this.auditService.write({
+      actorUserId: actor.id,
+      actorRoleCode: actor.role,
+      action: 'employee.goal.delete',
+      entityType: 'goal',
+      entityId: goalId,
+      beforeJson: {
+        year: result.year,
+        quarter: result.quarter,
+        code: result.code,
+        name: result.name
+      }
+    });
+  }
+
   async importGoalTemplates(actor: AuthUser, year: number, quarter: number, templateIds: string[]) {
     this.validateQuarter(year, quarter);
 
@@ -164,21 +183,22 @@ export class EmployeeService {
     return this.employeeRepository.getGoalDetail(actor, goalId);
   }
 
-  async submitGoalForReview(actor: AuthUser, goalId: string) {
-    const result = await this.employeeRepository.submitGoalForReview(actor, goalId);
+  async deleteKeyResult(actor: AuthUser, krId: string) {
+    const result = await this.employeeRepository.deleteKeyResult(actor, krId);
+    await this.deleteStoredProofs(result.removedProofStorageKeys);
 
     await this.auditService.write({
       actorUserId: actor.id,
       actorRoleCode: actor.role,
-      action: 'employee.goal.submit-review',
-      entityType: 'goal',
-      entityId: goalId,
-      afterJson: {
-        status: result.status
+      action: 'employee.kr.delete',
+      entityType: 'key-result',
+      entityId: krId,
+      beforeJson: {
+        goalId: result.goalId,
+        code: result.code,
+        name: result.name
       }
     });
-
-    return result;
   }
 
   async updateKeyResultCompletion(actor: AuthUser, krId: string, completionState: string) {
@@ -520,6 +540,11 @@ export class EmployeeService {
         scoreType: keyResult.scoreType ?? 'objective'
       }))
     };
+  }
+
+  private async deleteStoredProofs(storageKeys: string[]) {
+    const uniqueStorageKeys = [...new Set(storageKeys.filter(Boolean))];
+    await Promise.all(uniqueStorageKeys.map((storageKey) => this.proofStorage.delete(storageKey)));
   }
 }
 

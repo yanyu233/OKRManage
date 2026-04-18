@@ -40,6 +40,7 @@ function Invoke-NativeChecked {
 
 try {
   Set-DefaultEnv -Name 'DATABASE_URL' -Value 'mysql://root:root@127.0.0.1:3306/okr_route_c_dev'
+  Set-DefaultEnv -Name 'OKR_SEED_PROFILE' -Value 'minimal'
   Set-DefaultEnv -Name 'DEBUG_SYSADMIN_LOGIN' -Value 'sysadmin.local'
   Set-DefaultEnv -Name 'DEBUG_SYSADMIN_PASSWORD' -Value 'Admin123!'
   Set-DefaultEnv -Name 'DEBUG_SYSADMIN_NAME' -Value $defaultSysadminName

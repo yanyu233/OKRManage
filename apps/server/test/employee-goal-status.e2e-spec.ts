@@ -1,14 +1,16 @@
 import { INestApplication } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import { GoalReviewTransitionService } from '../src/modules/goal-review-transition/goal-review-transition.service';
 import { closeTestDatabase, resetTestDatabase } from './support/test-db';
 import { createTestApp, loginAsEmployee, loginAsSectionLeader, loginAsSysadmin } from './support/test-app';
 
 describe('Employee goal status workflow', () => {
   let app: INestApplication;
-  const prisma = new PrismaClient();
+  let prisma: PrismaClient;
 
   beforeAll(async () => {
     await resetTestDatabase();
+    prisma = new PrismaClient();
     app = await createTestApp();
   });
 
@@ -16,7 +18,9 @@ describe('Employee goal status workflow', () => {
     if (app) {
       await app.close();
     }
-    await prisma.$disconnect();
+    if (prisma) {
+      await prisma.$disconnect();
+    }
     await closeTestDatabase();
   });
 
@@ -87,8 +91,21 @@ describe('Employee goal status workflow', () => {
       })
       .expect(200);
 
+    await employee
+      .put(`/api/employee/key-results/${firstKeyResultId}/completion`)
+      .send({
+        completionState: 'completed'
+      })
+      .expect(400);
+
+    await employee
+      .post(`/api/employee/key-results/${firstKeyResultId}/proofs`)
+      .field('note', 'draft upload auto-completes')
+      .attach('file', Buffer.from('draft-proof', 'utf8'), 'draft-proof.txt')
+      .expect(201);
+
     const sysadmin = await loginAsSysadmin(app);
-    await sysadmin
+    const transition = await sysadmin
       .post('/api/admin/goal-status-control/transition')
       .send({
         year: reviewPeriod.year,
@@ -97,6 +114,8 @@ describe('Employee goal status workflow', () => {
         targetStatus: 'confirmed'
       })
       .expect(200);
+
+    expect(transition.body.autoAdvancedGoalCount).toBeGreaterThan(0);
 
     await employee
       .put(`/api/employee/goals/${goalId}`)
@@ -119,42 +138,6 @@ describe('Employee goal status workflow', () => {
             scoreType: 'objective'
           }
         ]
-      })
-      .expect(400);
-
-    await employee
-      .put(`/api/employee/key-results/${firstKeyResultId}/completion`)
-      .send({
-        completionState: 'completed'
-      })
-      .expect(400);
-
-    await employee
-      .post(`/api/employee/key-results/${firstKeyResultId}/proofs`)
-      .field('note', 'confirmed upload still allowed')
-      .attach('file', Buffer.from('confirmed-proof', 'utf8'), 'confirmed-proof.txt')
-      .expect(201);
-
-    await employee
-      .put(`/api/employee/key-results/${firstKeyResultId}/completion`)
-      .send({
-        completionState: 'incomplete'
-      })
-      .expect(200);
-
-    await employee
-      .put(`/api/employee/key-results/${firstKeyResultId}/completion`)
-      .send({
-        completionState: 'completed'
-      })
-      .expect(200);
-
-    const leader = await loginAsSectionLeader(app);
-    await leader
-      .put(`/api/leader/key-results/${firstKeyResultId}/score`)
-      .send({
-        score: 10,
-        comment: 'Should be blocked before auto review transition'
       })
       .expect(400);
 
@@ -187,6 +170,7 @@ describe('Employee goal status workflow', () => {
       })
       .expect(400);
 
+    const leader = await loginAsSectionLeader(app);
     for (const keyResult of pendingReviewDetail.body.keyResults) {
       await leader
         .put(`/api/leader/key-results/${keyResult.id}/score`)
@@ -212,6 +196,36 @@ describe('Employee goal status workflow', () => {
       .field('note', 'completed upload still allowed')
       .attach('file', Buffer.from('completed-proof', 'utf8'), 'completed-proof.txt')
       .expect(201);
+  });
+
+  it('auto-advances elapsed quarter draft goals to pending review', async () => {
+    const employee = await loginAsEmployee(app);
+
+    const created = await employee
+      .post('/api/employee/goals')
+      .send({
+        year: 2025,
+        quarter: 4,
+        name: 'Elapsed Quarter Draft Goal',
+        description: 'Should auto-enter review after the quarter passes',
+        keyResults: [
+          {
+            code: 'KR1',
+            name: 'Prepare review material',
+            description: null,
+            points: 10
+          }
+        ]
+      })
+      .expect(201);
+
+    const transitionService = app.get(GoalReviewTransitionService);
+    const affectedGoalCount = await transitionService.advanceEligibleGoalsToPendingReview(new Date('2026-01-10T08:00:00.000Z'));
+
+    expect(affectedGoalCount).toBeGreaterThan(0);
+
+    const detail = await employee.get(`/api/employee/goals/${created.body.id}`).expect(200);
+    expect(detail.body.status).toBe('pending-review');
   });
 });
 

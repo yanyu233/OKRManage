@@ -5,16 +5,17 @@ import { AuthUser } from '../../../shared/types/auth-user';
 import { DomainValidationError } from '../../../shared/errors/domain-validation.error';
 import { RuntimeConfigService } from '../../../modules/config/runtime-config.service';
 import { buildProofDownloadUrl, buildProofPreviewUrl } from '../../../shared/proof/proof-links';
-import { shouldAdvanceGoalsToPendingReview } from '../../../shared/time/goal-review-window';
 import {
   EmployeeCompletionUpdateResult,
   EmployeeCreateGoalInput,
+  EmployeeGoalDeleteResult,
   EmployeeGoalCreateResult,
   EmployeeGoalDetailRecord,
   EmployeeGoalUpdateInput,
   EmployeeGoalSummaryRecord,
   EmployeeGoalTemplateImportResult,
   EmployeeGoalTemplateRecord,
+  EmployeeKeyResultDeleteResult,
   EmployeeKeyResultRecord,
   EmployeeProofRecord,
   EmployeeProofUploadResult,
@@ -66,7 +67,6 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
   ) {}
 
   async getQuarterOverview(actor: AuthUser, year: number, quarter: number): Promise<EmployeeQuarterRecord> {
-    await this.advanceQuarterGoalsToReviewIfNeeded(year, quarter);
     const employee = await this.requireEmployeeQuarter(actor.id, year, quarter);
 
     return {
@@ -356,6 +356,50 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
     });
   }
 
+  async deleteGoal(actor: AuthUser, goalId: string): Promise<EmployeeGoalDeleteResult> {
+    return this.prisma.$transaction(async (transaction) => {
+      const goal = await transaction.goal.findUnique({
+        where: { id: goalId },
+        include: {
+          keyResults: {
+            include: {
+              proofs: true
+            }
+          }
+        }
+      });
+
+      if (!goal) {
+        throw new NotFoundException('goal not found');
+      }
+
+      if (goal.ownerUserId !== actor.id) {
+        throw new ForbiddenException('employee scope mismatch');
+      }
+
+      if (goal.status !== 'draft') {
+        throw new DomainValidationError('goal can only be deleted in draft status');
+      }
+
+      const removedProofStorageKeys = goal.keyResults.flatMap((keyResult) => keyResult.proofs.map((proof) => proof.fileUrl));
+
+      await transaction.goal.delete({
+        where: { id: goalId }
+      });
+
+      await this.resequenceQuarterGoals(transaction, actor.id, goal.year, goal.quarter);
+
+      return {
+        goalId: goal.id,
+        year: goal.year,
+        quarter: goal.quarter,
+        code: goal.code,
+        name: goal.name,
+        removedProofStorageKeys
+      };
+    });
+  }
+
   async importGoalTemplates(
     actor: AuthUser,
     year: number,
@@ -419,88 +463,90 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
       throw new DomainValidationError('selected template already imported for this quarter');
     }
 
-    const importedGoals = await this.prisma.$transaction(async (transaction) => {
-      await this.assertQuarterPointBudget(transaction, {
-        ownerUserId: actor.id,
-        year,
-        quarter,
-        nextPoints: templates.reduce(
-          (sum, template) => sum + template.keyResults.reduce((templateSum, keyResult) => templateSum + keyResult.points, 0),
-          0
-        )
-      });
-
-      const importedGoalIds: string[] = [];
-      const temporaryCodePrefix = `TMP-IMPORT-${Date.now()}`;
-
-      for (const [index, templateId] of templateIds.entries()) {
-        const template = templates.find((entry) => entry.id === templateId);
-        if (!template) {
-          throw new DomainValidationError('selected template is unavailable');
-        }
-
-        const goal = await transaction.goal.create({
-          data: {
-            ownerUserId: actor.id,
-            year,
-            quarter,
-            code: `${temporaryCodePrefix}-${index + 1}`,
-            name: template.name,
-            description: template.description,
-            status: 'draft',
-            totalPoints: template.keyResults.reduce((sum, keyResult) => sum + keyResult.points, 0)
-          }
+    const importedGoals = await this.withFriendlyDescriptionLimit(async () =>
+      this.prisma.$transaction(async (transaction) => {
+        await this.assertQuarterPointBudget(transaction, {
+          ownerUserId: actor.id,
+          year,
+          quarter,
+          nextPoints: templates.reduce(
+            (sum, template) => sum + template.keyResults.reduce((templateSum, keyResult) => templateSum + keyResult.points, 0),
+            0
+          )
         });
 
-        if (template.keyResults.length > 0) {
-          await transaction.keyResult.createMany({
-            data: template.keyResults.map((keyResult) => ({
-              goalId: goal.id,
-              code: keyResult.code,
-              name: keyResult.name,
-              description: keyResult.description,
-              points: keyResult.points,
-              scoreType: keyResult.scoreType,
-              completionState: 'incomplete'
-            }))
+        const importedGoalIds: string[] = [];
+        const temporaryCodePrefix = `TMP-IMPORT-${Date.now()}`;
+
+        for (const [index, templateId] of templateIds.entries()) {
+          const template = templates.find((entry) => entry.id === templateId);
+          if (!template) {
+            throw new DomainValidationError('selected template is unavailable');
+          }
+
+          const goal = await transaction.goal.create({
+            data: {
+              ownerUserId: actor.id,
+              year,
+              quarter,
+              code: `${temporaryCodePrefix}-${index + 1}`,
+              name: template.name,
+              description: template.description,
+              status: 'draft',
+              totalPoints: template.keyResults.reduce((sum, keyResult) => sum + keyResult.points, 0)
+            }
           });
+
+          if (template.keyResults.length > 0) {
+            await transaction.keyResult.createMany({
+              data: template.keyResults.map((keyResult) => ({
+                goalId: goal.id,
+                code: keyResult.code,
+                name: keyResult.name,
+                description: keyResult.description,
+                points: keyResult.points,
+                scoreType: keyResult.scoreType,
+                completionState: 'incomplete'
+              }))
+            });
+          }
+
+          await transaction.importedGoalTemplate.create({
+            data: {
+              goalTemplateId: template.id,
+              goalId: goal.id,
+              ownerUserId: actor.id,
+              year,
+              quarter
+            }
+          });
+          importedGoalIds.push(goal.id);
         }
 
-        await transaction.importedGoalTemplate.create({
-          data: {
-            goalTemplateId: template.id,
-            goalId: goal.id,
-            ownerUserId: actor.id,
-            year,
-            quarter
-          }
-        });
-        importedGoalIds.push(goal.id);
-      }
+        await this.resequenceQuarterGoals(transaction, actor.id, year, quarter);
 
-      await this.resequenceQuarterGoals(transaction, actor.id, year, quarter);
-
-      const importedGoals = await transaction.goal.findMany({
-        where: {
-          id: {
-            in: importedGoalIds
-          }
-        },
-        include: {
-          importedTemplates: true,
-          keyResults: {
-            include: {
-              proofs: true
+        const importedGoals = await transaction.goal.findMany({
+          where: {
+            id: {
+              in: importedGoalIds
+            }
+          },
+          include: {
+            importedTemplates: true,
+            keyResults: {
+              include: {
+                proofs: true
+              }
             }
           }
-        }
-      });
+        });
 
-      return importedGoals
-        .slice()
-        .sort((left, right) => compareGoalCode(left.code, right.code))
-        .map((goal) => this.toGoalSummary(goal as GoalWithQuarterData));
-    });
+        return importedGoals
+          .slice()
+          .sort((left, right) => compareGoalCode(left.code, right.code))
+          .map((goal) => this.toGoalSummary(goal as GoalWithQuarterData));
+      })
+    );
 
     return {
       year,
@@ -510,20 +556,6 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
   }
 
   async getGoalDetail(actor: AuthUser, goalId: string): Promise<EmployeeGoalDetailRecord> {
-    const goalMeta = await this.prisma.goal.findUnique({
-      where: { id: goalId },
-      select: {
-        year: true,
-        quarter: true
-      }
-    });
-
-    if (!goalMeta) {
-      throw new NotFoundException('goal not found');
-    }
-
-    await this.advanceQuarterGoalsToReviewIfNeeded(goalMeta.year, goalMeta.quarter);
-
     const goal = await this.prisma.goal.findUnique({
       where: { id: goalId },
       include: {
@@ -560,77 +592,55 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
     return this.toGoalDetail(goal);
   }
 
-  async submitGoalForReview(actor: AuthUser, goalId: string): Promise<EmployeeGoalDetailRecord> {
+  async deleteKeyResult(actor: AuthUser, krId: string): Promise<EmployeeKeyResultDeleteResult> {
     return this.prisma.$transaction(async (transaction) => {
-      const goal = await transaction.goal.findUnique({
-        where: { id: goalId },
+      const keyResult = await transaction.keyResult.findUnique({
+        where: { id: krId },
         include: {
-          importedTemplates: true,
-          keyResults: {
-            orderBy: {
-              code: 'asc'
-            },
+          proofs: true,
+          goal: {
             include: {
-              proofs: {
+              keyResults: {
                 orderBy: {
-                  uploadedAt: 'desc'
+                  code: 'asc'
                 }
               }
             }
-          },
-          owner: true
+          }
         }
       });
 
-      if (!goal) {
-        throw new NotFoundException('goal not found');
+      if (!keyResult) {
+        throw new NotFoundException('key result not found');
       }
 
-      if (goal.ownerUserId !== actor.id) {
+      if (keyResult.goal.ownerUserId !== actor.id) {
         throw new ForbiddenException('employee scope mismatch');
       }
 
-      if (goal.status !== 'confirmed') {
-        throw new DomainValidationError('only confirmed goals can be submitted for review');
+      if (keyResult.goal.status !== 'draft') {
+        throw new DomainValidationError('key result can only be deleted in draft status');
       }
 
-      if (!goal.keyResults.length) {
-        throw new DomainValidationError('goal requires at least one key result before review');
+      if (keyResult.goal.keyResults.length <= 1) {
+        throw new DomainValidationError('goal must keep at least one key result, delete the goal instead');
       }
 
-      const hasIncompleteKeyResult = goal.keyResults.some((keyResult) => keyResult.completionState !== 'completed');
-      if (hasIncompleteKeyResult) {
-        throw new DomainValidationError('all key results must be completed before submitting for review');
-      }
+      const removedProofStorageKeys = keyResult.proofs.map((proof) => proof.fileUrl);
 
-      await transaction.goal.update({
-        where: { id: goalId },
-        data: {
-          status: 'pending-review'
-        }
+      await transaction.keyResult.delete({
+        where: { id: krId }
       });
 
-      const refreshed = await transaction.goal.findUniqueOrThrow({
-        where: { id: goalId },
-        include: {
-          importedTemplates: true,
-          keyResults: {
-            orderBy: {
-              code: 'asc'
-            },
-            include: {
-              proofs: {
-                orderBy: {
-                  uploadedAt: 'desc'
-                }
-              }
-            }
-          },
-          owner: true
-        }
-      });
+      await this.resequenceGoalKeyResults(transaction, keyResult.goalId);
 
-      return this.toGoalDetail(refreshed);
+      return {
+        goalId: keyResult.goalId,
+        keyResultId: keyResult.id,
+        code: keyResult.code,
+        name: keyResult.name,
+        removedProofStorageKeys
+      };
     });
   }
 
@@ -1000,19 +1010,38 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
     }
   }
 
-  private async advanceQuarterGoalsToReviewIfNeeded(year: number, quarter: number) {
-    if (!shouldAdvanceGoalsToPendingReview(year, quarter)) {
-      return;
+  private async resequenceGoalKeyResults(transaction: Prisma.TransactionClient, goalId: string) {
+    const keyResults = await transaction.keyResult.findMany({
+      where: {
+        goalId
+      },
+      orderBy: {
+        createdAt: 'asc'
+      }
+    });
+
+    for (const [index, keyResult] of keyResults.entries()) {
+      await transaction.keyResult.update({
+        where: { id: keyResult.id },
+        data: {
+          code: `TMP-KR-${index + 1}-${keyResult.id}`
+        }
+      });
     }
 
-    await this.prisma.goal.updateMany({
-      where: {
-        year,
-        quarter,
-        status: 'confirmed'
-      },
+    for (const [index, keyResult] of keyResults.entries()) {
+      await transaction.keyResult.update({
+        where: { id: keyResult.id },
+        data: {
+          code: `KR${index + 1}`
+        }
+      });
+    }
+
+    await transaction.goal.update({
+      where: { id: goalId },
       data: {
-        status: 'pending-review'
+        totalPoints: keyResults.reduce((sum, keyResult) => sum + keyResult.points, 0)
       }
     });
   }
@@ -1048,6 +1077,22 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
     const existingPoints = aggregate._sum.totalPoints ?? 0;
     if (existingPoints + input.nextPoints > MAX_EMPLOYEE_QUARTER_POINTS) {
       throw new DomainValidationError('quarter total points cannot exceed 100');
+    }
+  }
+
+  private async withFriendlyDescriptionLimit<T>(callback: () => Promise<T>) {
+    try {
+      return await callback();
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2000' &&
+        String(error.meta?.target ?? '').includes('description')
+      ) {
+        throw new DomainValidationError('goal or key result description is too long');
+      }
+
+      throw error;
     }
   }
 }

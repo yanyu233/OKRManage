@@ -137,7 +137,7 @@ export type AdminGoalStatusTransitionInput = {
   year: number;
   quarter: number;
   userId?: string | null;
-  targetStatus: 'draft' | 'confirmed';
+  targetStatus: 'draft' | 'confirmed' | 'pending-review';
 };
 
 export interface OrgRepository {

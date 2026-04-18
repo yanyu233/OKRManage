@@ -32,6 +32,12 @@ type AnnualRankingQuery = {
   employeeId?: string | null;
 };
 
+type AnnualPublicNoticeQuery = {
+  year: number;
+  sectionId?: string | null;
+  reviewGroupId?: string | null;
+};
+
 export function getLeaderWorkbench(query: WorkbenchQuery) {
   return apiRequest<LeaderWorkbenchResponse>(`/leader/workbench${toQueryString(query)}`, {
     method: 'GET'
@@ -78,6 +84,20 @@ export function updateLeaderKnowledgeProof(proofId: string, payload: FormData) {
   });
 }
 
+export function uploadLeaderManualKnowledgeAsset(payload: FormData) {
+  return apiRequest<LeaderKnowledgeEntry>('/leader/knowledge-base/manual-assets', {
+    method: 'POST',
+    body: payload
+  });
+}
+
+export function updateLeaderManualKnowledgeAsset(assetId: string, payload: FormData) {
+  return apiRequest<LeaderKnowledgeEntry>(`/leader/knowledge-base/manual-assets/${assetId}`, {
+    method: 'PUT',
+    body: payload
+  });
+}
+
 export function downloadLeaderKnowledgeBase(proofIds: string[]) {
   return apiRequestBlob('/leader/knowledge-base/download', {
     method: 'POST',
@@ -103,7 +123,7 @@ export function getLeaderAnnualRanking(query: AnnualRankingQuery) {
   });
 }
 
-export function downloadLeaderAnnualRankingPublicNotice(query: AnnualRankingQuery) {
+export function downloadLeaderAnnualRankingPublicNotice(query: AnnualPublicNoticeQuery) {
   return apiRequestBlob(`/leader/annual-ranking/public-notice${toQueryString(query)}`, {
     method: 'GET'
   });

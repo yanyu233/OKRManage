@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { closeTestDatabase, resetTestDatabase } from './support/test-db';
-import { createTestApp, loginAsEmployee, loginAsSectionLeader } from './support/test-app';
+import { createTestApp, loginAsSectionLeader } from './support/test-app';
+import { CURRENT_DEMO_EMPLOYEES } from './support/current-demo-data';
 
 describe('Leader workbench', () => {
   let app: INestApplication;
@@ -20,54 +21,62 @@ describe('Leader workbench', () => {
   it('returns proof readiness metadata, keeps out-of-scope users readonly, and exposes bulk preview catalog', async () => {
     const agent = await loginAsSectionLeader(app);
     const response = await agent.get('/api/leader/workbench?year=2026&quarter=1').expect(200);
-    const zhang = response.body.employees.find((entry: { name: string }) => entry.name === '张晨');
-    const liLei = response.body.employees.find((entry: { name: string }) => entry.name === '李雷');
+    const chen = response.body.employees.find(
+      (entry: { name: string }) => entry.name === CURRENT_DEMO_EMPLOYEES.employeeLeader.name
+    );
+    const yang = response.body.employees.find(
+      (entry: { name: string }) => entry.name === CURRENT_DEMO_EMPLOYEES.topRankEmployee.name
+    );
+    const pan = response.body.employees.find(
+      (entry: { name: string }) => entry.name === CURRENT_DEMO_EMPLOYEES.outOfScopeEmployee.name
+    );
 
     expect(response.body.employees).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          name: '张晨',
+          name: CURRENT_DEMO_EMPLOYEES.employeeLeader.name,
           canScore: true
         }),
         expect.objectContaining({
-          name: '王敏',
+          name: CURRENT_DEMO_EMPLOYEES.topRankEmployee.name,
           canScore: true
         }),
         expect.objectContaining({
-          name: '李雷',
+          name: CURRENT_DEMO_EMPLOYEES.outOfScopeEmployee.name,
           canScore: false
         })
       ])
     );
-    expect(zhang).toBeTruthy();
-    expect(liLei).toBeTruthy();
-    expect(zhang).toEqual(
+    expect(chen).toBeTruthy();
+    expect(yang).toBeTruthy();
+    expect(pan).toBeTruthy();
+    expect(chen).toEqual(
       expect.objectContaining({
         canScore: true,
         missingProofKeyResultCount: expect.any(Number)
       })
     );
 
-    const zhangResponse = await agent
-      .get(`/api/leader/workbench?year=2026&quarter=1&employeeId=${zhang.id}`)
+    const chenResponse = await agent
+      .get(`/api/leader/workbench?year=2026&quarter=1&employeeId=${chen.id}`)
       .expect(200);
 
-    const selectedResponse = await agent
-      .get(`/api/leader/workbench?year=2026&quarter=1&employeeId=${liLei.id}`)
+    const outOfScopeResponse = await agent
+      .get(`/api/leader/workbench?year=2026&quarter=1&employeeId=${pan.id}`)
       .expect(200);
 
-    expect(selectedResponse.body.selectedEmployee).toEqual(
+    expect(outOfScopeResponse.body.selectedEmployee).toEqual(
       expect.objectContaining({
-        name: '李雷',
+        name: CURRENT_DEMO_EMPLOYEES.outOfScopeEmployee.name,
         canScore: false
       })
     );
-    expect(selectedResponse.body.goals[0]).toEqual(
+    expect(outOfScopeResponse.body.goals[0]).toEqual(
       expect.objectContaining({
         canScore: false
       })
     );
-    expect(selectedResponse.body.selectedGoal.keyResults).toEqual(
+    expect(outOfScopeResponse.body.selectedGoal.keyResults).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           code: 'KR1',
@@ -78,13 +87,13 @@ describe('Leader workbench', () => {
       ])
     );
 
-    expect(zhangResponse.body.selectedGoal).toEqual(
+    expect(chenResponse.body.selectedGoal).toEqual(
       expect.objectContaining({
         status: 'pending-review',
         missingProofKeyResultCount: expect.any(Number)
       })
     );
-    expect(zhangResponse.body.selectedGoal.keyResults).toEqual(
+    expect(chenResponse.body.selectedGoal.keyResults).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           hasProofs: true,
@@ -100,8 +109,8 @@ describe('Leader workbench', () => {
     expect(response.body.bulkCatalog).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          id: zhang.id,
-          name: '张晨',
+          id: chen.id,
+          name: CURRENT_DEMO_EMPLOYEES.employeeLeader.name,
           goals: expect.arrayContaining([
             expect.objectContaining({
               keyResults: expect.arrayContaining([

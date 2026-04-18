@@ -98,6 +98,7 @@ export class LeaderController {
         employeeIds: payload.employeeIds ?? [],
         goalIds: payload.goalIds ?? [],
         keyResultIds: payload.keyResultIds ?? [],
+        score: payload.score ?? null,
         comment: payload.comment ?? null,
         overwriteExisting: payload.overwriteExisting ?? false,
         excludeTemplateGoals: payload.excludeTemplateGoals ?? false,
@@ -114,7 +115,7 @@ export class LeaderController {
     @Param('proofId') proofId: string,
     @Body() payload: UpdateProofKnowledgeDto
   ) {
-    const actor = await this.requireAuthenticatedUser(request);
+    const actor = await this.requireKnowledgeEditor(request);
 
     try {
       return await this.leaderService.updateProofKnowledge(actor, proofId, payload.isKnowledge);
@@ -161,10 +162,77 @@ export class LeaderController {
     @Body() payload: UpdateKnowledgeProofDto,
     @UploadedFile() file: any
   ) {
-    const actor = await this.requireAuthenticatedUser(request);
+    const actor = await this.requireKnowledgeEditor(request);
 
     try {
       return await this.leaderService.updateKnowledgeProof(actor, proofId, file, payload.note);
+    } catch (error) {
+      this.rethrowDomainError(error);
+    }
+  }
+
+  @Post('knowledge-base/manual-assets')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadManualKnowledgeAsset(
+    @Req() request: Request,
+    @Body() payload: UpdateKnowledgeProofDto,
+    @UploadedFile() file: any
+  ) {
+    const actor = await this.requireKnowledgeEditor(request);
+
+    try {
+      return await this.leaderService.uploadManualKnowledgeAsset(actor, file, payload.note);
+    } catch (error) {
+      this.rethrowDomainError(error);
+    }
+  }
+
+  @Put('knowledge-base/manual-assets/:assetId')
+  @UseInterceptors(FileInterceptor('file'))
+  async updateManualKnowledgeAsset(
+    @Req() request: Request,
+    @Param('assetId') assetId: string,
+    @Body() payload: UpdateKnowledgeProofDto,
+    @UploadedFile() file: any
+  ) {
+    const actor = await this.requireAuthenticatedUser(request);
+
+    try {
+      return await this.leaderService.updateManualKnowledgeAsset(actor, assetId, file, payload.note);
+    } catch (error) {
+      this.rethrowDomainError(error);
+    }
+  }
+
+  @Get('knowledge-base/assets/:assetId/download')
+  async downloadManualKnowledgeAsset(
+    @Req() request: Request,
+    @Param('assetId') assetId: string,
+    @Res({ passthrough: true }) response: Response
+  ): Promise<StreamableFile> {
+    const actor = await this.requireAuthenticatedUser(request);
+
+    try {
+      const result = await this.leaderService.downloadManualKnowledgeAsset(actor, assetId);
+      response.setHeader('Content-Disposition', buildInlineContentDisposition(result.fileName));
+      response.setHeader('Content-Type', 'application/octet-stream');
+      return result.file;
+    } catch (error) {
+      this.rethrowDomainError(error);
+    }
+  }
+
+  @Get('knowledge-base/assets/:assetId/preview')
+  async previewManualKnowledgeAsset(
+    @Req() request: Request,
+    @Param('assetId') assetId: string,
+    @Res() response: Response
+  ) {
+    await this.requireAuthenticatedUser(request);
+
+    try {
+      const targetUrl = await this.leaderService.resolveManualKnowledgeAssetDirectPreviewUrl(assetId);
+      return response.redirect(targetUrl);
     } catch (error) {
       this.rethrowDomainError(error);
     }
@@ -229,12 +297,19 @@ export class LeaderController {
   async downloadAnnualPublicNotice(
     @Req() request: Request,
     @Query('year', ParseIntPipe) year: number,
+    @Query('sectionId') sectionId: string | undefined,
+    @Query('reviewGroupId') reviewGroupId: string | undefined,
     @Res({ passthrough: true }) response: Response
   ): Promise<StreamableFile> {
     const actor = await this.requireLeader(request);
 
     try {
-      const result = await this.leaderService.downloadAnnualPublicNotice(actor, year);
+      const result = await this.leaderService.downloadAnnualPublicNotice(
+        actor,
+        year,
+        sectionId,
+        reviewGroupId
+      );
       response.setHeader('Content-Disposition', buildInlineContentDisposition(result.fileName));
       response.setHeader(
         'Content-Type',
@@ -258,6 +333,16 @@ export class LeaderController {
 
   private async requireAuthenticatedUser(request: Request): Promise<AuthUser> {
     const session = await this.requireSession(request);
+    return session.user;
+  }
+
+  private async requireKnowledgeEditor(request: Request): Promise<AuthUser> {
+    const session = await this.requireSession(request);
+
+    if (!session.user.roles.some((assignment) => ['section-leader', 'group-leader'].includes(assignment.role))) {
+      throw new ForbiddenException('knowledge editor role required');
+    }
+
     return session.user;
   }
 

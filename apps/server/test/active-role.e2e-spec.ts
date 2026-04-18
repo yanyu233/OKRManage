@@ -2,6 +2,7 @@ import * as request from 'supertest';
 import { INestApplication } from '@nestjs/common';
 import { createTestApp, loginAsSectionLeader } from './support/test-app';
 import { closeTestDatabase, readAuditRows, resetTestDatabase } from './support/test-db';
+import { CURRENT_DEMO_LOGIN } from './support/current-demo-data';
 
 describe('Active role switching', () => {
   let app: INestApplication;
@@ -16,13 +17,10 @@ describe('Active role switching', () => {
     await closeTestDatabase();
   });
 
-  it('switches active role for a dual-role user', async () => {
+  it('switches active role for a multi-role user', async () => {
     const agent = request.agent(app.getHttpServer());
 
-    await agent.post('/api/auth/manual-login').send({
-      loginName: 'group.leader',
-      password: 'Leader123!'
-    }).expect(200);
+    await agent.post('/api/auth/manual-login').send(CURRENT_DEMO_LOGIN.multiRole).expect(200);
 
     const switched = await agent
       .post('/api/auth/active-role')
@@ -37,8 +35,12 @@ describe('Active role switching', () => {
     expect(me.body.user.activeRole).toBe('employee');
     expect(me.body.user.roles).toEqual([
       {
-        role: 'group-leader',
+        role: 'section-leader',
         isPrimary: true
+      },
+      {
+        role: 'group-leader',
+        isPrimary: false
       },
       {
         role: 'employee',
@@ -55,7 +57,7 @@ describe('Active role switching', () => {
 
     const response = await agent
       .post('/api/auth/active-role')
-      .send({ role: 'employee' })
+      .send({ role: 'department-head' })
       .expect(403);
 
     expect(response.body.message).toContain('assigned');

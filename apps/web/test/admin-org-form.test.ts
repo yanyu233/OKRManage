@@ -5,6 +5,7 @@ import {
   createGoalTemplateRecord,
   createReviewGroupRecord,
   rollbackAdminBootstrapDraft,
+  sanitizeBootstrapDraft,
   summarizeBootstrap,
   totalQuotaSeats
 } from '../src/modules/admin/admin-org-form';
@@ -257,5 +258,80 @@ describe('admin org form helpers', () => {
     const rolledBack = rollbackAdminBootstrapDraft(bootstrap, draft);
 
     expect(rolledBack.reviewGroups[0].quotas).toEqual(bootstrap.reviewGroups[0].quotas);
+  });
+
+  it('prunes orphaned user references after deleting a user from the draft', () => {
+    const bootstrap = createBootstrap();
+    const draft: AdminOrgBootstrapInput = {
+      ...bootstrap,
+      users: [],
+      localAccounts: [{ userId: 'user-1', loginName: 'sysadmin.local', localLoginEnabled: true, password: '' }],
+      roleAssignments: [
+        {
+          id: 'role-1',
+          userId: 'user-1',
+          roleCode: 'system-admin',
+          scopeType: 'system',
+          scopeId: 'system',
+          isPrimary: true,
+          isEnabled: true
+        }
+      ],
+      sectionLeaderBindings: [{ id: 'section-binding-1', leaderUserId: 'user-1', sectionId: 'section-1' }],
+      groupLeaderBindings: [{ id: 'group-binding-1', leaderUserId: 'user-1', reviewGroupId: 'group-1' }]
+    };
+
+    const sanitized = sanitizeBootstrapDraft(draft);
+
+    expect(sanitized.localAccounts).toEqual([]);
+    expect(sanitized.roleAssignments).toEqual([]);
+    expect(sanitized.sectionLeaderBindings).toEqual([]);
+    expect(sanitized.groupLeaderBindings).toEqual([]);
+  });
+
+  it('derives a single primary role automatically from enabled role priority when building save payload', () => {
+    const bootstrap = createBootstrap();
+    const draft: AdminOrgBootstrapInput = {
+      ...bootstrap,
+      roleAssignments: [
+        {
+          id: 'role-employee',
+          userId: 'user-1',
+          roleCode: 'employee',
+          scopeType: 'user',
+          scopeId: 'legacy',
+          isPrimary: true,
+          isEnabled: true
+        },
+        {
+          id: 'role-section',
+          userId: 'user-1',
+          roleCode: 'section-leader',
+          scopeType: 'section',
+          scopeId: 'legacy',
+          isPrimary: false,
+          isEnabled: true
+        }
+      ]
+    };
+
+    const payload = buildAdminBootstrapSaveInput(bootstrap, draft, ['access']);
+
+    expect(payload.roleAssignments).toEqual([
+      expect.objectContaining({
+        id: 'role-employee',
+        roleCode: 'employee',
+        scopeType: 'user',
+        scopeId: 'user-1',
+        isPrimary: false
+      }),
+      expect.objectContaining({
+        id: 'role-section',
+        roleCode: 'section-leader',
+        scopeType: 'section',
+        scopeId: 'managed-section:user-1',
+        isPrimary: true
+      })
+    ]);
   });
 });

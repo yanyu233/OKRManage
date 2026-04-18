@@ -1,9 +1,9 @@
-import { ArrowLeftOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, Card, Space, Tag, Typography } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getEmployeeGoalDetail, updateEmployeeGoal } from '../../shared/api/employee';
+import { deleteEmployeeGoal, deleteEmployeeKeyResult, getEmployeeGoalDetail, updateEmployeeGoal } from '../../shared/api/employee';
 import { ApiError } from '../../shared/api/http';
 import { formatQuarterLabel, formatNullableScore, getGoalStatusLabel } from '../../shared/i18n/labels';
 import { EmployeeCreateGoalDialog } from './EmployeeCreateGoalDialog';
@@ -20,8 +20,9 @@ const TEXT = {
   editGoal: '编辑目标',
   editSuccess: '目标修改已保存。',
   editFailed: '目标修改失败，请稍后重试。',
+  pointLimitExceeded: '当前季度所有目标的关键结果分值合计不能超过 100 分。',
   draftHint: '当前仍可继续修改目标与关键结果内容。',
-  confirmedHint: '目标已确认，当前以补充材料和维护完成情况为主。',
+  confirmedHint: '目标已确认，当前以补充材料为主。',
   pendingReviewHint: '目标已进入待评分，可继续补充材料供评分时查看。',
   completedHint: '目标已评分完成，仍可继续查看和补充材料。'
 } as const;
@@ -58,13 +59,31 @@ export function EmployeeGoalPage() {
       message.success(TEXT.editSuccess);
     },
     onError: (error) => {
-      message.error(
-        isQuarterPointLimitError(error)
-          ? '当前季度所有目标的关键结果分值合计不能超过 100 分。'
-          : error instanceof ApiError
-            ? error.message
-            : TEXT.editFailed
-      );
+      message.error(isQuarterPointLimitError(error) ? TEXT.pointLimitExceeded : error instanceof ApiError ? error.message : TEXT.editFailed);
+    }
+  });
+  const deleteGoalMutation = useMutation({
+    mutationFn: () => deleteEmployeeGoal(goalId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['employee-okr'] });
+      message.success('目标已删除');
+      navigate('/employee/okr');
+    },
+    onError: (error) => {
+      message.error(error instanceof ApiError ? error.message : '目标删除失败，请稍后重试。');
+    }
+  });
+  const deleteKeyResultMutation = useMutation({
+    mutationFn: (krId: string) => deleteEmployeeKeyResult(krId),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['employee-goal', goalId] }),
+        queryClient.invalidateQueries({ queryKey: ['employee-okr'] })
+      ]);
+      message.success('关键结果已删除');
+    },
+    onError: (error) => {
+      message.error(error instanceof ApiError ? error.message : '关键结果删除失败，请稍后重试。');
     }
   });
 
@@ -141,21 +160,32 @@ export function EmployeeGoalPage() {
 
       <Card className="employee-detail-card" variant="borderless">
         <Space direction="vertical" size={16} style={{ width: '100%' }}>
-          <Typography.Paragraph style={{ marginBottom: 0 }}>
-            {goal.description ?? TEXT.goalDescriptionFallback}
-          </Typography.Paragraph>
+          <Typography.Paragraph style={{ marginBottom: 0 }}>{goal.description ?? TEXT.goalDescriptionFallback}</Typography.Paragraph>
 
           {statusHint ? <Alert type={statusHint.type} showIcon message={statusHint.message} /> : null}
 
           {canEditGoal(goal.status) ? (
             <Space wrap>
               <Button onClick={() => setEditOpen(true)}>{TEXT.editGoal}</Button>
+              <Button danger icon={<DeleteOutlined />} loading={deleteGoalMutation.isPending} onClick={handleDeleteGoal}>
+                删除目标
+              </Button>
             </Space>
           ) : null}
         </Space>
       </Card>
 
-      <EmployeeGoalKeyResultWorkspace goal={goal} />
+      <EmployeeGoalKeyResultWorkspace
+        goal={goal}
+        deletingKeyResultId={deleteKeyResultMutation.isPending ? deleteKeyResultMutation.variables ?? null : null}
+        onDeleteKeyResult={(keyResult) => {
+          if (!window.confirm(`确认删除关键结果“${keyResult.name}”吗？`)) {
+            return;
+          }
+
+          deleteKeyResultMutation.mutate(keyResult.id);
+        }}
+      />
 
       <EmployeeCreateGoalDialog
         open={editOpen}
@@ -167,4 +197,12 @@ export function EmployeeGoalPage() {
       />
     </Space>
   );
+
+  function handleDeleteGoal() {
+    if (!goal || !window.confirm(`确认删除目标“${goal.name}”吗？`)) {
+      return;
+    }
+
+    deleteGoalMutation.mutate();
+  }
 }

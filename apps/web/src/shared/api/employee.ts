@@ -56,9 +56,15 @@ export function updateEmployeeGoal(goalId: string, payload: UpdateEmployeeGoalIn
   });
 }
 
-export function submitEmployeeGoalReview(goalId: string) {
-  return apiRequest<EmployeeGoalDetail>(`/employee/goals/${goalId}/submit-review`, {
-    method: 'POST'
+export function deleteEmployeeGoal(goalId: string) {
+  return apiRequest<void>(`/employee/goals/${goalId}`, {
+    method: 'DELETE'
+  });
+}
+
+export function deleteEmployeeKeyResult(krId: string) {
+  return apiRequest<void>(`/employee/key-results/${krId}`, {
+    method: 'DELETE'
   });
 }
 

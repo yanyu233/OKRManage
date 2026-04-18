@@ -6,7 +6,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { getCurrentSession, manualLogin } from '../../shared/api/auth';
 import { ApiError } from '../../shared/api/http';
 import { useSessionStore } from '../../shared/store/session-store';
-import { defaultPathForRole } from '../layout/routing';
+import { resolvePostAuthPath } from '../layout/routing';
 
 type LoginFormValues = {
   loginName: string;
@@ -14,15 +14,18 @@ type LoginFormValues = {
 };
 
 const TEXT = {
-  titleFallback: '\u672c\u5730\u8c03\u8bd5\u767b\u5f55',
-  titleUnmapped: '\u672c\u5730\u515c\u5e95\u767b\u5f55',
+  titleFallback: '\u8d26\u53f7\u5bc6\u7801\u767b\u5f55',
+  titleUnmapped: '\u4f01\u4e1a\u5fae\u4fe1\u672a\u5b8c\u6210\u6620\u5c04',
   description:
-    '\u4f01\u4e1a\u5fae\u4fe1\u4ecd\u7136\u662f\u6b63\u5f0f\u5165\u53e3\uff0c\u8fd9\u4e2a\u9875\u9762\u4ec5\u7528\u4e8e\u4f01\u4e1a\u5fae\u4fe1\u8d26\u53f7\u672a\u6620\u5c04\u65f6\u7684\u515c\u5e95\u767b\u5f55\uff0c\u4ee5\u53ca\u5f53\u524d\u672c\u5730\u8c03\u8bd5\u3002',
+    '\u7cfb\u7edf\u4f1a\u4f18\u5148\u5c1d\u8bd5\u4f01\u4e1a\u5fae\u4fe1\u8ba4\u8bc1\u3002\u5f53\u524d\u9875\u9762\u7528\u4e8e\u6ca1\u6709\u643a\u5e26\u4f01\u4e1a\u5fae\u4fe1\u8ba4\u8bc1\u4fe1\u606f\u3001\u672a\u5b8c\u6210\u8d26\u53f7\u6620\u5c04\uff0c\u6216\u9000\u51fa\u540e\u6539\u7528\u8d26\u53f7\u5bc6\u7801\u767b\u5f55\u7684\u573a\u666f\u3002',
   unmappedTitle: '\u4f01\u4e1a\u5fae\u4fe1\u8d26\u53f7\u672a\u8bc6\u522b',
   unmappedDescription:
-    '\u8bf7\u4f7f\u7528\u7cfb\u7edf\u7ba1\u7406\u5458\u5206\u914d\u7684\u672c\u5730\u515c\u5e95\u8d26\u53f7\u767b\u5f55\uff0c\u6216\u8054\u7cfb\u7cfb\u7edf\u7ba1\u7406\u5458\u8865\u9f50\u4f01\u4e1a\u5fae\u4fe1\u8d26\u53f7\u6620\u5c04\u3002',
+    '\u8bf7\u4f7f\u7528\u7cfb\u7edf\u7ba1\u7406\u5458\u5206\u914d\u7684\u8d26\u53f7\u5bc6\u7801\u767b\u5f55\uff0c\u6216\u8054\u7cfb\u7cfb\u7edf\u7ba1\u7406\u5458\u8865\u9f50\u4f01\u4e1a\u5fae\u4fe1\u8d26\u53f7\u6620\u5c04\u3002',
+  unavailableTitle: '\u672a\u68c0\u6d4b\u5230\u4f01\u4e1a\u5fae\u4fe1\u767b\u5f55\u914d\u7f6e',
+  unavailableDescription:
+    '\u5f53\u524d\u73af\u5883\u65e0\u6cd5\u76f4\u63a5\u53d1\u8d77\u4f01\u4e1a\u5fae\u4fe1\u8ba4\u8bc1\uff0c\u53ef\u76f4\u63a5\u4f7f\u7528\u8d26\u53f7\u5bc6\u7801\u767b\u5f55\u3002',
   hint:
-    '\u6b63\u5f0f\u7528\u6237\u8bf7\u4ece\u4f01\u4e1a\u5fae\u4fe1\u5de5\u4f5c\u53f0\u8fdb\u5165\u3002\u8fd9\u91cc\u4fdd\u7559\u672c\u5730\u8d26\u53f7\u767b\u5f55\uff0c\u662f\u4e3a\u4e86\u5c11\u91cf\u515c\u5e95\u573a\u666f\u548c\u5f53\u524d\u5f00\u53d1\u8c03\u8bd5\u3002',
+    '\u5982\u679c\u5f53\u524d\u73af\u5883\u643a\u5e26\u4f01\u4e1a\u5fae\u4fe1\u8ba4\u8bc1\u4fe1\u606f\uff0c\u7cfb\u7edf\u4f1a\u4f18\u5148\u8df3\u8f6c\u4f01\u4e1a\u5fae\u4fe1\uff1b\u5982\u672a\u643a\u5e26\u8ba4\u8bc1\u4fe1\u606f\uff0c\u6216\u4f60\u5df2\u4e3b\u52a8\u9000\u51fa\uff0c\u4ecd\u53ef\u5728\u8fd9\u91cc\u4f7f\u7528\u8d26\u53f7\u5bc6\u7801\u767b\u5f55\u3002',
   loginName: '\u767b\u5f55\u540d',
   password: '\u5bc6\u7801',
   loginNamePlaceholder: '\u8bf7\u8f93\u5165\u767b\u5f55\u540d',
@@ -43,6 +46,7 @@ export function LoginPage() {
   const returnTo = search.get('returnTo');
   const reason = search.get('reason');
   const isUnmappedFallback = reason === 'unmapped';
+  const isWecomUnavailable = reason === 'wecom-unavailable';
 
   const sessionQuery = useQuery({
     queryKey: ['session'],
@@ -55,7 +59,7 @@ export function LoginPage() {
       setUser(payload.user);
       await queryClient.invalidateQueries({ queryKey: ['session'] });
       if (payload.user) {
-        navigate(returnTo || defaultPathForRole(payload.user.activeRole), { replace: true });
+        navigate(resolvePostAuthPath(payload.user, returnTo), { replace: true });
       }
     },
     onError: (error) => {
@@ -65,7 +69,7 @@ export function LoginPage() {
   });
 
   if (sessionQuery.data?.authenticated && sessionQuery.data.user) {
-    return <Navigate to={returnTo || defaultPathForRole(sessionQuery.data.user.activeRole)} replace />;
+    return <Navigate to={resolvePostAuthPath(sessionQuery.data.user, returnTo)} replace />;
   }
 
   return (
@@ -83,6 +87,10 @@ export function LoginPage() {
 
           {isUnmappedFallback ? (
             <Alert type="warning" showIcon message={TEXT.unmappedTitle} description={TEXT.unmappedDescription} />
+          ) : null}
+
+          {!isUnmappedFallback && isWecomUnavailable ? (
+            <Alert type="info" showIcon message={TEXT.unavailableTitle} description={TEXT.unavailableDescription} />
           ) : null}
 
           <Card size="small" className="auth-hint-card">

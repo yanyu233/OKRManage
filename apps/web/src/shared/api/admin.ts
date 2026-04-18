@@ -2,6 +2,7 @@ import type {
   AdminGoalStatusControlQuery,
   AdminGoalStatusControlResponse,
   AdminGoalStatusTransitionInput,
+  AdminGoalStatusTransitionResponse,
   AdminOrgBootstrap,
   AdminOrgBootstrapInput
 } from '../types/admin-config';
@@ -43,7 +44,7 @@ export function getAdminGoalStatusControls(query: AdminGoalStatusControlQuery) {
 }
 
 export function transitionAdminGoalStatuses(payload: AdminGoalStatusTransitionInput) {
-  return apiRequest<{ affectedGoalCount: number }>('/admin/goal-status-control/transition', {
+  return apiRequest<AdminGoalStatusTransitionResponse>('/admin/goal-status-control/transition', {
     method: 'POST',
     body: JSON.stringify(payload)
   });

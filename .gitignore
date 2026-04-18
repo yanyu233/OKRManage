@@ -24,6 +24,7 @@ apps/server/.runtime-*.log
 apps/web/.runtime-*.log
 .codex-logs/
 .codex-runtime/
+logs/
 vendor/kkfileview/source/
 vendor/kkfileview/current/*
 !vendor/kkfileview/current/.gitkeep

@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { App as AntApp } from 'antd';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmployeeGoalPage } from '../src/modules/employee/EmployeeGoalPage';
 import { ApiError } from '../src/shared/api/http';
@@ -9,13 +9,14 @@ import { ApiError } from '../src/shared/api/http';
 const mockNavigate = vi.fn();
 const mockGetEmployeeGoalDetail = vi.fn();
 const mockUpdateEmployeeGoal = vi.fn();
-const mockSubmitEmployeeGoalReview = vi.fn();
+const mockDeleteEmployeeGoal = vi.fn();
+const mockDeleteEmployeeKeyResult = vi.fn();
 
 vi.mock('../src/shared/api/employee', () => ({
   getEmployeeGoalDetail: (...args: unknown[]) => mockGetEmployeeGoalDetail(...args),
   updateEmployeeGoal: (...args: unknown[]) => mockUpdateEmployeeGoal(...args),
-  submitEmployeeGoalReview: (...args: unknown[]) => mockSubmitEmployeeGoalReview(...args),
-  updateEmployeeKrCompletion: vi.fn(),
+  deleteEmployeeGoal: (...args: unknown[]) => mockDeleteEmployeeGoal(...args),
+  deleteEmployeeKeyResult: (...args: unknown[]) => mockDeleteEmployeeKeyResult(...args),
   uploadEmployeeProof: vi.fn()
 }));
 
@@ -33,7 +34,8 @@ describe('EmployeeGoalPage proof actions', () => {
     mockNavigate.mockReset();
     mockGetEmployeeGoalDetail.mockReset();
     mockUpdateEmployeeGoal.mockReset();
-    mockSubmitEmployeeGoalReview.mockReset();
+    mockDeleteEmployeeGoal.mockReset();
+    mockDeleteEmployeeKeyResult.mockReset();
   });
 
   it('opens the final preview target directly and keeps download as a separate action', async () => {
@@ -46,6 +48,7 @@ describe('EmployeeGoalPage proof actions', () => {
       totalPoints: 10,
       keyResultCount: 1,
       completedKeyResultCount: 1,
+      missingProofKeyResultCount: 0,
       proofCount: 1,
       currentScore: null,
       year: 2026,
@@ -61,7 +64,10 @@ describe('EmployeeGoalPage proof actions', () => {
           completionState: 'completed',
           reviewScore: null,
           reviewComment: null,
+          hasProofs: true,
+          isProofMissing: false,
           proofCount: 1,
+          latestProofUploadedAt: '2026-04-13T08:00:00.000Z',
           proofs: [
             {
               id: 'proof-1',
@@ -79,6 +85,7 @@ describe('EmployeeGoalPage proof actions', () => {
     });
 
     renderWithProviders(<EmployeeGoalPage />);
+    fireEvent.click(await screen.findByRole('button', { name: /KR1 proof flow kr/i }));
 
     const previewLink = await screen.findByRole('link', { name: 'quarter-proof.txt' });
     const previewAction = screen.getByRole('link', { name: '预览' });
@@ -96,16 +103,18 @@ describe('EmployeeGoalPage', () => {
     mockNavigate.mockReset();
     mockGetEmployeeGoalDetail.mockReset();
     mockUpdateEmployeeGoal.mockReset();
-    mockSubmitEmployeeGoalReview.mockReset();
+    mockDeleteEmployeeGoal.mockReset();
+    mockDeleteEmployeeKeyResult.mockReset();
     mockGetEmployeeGoalDetail.mockResolvedValue({
       id: 'goal-1',
       code: 'O3',
-      name: '完成AI项目',
-      description: 'AI项目',
+      name: '完成 AI 项目',
+      description: 'AI 项目',
       status: 'draft',
       totalPoints: 20,
-      keyResultCount: 1,
+      keyResultCount: 2,
       completedKeyResultCount: 0,
+      missingProofKeyResultCount: 2,
       proofCount: 0,
       currentScore: null,
       year: 2026,
@@ -114,30 +123,62 @@ describe('EmployeeGoalPage', () => {
         {
           id: 'kr-1',
           code: 'KR1',
-          name: 'AI项目可研上会',
+          name: 'AI 项目可研上会',
           description: null,
           points: 10,
           scoreType: 'objective',
           completionState: 'incomplete',
           reviewScore: null,
           reviewComment: null,
+          hasProofs: false,
+          isProofMissing: true,
           proofCount: 0,
+          latestProofUploadedAt: null,
+          proofs: []
+        },
+        {
+          id: 'kr-2',
+          code: 'KR2',
+          name: 'AI review output',
+          description: null,
+          points: 10,
+          scoreType: 'objective',
+          completionState: 'incomplete',
+          reviewScore: null,
+          reviewComment: null,
+          hasProofs: false,
+          isProofMissing: true,
+          proofCount: 0,
+          latestProofUploadedAt: null,
           proofs: []
         }
       ]
     });
   });
 
-  it('hides draft status text and exposes draft editing entry', async () => {
+  it('hides draft status text and keeps proof upload as the only completion path', async () => {
     renderWithProviders(<EmployeeGoalPage />);
 
     expect(await screen.findByRole('button', { name: '编辑目标' })).toBeInTheDocument();
     expect(screen.queryByText('草稿')).not.toBeInTheDocument();
-    expect(screen.getByPlaceholderText('选填，上传时会一并记录')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /KR1 AI 项目可研上会/i }));
+    expect(screen.getByPlaceholderText('可选填写，本次上传的文件会统一使用这段说明')).toBeInTheDocument();
     expect(screen.getByText('当前还没有上传证明材料')).toBeInTheDocument();
+    expect(screen.queryByText('完成状态')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '改回未完成' })).not.toBeInTheDocument();
   });
 
-  it('shows submit-for-review action for confirmed goals after all key results are completed', async () => {
+  it('opens the upload area directly from the summary upload button', async () => {
+    renderWithProviders(<EmployeeGoalPage />);
+
+    const uploadButtons = await screen.findAllByRole('button', { name: /上传材料/ });
+    fireEvent.click(uploadButtons[0]);
+
+    expect(await screen.findByPlaceholderText('可选填写，本次上传的文件会统一使用这段说明')).toBeInTheDocument();
+    expect(document.querySelectorAll('input[type="file"]').length).toBeGreaterThan(0);
+  });
+
+  it('keeps confirmed goals in material maintenance mode without manual completion editing', async () => {
     mockGetEmployeeGoalDetail.mockResolvedValueOnce({
       id: 'goal-1',
       code: 'O1',
@@ -147,6 +188,7 @@ describe('EmployeeGoalPage', () => {
       totalPoints: 30,
       keyResultCount: 2,
       completedKeyResultCount: 2,
+      missingProofKeyResultCount: 1,
       proofCount: 1,
       currentScore: null,
       year: 2026,
@@ -162,7 +204,10 @@ describe('EmployeeGoalPage', () => {
           completionState: 'completed',
           reviewScore: null,
           reviewComment: null,
+          hasProofs: true,
+          isProofMissing: false,
           proofCount: 1,
+          latestProofUploadedAt: '2026-04-13T08:00:00.000Z',
           proofs: []
         },
         {
@@ -175,7 +220,10 @@ describe('EmployeeGoalPage', () => {
           completionState: 'completed',
           reviewScore: null,
           reviewComment: null,
+          hasProofs: false,
+          isProofMissing: true,
           proofCount: 0,
+          latestProofUploadedAt: null,
           proofs: []
         }
       ]
@@ -183,10 +231,20 @@ describe('EmployeeGoalPage', () => {
 
     renderWithProviders(<EmployeeGoalPage />);
 
-    expect(await screen.findByRole('button', { name: '确认目标完成并提交评分' })).toBeEnabled();
+    expect(await screen.findByText('目标已确认，当前以补充材料为主。')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '确认目标完成并提交评分' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '编辑目标' })).not.toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: '上传证明材料' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: /上传材料/ }).length).toBeGreaterThan(0);
   });
+
+  it('shows draft delete actions for the goal and key results', async () => {
+    renderWithProviders(<EmployeeGoalPage />);
+
+    expect(await screen.findByRole('button', { name: /删除目标/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /KR1 AI 项目可研上会/i }));
+    expect(screen.getAllByRole('button', { name: /删除KR/ }).length).toBeGreaterThan(0);
+  });
+
   it('redirects to the employee OKR list when the goal no longer exists', async () => {
     mockGetEmployeeGoalDetail.mockRejectedValueOnce(new ApiError('goal not found', 404));
 

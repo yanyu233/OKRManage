@@ -6,17 +6,22 @@ import { LeaderWorkbenchPage } from '../src/modules/leader/LeaderWorkbenchPage';
 import { bulkLeaderKrScore } from '../src/shared/api/leader';
 
 const T = {
-  batchTitle: '\u5ba2\u89c2\u9879\u6279\u91cf\u8bc4\u5206',
+  batchTitle: '\u5173\u952e\u7ed3\u679c\u6279\u91cf\u8bc4\u5206',
   sectionFilter: '\u6309\u79d1\u5ba4\u7b5b\u9009',
   groupFilter: '\u6309\u5c0f\u7ec4\u7b5b\u9009',
   selectAllKrs: '\u5168\u9009\u5ba2\u89c2\u9879\u5173\u952e\u7ed3\u679c',
+  selectAllUnscoredKrs: '\u5168\u9009\u672a\u8bc4\u4ef7\u5173\u952e\u7ed3\u679c',
   cancel: '\u53d6\u6d88',
   selectedEmployees: '\u5df2\u9009\u5458\u5de5',
   selectedGoals: '\u5df2\u9009\u76ee\u6807',
   selectedKrs: '\u5df2\u9009\u5173\u952e\u7ed3\u679c',
-  batchSave: '\u6279\u91cf\u8d4b\u6ee1\u5206',
-  batchMissingProofTitle: '\u6709 1 \u6761\u5173\u952e\u7ed3\u679c\u672a\u63d0\u4ea4\u6750\u6599\uff0c\u9ed8\u8ba4\u4e0d\u4f1a\u53c2\u4e0e\u6279\u91cf\u8d4b\u6ee1\u5206',
-  batchAllowMissingProofs: '\u5141\u8bb8\u5bf9\u672a\u63d0\u4ea4\u6750\u6599\u7684\u5173\u952e\u7ed3\u679c\u7ee7\u7eed\u6279\u91cf\u8d4b\u6ee1\u5206',
+  batchSave: '\u6279\u91cf\u8d4b\u5206',
+  batchMissingProofTitle: '\u6709 1 \u6761\u5173\u952e\u7ed3\u679c\u672a\u63d0\u4ea4\u6750\u6599\uff0c\u9ed8\u8ba4\u4e0d\u4f1a\u53c2\u4e0e\u6279\u91cf\u8d4b\u5206',
+  batchAllowMissingProofs: '\u5141\u8bb8\u5bf9\u672a\u63d0\u4ea4\u6750\u6599\u7684\u5173\u952e\u7ed3\u679c\u7ee7\u7eed\u6279\u91cf\u8d4b\u5206',
+  batchModeCustom: '\u6309\u81ea\u5b9a\u4e49\u5206\u6570',
+  batchCustomScoreLabel: '\u81ea\u5b9a\u4e49\u5206\u6570',
+  batchCustomScoreExceeded:
+    '\u81ea\u5b9a\u4e49\u5206\u6570 36 \u5206\u5df2\u8d85\u8fc7\u5f53\u524d\u5df2\u9009\u5173\u952e\u7ed3\u679c\u7684\u6700\u4f4e\u5206\u503c 20 \u5206\uff0c\u8bf7\u8c03\u6574\u540e\u518d\u6279\u91cf\u8d4b\u5206\u3002',
   removeTemplateKr: '\u79fb\u9664 KR1 \u6a21\u677f\u5ba2\u89c2\u9879',
   employeeName: '\u5f20\u6668',
   readonlyEmployee: '\u674e\u96f7',
@@ -24,7 +29,8 @@ const T = {
   employeeGoal2: '\u5f20\u6668 / O2 \u5f20\u6668 2026 \u5e74\u4e00\u5b63\u5ea6 OKR',
   readonlyGoal: '\u674e\u96f7 / O3 \u674e\u96f7 \u8fd0\u8425\u652f\u6491\u4e13\u9879',
   templateKr: 'KR1 \u6a21\u677f\u5ba2\u89c2\u9879',
-  deliveryKr: 'KR1 \u5b8c\u6210 6 \u4e2a\u7248\u672c\u4ea4\u4ed8'
+  deliveryKr: 'KR1 \u5b8c\u6210 6 \u4e2a\u7248\u672c\u4ea4\u4ed8',
+  subjectiveKr: 'KR2 \u4e3b\u89c2\u8bc4\u4f30\u9879'
 } as const;
 
 function ensureMatchMedia() {
@@ -339,6 +345,7 @@ describe('LeaderWorkbenchPage batch score modal', () => {
       expect(screen.getByText(T.sectionFilter)).toBeTruthy();
       expect(screen.getByText(T.groupFilter)).toBeTruthy();
       expect(screen.getByRole('button', { name: T.selectAllKrs })).toBeTruthy();
+      expect(screen.getByRole('button', { name: T.selectAllUnscoredKrs })).toBeTruthy();
       expect(screen.queryByRole('button', { name: '\u5168\u9009\u5458\u5de5' })).toBeNull();
       expect(screen.queryByRole('button', { name: '\u5168\u9009\u76ee\u6807' })).toBeNull();
       expect(screen.queryByRole('button', { name: '\u5168\u9009\uff08\u53bb\u9664\u6a21\u677f\u76ee\u6807\uff09' })).toBeNull();
@@ -356,7 +363,47 @@ describe('LeaderWorkbenchPage batch score modal', () => {
       expect(screen.getByText(T.selectedKrs)).toBeTruthy();
       expect(screen.getAllByText(T.templateKr).length).toBeGreaterThan(0);
       expect(screen.getAllByText(T.deliveryKr).length).toBeGreaterThan(0);
+      const selectedKrCard = screen.getByText(T.selectedKrs).closest('.ant-card');
+      expect(selectedKrCard).toBeTruthy();
+      expect(within(selectedKrCard as HTMLElement).queryByText(T.subjectiveKr)).toBeNull();
       expect(screen.getByRole('button', { name: T.batchSave })).toBeTruthy();
+    },
+    10000
+  );
+
+  it(
+    'selects all unscored key results when using the unscored shortcut',
+    async () => {
+      ensureMatchMedia();
+
+      const bulkScoreMock = vi.mocked(bulkLeaderKrScore);
+
+      render(
+        <QueryClientProvider client={new QueryClient()}>
+          <AntApp>
+            <LeaderWorkbenchPage />
+          </AntApp>
+        </QueryClientProvider>
+      );
+
+      fireEvent.click(await screen.findByRole('button', { name: T.batchTitle }));
+      fireEvent.click(await screen.findByRole('button', { name: T.selectAllUnscoredKrs }));
+
+      const selectedKrCard = (await screen.findByText(T.selectedKrs)).closest('.ant-card');
+      expect(selectedKrCard).toBeTruthy();
+      expect(within(selectedKrCard as HTMLElement).getAllByText(T.templateKr).length).toBeGreaterThan(0);
+      expect(within(selectedKrCard as HTMLElement).getAllByText(T.subjectiveKr).length).toBeGreaterThan(0);
+      expect(within(selectedKrCard as HTMLElement).queryByText(T.deliveryKr)).toBeNull();
+
+      fireEvent.click(screen.getByRole('button', { name: T.batchSave }));
+
+      await waitFor(() =>
+        expect(bulkScoreMock).toHaveBeenCalledWith(
+          expect.objectContaining({
+            keyResultIds: ['g1-kr1', 'kr-2']
+          })
+        )
+      );
     },
     10000
   );
@@ -398,6 +445,76 @@ describe('LeaderWorkbenchPage batch score modal', () => {
           })
         )
       );
+    },
+    10000
+  );
+
+  it(
+    'supports assigning a custom score to all selected objective key results',
+    async () => {
+      ensureMatchMedia();
+
+      const bulkScoreMock = vi.mocked(bulkLeaderKrScore);
+
+      render(
+        <QueryClientProvider client={new QueryClient()}>
+          <AntApp>
+            <LeaderWorkbenchPage />
+          </AntApp>
+        </QueryClientProvider>
+      );
+
+      fireEvent.click(await screen.findByRole('button', { name: T.batchTitle }));
+      fireEvent.click(await screen.findByRole('button', { name: T.selectAllKrs }));
+      fireEvent.click(await screen.findByRole('radio', { name: T.batchModeCustom }));
+
+      const scoreInput = screen.getByRole('spinbutton', { name: T.batchCustomScoreLabel });
+      fireEvent.change(scoreInput, { target: { value: '12' } });
+      fireEvent.blur(scoreInput);
+
+      fireEvent.click(screen.getByRole('button', { name: T.batchSave }));
+
+      await waitFor(() =>
+        expect(bulkScoreMock).toHaveBeenCalledWith(
+          expect.objectContaining({
+            score: 12
+          })
+        )
+      );
+    },
+    10000
+  );
+
+  it(
+    'blocks custom bulk scores that exceed the minimum selected key result points',
+    async () => {
+      ensureMatchMedia();
+
+      const bulkScoreMock = vi.mocked(bulkLeaderKrScore);
+
+      render(
+        <QueryClientProvider client={new QueryClient()}>
+          <AntApp>
+            <LeaderWorkbenchPage />
+          </AntApp>
+        </QueryClientProvider>
+      );
+
+      fireEvent.click(await screen.findByRole('button', { name: T.batchTitle }));
+      fireEvent.click(await screen.findByRole('button', { name: T.selectAllKrs }));
+      fireEvent.click(await screen.findByRole('radio', { name: T.batchModeCustom }));
+
+      const scoreInput = screen.getByRole('spinbutton', { name: T.batchCustomScoreLabel });
+      fireEvent.change(scoreInput, { target: { value: '36' } });
+      fireEvent.blur(scoreInput);
+
+      expect(await screen.findByText(T.batchCustomScoreExceeded)).toBeTruthy();
+
+      fireEvent.click(screen.getByRole('button', { name: T.batchSave }));
+
+      await waitFor(() => {
+        expect(bulkScoreMock).not.toHaveBeenCalled();
+      });
     },
     10000
   );

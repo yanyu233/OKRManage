@@ -65,7 +65,7 @@ describe('multi-role routing', () => {
         items: [
           {
             key: '/employee/okr',
-            label: '我的 OKR',
+            label: '我的OKR',
             role: 'employee'
           }
         ]
@@ -105,17 +105,18 @@ describe('multi-role routing', () => {
         items: [
           {
             key: '/employee/okr',
-            label: '我的 OKR',
+            label: '我的OKR',
             role: 'employee'
           }
         ]
       }
     ]);
 
-    expect(items).toHaveLength(3);
-    expect((items[0] as { key?: string }).key).toBe('/knowledge-base');
+    expect(items).toHaveLength(4);
+    expect((items[0] as { key?: string }).key).toBe('/okr/all');
+    expect((items[1] as { key?: string }).key).toBe('/knowledge-base');
     const totalChildren = items.reduce((sum, item) => sum + ((item as { children?: unknown[] }).children?.length ?? 1), 0);
-    expect(totalChildren).toBe(5);
+    expect(totalChildren).toBe(6);
   });
 
   it('shows all non-admin menus for department head', () => {
@@ -144,16 +145,17 @@ describe('multi-role routing', () => {
           },
           {
             key: '/employee/okr',
-            label: '我的 OKR',
+            label: '我的OKR',
             role: 'department-head'
           }
         ]
       }
     ]);
 
-    expect(items).toHaveLength(5);
-    expect((items[0] as { key?: string }).key).toBe('/knowledge-base');
-    expect((items[4] as { key?: string }).key).toBe('/employee/okr');
+    expect(items).toHaveLength(6);
+    expect((items[0] as { key?: string }).key).toBe('/okr/all');
+    expect((items[1] as { key?: string }).key).toBe('/knowledge-base');
+    expect((items[5] as { key?: string }).key).toBe('/employee/okr');
   });
 
   it('resolves target active role from the destination path', () => {

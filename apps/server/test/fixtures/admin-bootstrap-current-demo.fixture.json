@@ -1,0 +1,1750 @@
+{
+  "departments": [
+    {
+      "id": "cmo34mr0p0000ijo0t9t756li",
+      "name": "数字科技管理事业部",
+      "isActive": true
+    }
+  ],
+  "sections": [
+    {
+      "id": "cmo34mr130004ijo0t4i49go7",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "name": "智慧园区中心",
+      "isActive": true
+    },
+    {
+      "id": "cmo34mr170006ijo0yimswmq9",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "name": "数字基建中心",
+      "isActive": true
+    },
+    {
+      "id": "cmo34mr190008ijo03845snm2",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "name": "数字业务中心",
+      "isActive": true
+    },
+    {
+      "id": "cmo34mr1c000aijo0qsykp17p",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "name": "工业互联网中心",
+      "isActive": true
+    },
+    {
+      "id": "cmo34mr1g000cijo0fkljgqbr",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "name": "综合管理部",
+      "isActive": true
+    },
+    {
+      "id": "cmo34mr1j000eijo01oo1q80h",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "name": "数字生产力中心",
+      "isActive": true
+    },
+    {
+      "id": "cmo34mr1m000gijo00mz0mxlc",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "name": "运营中心",
+      "isActive": true
+    },
+    {
+      "id": "section-ab65kk",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "name": "虚拟科室",
+      "isActive": true
+    }
+  ],
+  "users": [
+    {
+      "id": "cmo34mr0u0002ijo0q62vwa9e",
+      "employeeNo": "DEBUG-SYSADMIN",
+      "name": "System Admin",
+      "positionName": "系统管理员",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "section-ab65kk",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9su0001ijkghpvbv7hu",
+      "employeeNo": null,
+      "name": "张艺耀",
+      "positionName": "信息系统工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr130004ijo0t4i49go7",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9sv0003ijkg2lgo3g81",
+      "employeeNo": null,
+      "name": "陈福松",
+      "positionName": "终端设备工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr130004ijo0t4i49go7",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9sw0005ijkg9u4qcpy3",
+      "employeeNo": null,
+      "name": "陈帝",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr130004ijo0t4i49go7",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9sx0007ijkg0bty37x7",
+      "employeeNo": null,
+      "name": "龚世铖",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr130004ijo0t4i49go7",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9sy0009ijkg43l5o353",
+      "employeeNo": null,
+      "name": "游娣",
+      "positionName": "办公电子设备管理岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr130004ijo0t4i49go7",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9sz000bijkgyefzmctz",
+      "employeeNo": null,
+      "name": "聂小驰",
+      "positionName": "终端设备工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr130004ijo0t4i49go7",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9t0000dijkg3zlkun2i",
+      "employeeNo": null,
+      "name": "聂星宇",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr130004ijo0t4i49go7",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9t0000fijkg2f46y0z9",
+      "employeeNo": null,
+      "name": "张正奕",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr130004ijo0t4i49go7",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9t1000hijkgpz6ouit7",
+      "employeeNo": null,
+      "name": "李春山",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr170006ijo0yimswmq9",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9t2000jijkg5oigs3jn",
+      "employeeNo": null,
+      "name": "王晨",
+      "positionName": "网络安全工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr170006ijo0yimswmq9",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9t2000lijkgtgpnb2da",
+      "employeeNo": null,
+      "name": "全俊",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr170006ijo0yimswmq9",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9t3000nijkgy56mqeis",
+      "employeeNo": null,
+      "name": "陈均",
+      "positionName": "网络安全工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr170006ijo0yimswmq9",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9t3000pijkg8x3t269h",
+      "employeeNo": null,
+      "name": "吕扬",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr170006ijo0yimswmq9",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9t4000rijkgpick57ul",
+      "employeeNo": null,
+      "name": "骆书宇",
+      "positionName": "网络工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr170006ijo0yimswmq9",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9t5000tijkgfbqsppzj",
+      "employeeNo": null,
+      "name": "田绍礼",
+      "positionName": "云技术工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr170006ijo0yimswmq9",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9t5000vijkgqdvalqaw",
+      "employeeNo": null,
+      "name": "程支猛",
+      "positionName": "云技术工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr170006ijo0yimswmq9",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9t6000xijkgq8u40vd8",
+      "employeeNo": null,
+      "name": "刘渊",
+      "positionName": "网络工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr170006ijo0yimswmq9",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9t6000zijkg3iodawl4",
+      "employeeNo": null,
+      "name": "胡晓",
+      "positionName": "网络安全工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr170006ijo0yimswmq9",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9t70011ijkg46qgaj2o",
+      "employeeNo": null,
+      "name": "余浪",
+      "positionName": "网络安全工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr170006ijo0yimswmq9",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9t80013ijkgpok22skg",
+      "employeeNo": null,
+      "name": "杨旭东",
+      "positionName": "云技术工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr170006ijo0yimswmq9",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9t80015ijkgbsoexfu9",
+      "employeeNo": "1700066",
+      "name": "陈美果",
+      "positionName": "负责人",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr190008ijo03845snm2",
+      "reviewGroupId": "review-group-l1wxk9",
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9t90017ijkg8mmtviss",
+      "employeeNo": null,
+      "name": "谢胡林",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr190008ijo03845snm2",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9ta0019ijkg5c8k9xqh",
+      "employeeNo": null,
+      "name": "姜峰",
+      "positionName": "信息系统工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr190008ijo03845snm2",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tb001bijkgti2arzsn",
+      "employeeNo": null,
+      "name": "熊贞兰",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr190008ijo03845snm2",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tb001dijkg8pi0a3ez",
+      "employeeNo": null,
+      "name": "丁醇",
+      "positionName": "信息系统工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr190008ijo03845snm2",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tc001fijkg8sd8ow95",
+      "employeeNo": null,
+      "name": "赵坚",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr190008ijo03845snm2",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9td001hijkg4m9s2tvq",
+      "employeeNo": null,
+      "name": "杨增禄",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr190008ijo03845snm2",
+      "reviewGroupId": "review-group-l1wxk9",
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9te001jijkgaptmz8p7",
+      "employeeNo": null,
+      "name": "李朝江",
+      "positionName": "业务流程与系统架构师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr190008ijo03845snm2",
+      "reviewGroupId": "review-group-new-hires",
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tf001lijkgrnfpo27e",
+      "employeeNo": null,
+      "name": "蒲雪映",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr190008ijo03845snm2",
+      "reviewGroupId": "review-group-l1wxk9",
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tf001nijkgdt1tfn8w",
+      "employeeNo": null,
+      "name": "汪跃",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr190008ijo03845snm2",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tg001pijkgod3xi4cv",
+      "employeeNo": null,
+      "name": "方墨",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1c000aijo0qsykp17p",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9th001rijkgveot94ii",
+      "employeeNo": null,
+      "name": "赵庆",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1c000aijo0qsykp17p",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9th001tijkg2eq78ajm",
+      "employeeNo": null,
+      "name": "袁波",
+      "positionName": "信息系统工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1c000aijo0qsykp17p",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9ti001vijkg1ggnahw5",
+      "employeeNo": null,
+      "name": "赵琨",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1c000aijo0qsykp17p",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9ti001xijkgdthldvzl",
+      "employeeNo": null,
+      "name": "涂宗强",
+      "positionName": "信息系统工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1c000aijo0qsykp17p",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tj001zijkgpihbvj2c",
+      "employeeNo": null,
+      "name": "陈磊",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1c000aijo0qsykp17p",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tk0021ijkgmzwdzpta",
+      "employeeNo": null,
+      "name": "何颖",
+      "positionName": "信息系统工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1c000aijo0qsykp17p",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tk0023ijkg4aqlc74m",
+      "employeeNo": null,
+      "name": "严翔",
+      "positionName": "信息系统工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1c000aijo0qsykp17p",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tl0025ijkgli90cz43",
+      "employeeNo": null,
+      "name": "冯林",
+      "positionName": "信息系统工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1c000aijo0qsykp17p",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tl0027ijkgzi3vms6a",
+      "employeeNo": null,
+      "name": "安小波",
+      "positionName": "信息系统工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1c000aijo0qsykp17p",
+      "reviewGroupId": "review-group-l1wxk9",
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tm0029ijkgpikbqq1h",
+      "employeeNo": null,
+      "name": "曾开燚",
+      "positionName": "业务流程与系统架构师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1c000aijo0qsykp17p",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tm002bijkgtdxi1c2g",
+      "employeeNo": null,
+      "name": "袁江远",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1c000aijo0qsykp17p",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tn002dijkgo649t5w2",
+      "employeeNo": null,
+      "name": "周婷",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1c000aijo0qsykp17p",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9to002fijkgb0pjrrlu",
+      "employeeNo": null,
+      "name": "孙攀",
+      "positionName": "综合管理岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1g000cijo0fkljgqbr",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9to002hijkguonj18j7",
+      "employeeNo": null,
+      "name": "仇爱",
+      "positionName": "综合管理岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1g000cijo0fkljgqbr",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tp002jijkgqbgh12am",
+      "employeeNo": null,
+      "name": "刘园",
+      "positionName": "综合管理岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1g000cijo0fkljgqbr",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tp002lijkg6xsivway",
+      "employeeNo": null,
+      "name": "钟小玉",
+      "positionName": "财务管理岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1g000cijo0fkljgqbr",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tq002nijkgxppmw2ac",
+      "employeeNo": null,
+      "name": "刘雨垚",
+      "positionName": "财务管理岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1g000cijo0fkljgqbr",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tq002pijkg3h7q4kqh",
+      "employeeNo": null,
+      "name": "李吉瑜",
+      "positionName": "综合管理岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1g000cijo0fkljgqbr",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tr002rijkgec4pak9v",
+      "employeeNo": null,
+      "name": "杜文闻",
+      "positionName": "综合管理岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1g000cijo0fkljgqbr",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9ts002tijkgs6zllgin",
+      "employeeNo": null,
+      "name": "周银波",
+      "positionName": "商务管理岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1g000cijo0fkljgqbr",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tt002vijkg4cej2j24",
+      "employeeNo": null,
+      "name": "杨凡",
+      "positionName": "综合管理岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1g000cijo0fkljgqbr",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tu002xijkgdgbjsk75",
+      "employeeNo": null,
+      "name": "李健",
+      "positionName": "产品技术经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1j000eijo01oo1q80h",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tv002zijkg9saa1htr",
+      "employeeNo": null,
+      "name": "陈曦",
+      "positionName": "产品技术经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1j000eijo01oo1q80h",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tv0031ijkg3s3kegd3",
+      "employeeNo": null,
+      "name": "万远阳",
+      "positionName": "内控管理岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1j000eijo01oo1q80h",
+      "reviewGroupId": "review-group-l1wxk9",
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tw0033ijkgs8g8oofc",
+      "employeeNo": null,
+      "name": "刘然",
+      "positionName": "项目经理",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1j000eijo01oo1q80h",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tw0035ijkgdtixdntv",
+      "employeeNo": null,
+      "name": "谭诗镇",
+      "positionName": "数据工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1j000eijo01oo1q80h",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tx0037ijkgugeomeka",
+      "employeeNo": null,
+      "name": "罗钰琛",
+      "positionName": "业务流程与系统架构师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1m000gijo00mz0mxlc",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9ty0039ijkgvtpsrmvp",
+      "employeeNo": null,
+      "name": "张维维",
+      "positionName": "业务流程与系统架构师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1m000gijo00mz0mxlc",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9ty003bijkgbp424ji1",
+      "employeeNo": null,
+      "name": "李俊宏",
+      "positionName": "云技术架构师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr170006ijo0yimswmq9",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tz003dijkgo0peucgu",
+      "employeeNo": null,
+      "name": "王川川",
+      "positionName": "云技术工程师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr170006ijo0yimswmq9",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9tz003fijkgu3d05zex",
+      "employeeNo": null,
+      "name": "曹辉罡",
+      "positionName": "营销运营岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1m000gijo00mz0mxlc",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9u0003hijkgyp5pug98",
+      "employeeNo": null,
+      "name": "周洪池",
+      "positionName": "新媒体运营岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1m000gijo00mz0mxlc",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9u0003jijkgytr1s92d",
+      "employeeNo": null,
+      "name": "李昌慧颖",
+      "positionName": "新媒体运营岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1m000gijo00mz0mxlc",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9u1003lijkgj6oltzeg",
+      "employeeNo": null,
+      "name": "程怡",
+      "positionName": "内容运营岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1m000gijo00mz0mxlc",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9u2003nijkgy14mafz8",
+      "employeeNo": null,
+      "name": "李世遥",
+      "positionName": "业务管理岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1m000gijo00mz0mxlc",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9u2003pijkgwkupfvrv",
+      "employeeNo": null,
+      "name": "谭清梅",
+      "positionName": "客服管理岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1m000gijo00mz0mxlc",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9u3003rijkg7wq8ula3",
+      "employeeNo": null,
+      "name": "吴霜",
+      "positionName": "内容运营岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1m000gijo00mz0mxlc",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9u3003tijkgflvhfnmt",
+      "employeeNo": null,
+      "name": "邹波",
+      "positionName": "门店管理岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1m000gijo00mz0mxlc",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9u4003vijkgof6yruqv",
+      "employeeNo": null,
+      "name": "吴莉莉",
+      "positionName": "平面设计师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1m000gijo00mz0mxlc",
+      "reviewGroupId": "review-group-new-hires",
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9u4003xijkgtnfbgyd7",
+      "employeeNo": null,
+      "name": "王利",
+      "positionName": "商品运营岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1m000gijo00mz0mxlc",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9u5003zijkgdw0x3vw1",
+      "employeeNo": null,
+      "name": "和紫萱",
+      "positionName": "商品运营岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1m000gijo00mz0mxlc",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9u50041ijkgapx71t63",
+      "employeeNo": null,
+      "name": "钟显阳",
+      "positionName": "平面设计师",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1m000gijo00mz0mxlc",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9u60043ijkg5ukp1pl3",
+      "employeeNo": null,
+      "name": "姚磬馨",
+      "positionName": "产品运营岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1m000gijo00mz0mxlc",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9u60045ijkgbqrmtaan",
+      "employeeNo": null,
+      "name": "李路瑶",
+      "positionName": "商品运营岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1m000gijo00mz0mxlc",
+      "reviewGroupId": null,
+      "isActive": true
+    },
+    {
+      "id": "cmo34n9u70047ijkgu084zfz2",
+      "employeeNo": null,
+      "name": "潘红",
+      "positionName": "内容运营岗",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "sectionId": "cmo34mr1m000gijo00mz0mxlc",
+      "reviewGroupId": "review-group-operations",
+      "isActive": true
+    }
+  ],
+  "localAccounts": [
+    {
+      "userId": "cmo34mr0u0002ijo0q62vwa9e",
+      "loginName": "sysadmin.local",
+      "localLoginEnabled": true,
+      "password": null
+    },
+    {
+      "userId": "cmo34n9t80015ijkgbsoexfu9",
+      "loginName": "1700066",
+      "localLoginEnabled": true,
+      "password": null
+    }
+  ],
+  "roleAssignments": [
+    {
+      "id": "d54b1bd3-5a08-47b4-8847-8fc66fcbca95",
+      "userId": "cmo34mr0u0002ijo0q62vwa9e",
+      "roleCode": "system-admin",
+      "scopeType": "system",
+      "scopeId": "system",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "3f869008-adac-4a01-9c66-7a40b8388d23",
+      "userId": "cmo34n9t80015ijkgbsoexfu9",
+      "roleCode": "section-leader",
+      "scopeType": "section",
+      "scopeId": "managed-section:cmo34n9t80015ijkgbsoexfu9",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "50b749f7-25dd-4f46-b7f7-d3f640756223",
+      "userId": "cmo34n9t80015ijkgbsoexfu9",
+      "roleCode": "group-leader",
+      "scopeType": "review-group",
+      "scopeId": "managed-group:cmo34n9t80015ijkgbsoexfu9",
+      "isPrimary": false,
+      "isEnabled": true
+    },
+    {
+      "id": "867389c0-0403-4ec5-b6de-7b4eae61a19d",
+      "userId": "cmo34n9su0001ijkghpvbv7hu",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9su0001ijkghpvbv7hu",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "98af6a6f-3f09-4544-bdbd-1f7e0586dd1b",
+      "userId": "cmo34n9t80015ijkgbsoexfu9",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9t80015ijkgbsoexfu9",
+      "isPrimary": false,
+      "isEnabled": true
+    },
+    {
+      "id": "f6ccb324-acf0-42c0-a67d-3d2f19fb776e",
+      "userId": "cmo34n9sv0003ijkg2lgo3g81",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9sv0003ijkg2lgo3g81",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "2d72c024-f618-4a50-ad8a-e8d3b28781eb",
+      "userId": "cmo34n9sw0005ijkg9u4qcpy3",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9sw0005ijkg9u4qcpy3",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "e8d4fb24-4d9b-491b-aaac-76d37089d665",
+      "userId": "cmo34n9sx0007ijkg0bty37x7",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9sx0007ijkg0bty37x7",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "12a13e41-7ddf-409c-acbe-6246d5ca51f8",
+      "userId": "cmo34n9sy0009ijkg43l5o353",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9sy0009ijkg43l5o353",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "b17510d6-56e6-4d4c-8eef-5068dbcbee33",
+      "userId": "cmo34n9sz000bijkgyefzmctz",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9sz000bijkgyefzmctz",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "db5fbd81-1104-4966-91c4-107d8cd8d2b3",
+      "userId": "cmo34n9t0000dijkg3zlkun2i",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9t0000dijkg3zlkun2i",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "bd075d2e-b395-42ad-9a72-c85a99ea941b",
+      "userId": "cmo34n9t0000fijkg2f46y0z9",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9t0000fijkg2f46y0z9",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "bb077e90-b6c9-4555-8336-0448d161586d",
+      "userId": "cmo34n9t1000hijkgpz6ouit7",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9t1000hijkgpz6ouit7",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "0e0e6c2c-087d-4792-96da-7a650b5e50c5",
+      "userId": "cmo34n9t2000jijkg5oigs3jn",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9t2000jijkg5oigs3jn",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "ce69e4fe-298f-4830-9513-c8062a0407aa",
+      "userId": "cmo34n9t2000lijkgtgpnb2da",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9t2000lijkgtgpnb2da",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "45f8ec2f-830c-4651-b779-2853f93eff82",
+      "userId": "cmo34n9t3000nijkgy56mqeis",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9t3000nijkgy56mqeis",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "38336238-614a-4396-a6e4-ba986d563246",
+      "userId": "cmo34n9t3000pijkg8x3t269h",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9t3000pijkg8x3t269h",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "876b3094-3344-4aa3-a1e4-64fe6bdd26e5",
+      "userId": "cmo34n9t4000rijkgpick57ul",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9t4000rijkgpick57ul",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "ab0b62c5-cc69-43f5-97c5-4e0ff4c64f34",
+      "userId": "cmo34n9t5000tijkgfbqsppzj",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9t5000tijkgfbqsppzj",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "c9febb12-4b9d-4287-94df-cb4b105ec777",
+      "userId": "cmo34n9t5000vijkgqdvalqaw",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9t5000vijkgqdvalqaw",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "a0e6eca7-a8e6-4b8a-b491-ae8a6b71666b",
+      "userId": "cmo34n9t6000xijkgq8u40vd8",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9t6000xijkgq8u40vd8",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "12d5f784-6add-4ca9-ba36-cc4096261caf",
+      "userId": "cmo34n9t6000zijkg3iodawl4",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9t6000zijkg3iodawl4",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "a3a5dcc4-bd6b-40cc-8e92-cf590e2a5bd0",
+      "userId": "cmo34n9t70011ijkg46qgaj2o",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9t70011ijkg46qgaj2o",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "3fec1799-0940-466d-a9f0-51a39e6c6a45",
+      "userId": "cmo34n9t80013ijkgpok22skg",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9t80013ijkgpok22skg",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "48417702-c04c-49b0-af54-6b7d0e5678d8",
+      "userId": "cmo34n9t90017ijkg8mmtviss",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9t90017ijkg8mmtviss",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "6c754c84-d665-4238-affb-b6e44df1885d",
+      "userId": "cmo34n9ta0019ijkg5c8k9xqh",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9ta0019ijkg5c8k9xqh",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "3bb3beff-6512-423c-bf45-4b157439eac2",
+      "userId": "cmo34n9tb001bijkgti2arzsn",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9tb001bijkgti2arzsn",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "ddd94bfc-805f-425f-8eef-b83dbd760edc",
+      "userId": "cmo34n9tb001dijkg8pi0a3ez",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9tb001dijkg8pi0a3ez",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "9e3dc59d-35b8-45e6-8c59-e28f0659046a",
+      "userId": "cmo34n9tc001fijkg8sd8ow95",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9tc001fijkg8sd8ow95",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "c29584c0-4cb4-4af8-a50f-2da4d7f45e33",
+      "userId": "cmo34n9td001hijkg4m9s2tvq",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9td001hijkg4m9s2tvq",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "76ab33ac-aa69-477b-b3b9-3582fbd7d0e0",
+      "userId": "cmo34n9te001jijkgaptmz8p7",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9te001jijkgaptmz8p7",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "67cee0e4-a79c-4216-a9f5-dc8e805a879b",
+      "userId": "cmo34n9tf001lijkgrnfpo27e",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9tf001lijkgrnfpo27e",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "2609b000-491c-41cf-bb91-7b8b69f0f5e9",
+      "userId": "cmo34n9tf001nijkgdt1tfn8w",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9tf001nijkgdt1tfn8w",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "95d164b6-1dd6-42f7-8745-d049aa5fbd0c",
+      "userId": "cmo34n9tg001pijkgod3xi4cv",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9tg001pijkgod3xi4cv",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "2b832409-3d15-41ae-afca-047b529dd1df",
+      "userId": "cmo34n9th001rijkgveot94ii",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9th001rijkgveot94ii",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "161b3c0b-35b8-4f44-8585-11d8564990e6",
+      "userId": "cmo34n9th001tijkg2eq78ajm",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9th001tijkg2eq78ajm",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "5b204fb3-fba9-4cda-be67-ccf0234ab4ce",
+      "userId": "cmo34n9ti001vijkg1ggnahw5",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9ti001vijkg1ggnahw5",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "4fc25fa2-953c-410f-9849-4c785e4381d5",
+      "userId": "cmo34n9ti001xijkgdthldvzl",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9ti001xijkgdthldvzl",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "71a35390-b362-4922-9d68-7d7d216e0929",
+      "userId": "cmo34n9tj001zijkgpihbvj2c",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9tj001zijkgpihbvj2c",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "5cd7b1db-8ed9-4184-892f-56291da27005",
+      "userId": "cmo34n9tk0021ijkgmzwdzpta",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9tk0021ijkgmzwdzpta",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "0df1213a-143e-401c-ba99-d8a4a5f82c8c",
+      "userId": "cmo34n9tk0023ijkg4aqlc74m",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9tk0023ijkg4aqlc74m",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "4d800603-61fd-4d6f-aeaf-87d95e75d7e0",
+      "userId": "cmo34n9tl0025ijkgli90cz43",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9tl0025ijkgli90cz43",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "3191e371-c3ac-43f3-aef0-d655ad2342ee",
+      "userId": "cmo34n9tl0027ijkgzi3vms6a",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9tl0027ijkgzi3vms6a",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "0310b4b5-2a17-4604-b5e0-23c9d0e41f21",
+      "userId": "cmo34n9tm0029ijkgpikbqq1h",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9tm0029ijkgpikbqq1h",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "ceb38cc1-fa15-4bb0-9c6f-e3ada9a2bb8f",
+      "userId": "cmo34n9tm002bijkgtdxi1c2g",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9tm002bijkgtdxi1c2g",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "b5386c15-1077-47f8-b793-a365b850a63f",
+      "userId": "cmo34n9tn002dijkgo649t5w2",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9tn002dijkgo649t5w2",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "42c8fce2-7b91-4b95-91f8-e8e3fb165185",
+      "userId": "cmo34n9to002fijkgb0pjrrlu",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9to002fijkgb0pjrrlu",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "33a44875-f67d-4309-8290-b3e6545ebd40",
+      "userId": "cmo34n9to002hijkguonj18j7",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9to002hijkguonj18j7",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "ae5dded0-e5ef-4c7c-9709-7a5310a850f2",
+      "userId": "cmo34n9tp002jijkgqbgh12am",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9tp002jijkgqbgh12am",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "ec6fde60-ac50-496e-b418-7da7a7619627",
+      "userId": "cmo34n9tp002lijkg6xsivway",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9tp002lijkg6xsivway",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "2681656c-4151-4a6e-8666-c584706bdc5d",
+      "userId": "cmo34n9tq002nijkgxppmw2ac",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9tq002nijkgxppmw2ac",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "2c4f9ae7-1380-4598-b6e2-08fdc9b08efb",
+      "userId": "cmo34n9tq002pijkg3h7q4kqh",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9tq002pijkg3h7q4kqh",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "d1165244-c154-4401-91ae-5acd7ba7a400",
+      "userId": "cmo34n9tr002rijkgec4pak9v",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9tr002rijkgec4pak9v",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "d2bbc562-c3cd-4ffe-a144-981a47fad6da",
+      "userId": "cmo34n9ts002tijkgs6zllgin",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9ts002tijkgs6zllgin",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "63c82d67-3e88-416d-ba42-b3f10118ee0f",
+      "userId": "cmo34n9tt002vijkg4cej2j24",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9tt002vijkg4cej2j24",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "5a333dd1-b043-4cae-9d88-ad80c7d05d4a",
+      "userId": "cmo34n9tu002xijkgdgbjsk75",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9tu002xijkgdgbjsk75",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "b69226e4-c98d-440f-8f45-90064a4a4cdb",
+      "userId": "cmo34n9tv002zijkg9saa1htr",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9tv002zijkg9saa1htr",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "314d6391-7059-46e6-9834-b422d3e70149",
+      "userId": "cmo34n9tv0031ijkg3s3kegd3",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9tv0031ijkg3s3kegd3",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "1e554d82-e69e-40af-b28a-c3a1ad723867",
+      "userId": "cmo34n9tw0033ijkgs8g8oofc",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9tw0033ijkgs8g8oofc",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "afc051ef-3b6e-41a9-a738-78316bf9509b",
+      "userId": "cmo34n9tw0035ijkgdtixdntv",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9tw0035ijkgdtixdntv",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "b4f6049b-09b4-43a4-87c5-5dbdcbc296a4",
+      "userId": "cmo34n9tx0037ijkgugeomeka",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9tx0037ijkgugeomeka",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "e393abf2-f7be-4f1b-9c77-75e248c575fd",
+      "userId": "cmo34n9ty0039ijkgvtpsrmvp",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9ty0039ijkgvtpsrmvp",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "c031a8ba-0428-46ff-81b7-c63e0f9799a9",
+      "userId": "cmo34n9ty003bijkgbp424ji1",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9ty003bijkgbp424ji1",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "c6479556-580e-4849-aaca-b028315537fe",
+      "userId": "cmo34n9tz003dijkgo0peucgu",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9tz003dijkgo0peucgu",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "dc49f3d1-6114-4dea-b197-871ac078ba0a",
+      "userId": "cmo34n9tz003fijkgu3d05zex",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9tz003fijkgu3d05zex",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "69c27d39-6ff6-453f-8524-d559e7f50c52",
+      "userId": "cmo34n9u0003hijkgyp5pug98",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9u0003hijkgyp5pug98",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "b791173a-781f-4808-8771-50f2db5c6ad4",
+      "userId": "cmo34n9u0003jijkgytr1s92d",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9u0003jijkgytr1s92d",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "d7ba05cd-ba56-4a5b-ba1a-e8b3c40a4cd4",
+      "userId": "cmo34n9u1003lijkgj6oltzeg",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9u1003lijkgj6oltzeg",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "d299bd65-cdd3-4307-ae99-14e01ea120d0",
+      "userId": "cmo34n9u2003nijkgy14mafz8",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9u2003nijkgy14mafz8",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "0f38280c-be33-42d0-9957-d2222993ed96",
+      "userId": "cmo34n9u2003pijkgwkupfvrv",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9u2003pijkgwkupfvrv",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "8106a2d5-5c70-45a3-a7ca-66fb966a78d0",
+      "userId": "cmo34n9u3003rijkg7wq8ula3",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9u3003rijkg7wq8ula3",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "96ff668b-e892-41fc-8b2f-dba0fa4c271b",
+      "userId": "cmo34n9u3003tijkgflvhfnmt",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9u3003tijkgflvhfnmt",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "16da3bb4-d0c7-439e-a600-004706271da5",
+      "userId": "cmo34n9u4003vijkgof6yruqv",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9u4003vijkgof6yruqv",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "f579949a-d72d-4faf-8a3c-03acee05a5da",
+      "userId": "cmo34n9u4003xijkgtnfbgyd7",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9u4003xijkgtnfbgyd7",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "992c4c68-05c7-478f-a37d-44bd68ca48e4",
+      "userId": "cmo34n9u5003zijkgdw0x3vw1",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9u5003zijkgdw0x3vw1",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "ad7d71e1-40f8-4820-86f9-d91cb65d4ada",
+      "userId": "cmo34n9u50041ijkgapx71t63",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9u50041ijkgapx71t63",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "325afdc1-0067-4795-97fe-e68427c0df22",
+      "userId": "cmo34n9u60043ijkg5ukp1pl3",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9u60043ijkg5ukp1pl3",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "6ef51658-d200-48cc-bbd5-65477a3566e0",
+      "userId": "cmo34n9u60045ijkgbqrmtaan",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9u60045ijkgbqrmtaan",
+      "isPrimary": true,
+      "isEnabled": true
+    },
+    {
+      "id": "c452fb69-71b7-4ed4-b68e-57e9498eea6a",
+      "userId": "cmo34n9u70047ijkgu084zfz2",
+      "roleCode": "employee",
+      "scopeType": "user",
+      "scopeId": "cmo34n9u70047ijkgu084zfz2",
+      "isPrimary": true,
+      "isEnabled": true
+    }
+  ],
+  "sectionLeaderBindings": [
+    {
+      "id": "a10ce730-5d06-4be5-a2ba-d86f536648aa",
+      "leaderUserId": "cmo34n9t80015ijkgbsoexfu9",
+      "sectionId": "cmo34mr190008ijo03845snm2"
+    }
+  ],
+  "groupLeaderBindings": [
+    {
+      "id": "695b9ff9-ee57-4aeb-aeac-d2be7f308060",
+      "leaderUserId": "cmo34n9t80015ijkgbsoexfu9",
+      "reviewGroupId": "review-group-l1wxk9"
+    }
+  ],
+  "reviewGroups": [
+    {
+      "id": "review-group-l1wxk9",
+      "name": "信息化组",
+      "isActive": true,
+      "quotas": [
+        {
+          "gradeCode": "A+",
+          "seatCount": 0
+        },
+        {
+          "gradeCode": "A",
+          "seatCount": 0
+        },
+        {
+          "gradeCode": "B",
+          "seatCount": 0
+        },
+        {
+          "gradeCode": "C",
+          "seatCount": 0
+        },
+        {
+          "gradeCode": "D",
+          "seatCount": 0
+        }
+      ]
+    },
+    {
+      "id": "review-group-operations",
+      "name": "运营组",
+      "isActive": true,
+      "quotas": [
+        {
+          "gradeCode": "A+",
+          "seatCount": 0
+        },
+        {
+          "gradeCode": "A",
+          "seatCount": 0
+        },
+        {
+          "gradeCode": "B",
+          "seatCount": 0
+        },
+        {
+          "gradeCode": "C",
+          "seatCount": 0
+        },
+        {
+          "gradeCode": "D",
+          "seatCount": 0
+        }
+      ]
+    },
+    {
+      "id": "review-group-new-hires",
+      "name": "新员工组",
+      "isActive": true,
+      "quotas": [
+        {
+          "gradeCode": "A+",
+          "seatCount": 0
+        },
+        {
+          "gradeCode": "A",
+          "seatCount": 0
+        },
+        {
+          "gradeCode": "B",
+          "seatCount": 0
+        },
+        {
+          "gradeCode": "C",
+          "seatCount": 0
+        },
+        {
+          "gradeCode": "D",
+          "seatCount": 0
+        }
+      ]
+    },
+    {
+      "id": "review-group-general",
+      "name": "综合组",
+      "isActive": true,
+      "quotas": [
+        {
+          "gradeCode": "A+",
+          "seatCount": 0
+        },
+        {
+          "gradeCode": "A",
+          "seatCount": 0
+        },
+        {
+          "gradeCode": "B",
+          "seatCount": 0
+        },
+        {
+          "gradeCode": "C",
+          "seatCount": 0
+        },
+        {
+          "gradeCode": "D",
+          "seatCount": 0
+        }
+      ]
+    }
+  ],
+  "goalTemplates": [
+    {
+      "id": "goal-template-ywtsdo",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "name": "工作态度与能力",
+      "description": "用于快速导入季度模板目标",
+      "isActive": true,
+      "keyResults": [
+        {
+          "id": "goal-template-kr-twfr4x",
+          "code": "KR1",
+          "name": "活动与会议、5S管理出勤",
+          "description": null,
+          "points": 5,
+          "scoreType": "objective"
+        },
+        {
+          "id": "goal-template-kr-262ijn",
+          "code": "KR2",
+          "name": "学习分享",
+          "description": null,
+          "points": 5,
+          "scoreType": "objective"
+        },
+        {
+          "id": "goal-template-kr-qdztos",
+          "code": "KR3",
+          "name": "创新能力",
+          "description": null,
+          "points": 5,
+          "scoreType": "subjective"
+        },
+        {
+          "id": "goal-template-kr-aqnkzx",
+          "code": "KR4",
+          "name": "工作态度表现",
+          "description": "员工在团队中经常表现出个人主义和独来独往的行为，缺乏与团队成员的合作精神，缺乏工作责任心和积极性，对团队目标和工作任务缺乏关注和投入，经常表现出消极和不配合的态度，或经常出现失误和错误，需要经常督促和监督，赋0-2分。\n员工在团队中有时表现出个人主义的行为，与团队成员的合作精神需要进一步提升，对团队目标和工作任务有一定的关注和投入，但还需要更加努力，在工作中偶尔会出现失误和错误，需要适当的督促和监督，赋2-4分。\n员工能够积极参与团队的协作，对团队目标任务和工作业绩有一定的关注和贡献。在承担工作任务时，能够尽责尽力，但还需要进一步提升工作责任心和工作积极性，赋4-6分。\n员工有较好的团队精神，能够积极主动地参与团队的协作，对团队的目标任务和工作业绩有较多关注和贡献。在承担工作任务时，能够尽责尽力，取得良好的工作质量和效果，在团队中发挥着积极作用，但还需要进一步提升领导能力，赋6-8分。\n员工表现出极强的团队精神，全力以赴地参与团队的协作，对团队的目标任务和工作业绩非常关注和贡献突出，勇于承担工作任务，主动投入大量时间精力，取得优秀工作质量和效果，并在团队中发挥领导作用和模范带头作用，赋8-10分。",
+          "points": 10,
+          "scoreType": "subjective"
+        },
+        {
+          "id": "goal-template-kr-eeugy3",
+          "code": "KR5",
+          "name": "工作能力表现",
+          "description": "员工沟通协调能力有一定欠缺，无法清晰表达自己的观点，无法与他人协调解决问题，造成工作进度滞后或错误频出，对团队工作带来较大负面影响，赋0-1分。\n员工能够清晰表达自己的观点，但沟通协调能力有待提高，在与他人协调解决问题时仍存在一些困难，导致工作进度缓慢或偶有错误，对团队工作有一定负面影响，赋1-2分。\n员工具备一般的沟通协调能力，能够参与协调解决问题，对团队工作有一定的贡献，赋2-3分。\n员工具备较好的沟通协调能力，能够积极、主动地参与跨部门、跨科室的沟通和协调工作，在解决问题时发挥积极作用，得到相关部门、科室的认可，赋3-4分。\n员工具备出色的沟通和组织协调能力，能够积极、主动、有效地组织跨部门、跨科室的沟通和协调工作，在解决问题时发挥关键作用，得到相关部门、科室的高度认可，赋4-5分。",
+          "points": 5,
+          "scoreType": "subjective"
+        }
+      ]
+    },
+    {
+      "id": "goal-template-8rp1f3",
+      "departmentId": "cmo34mr0p0000ijo0t9t756li",
+      "name": "目标任务综合评价",
+      "description": "用于快速导入季度模板目标",
+      "isActive": true,
+      "keyResults": [
+        {
+          "id": "goal-template-kr-rrq7xm",
+          "code": "KR1",
+          "name": "目标任务综合评价",
+          "description": "1.工作量评估：根据个人所承担的目标任务规模、工作耗时、对成果的贡献度进行评估。\n较低工作量：承担的目标任务规模很小，主要是一些简单、重复性的工作，工作耗时很短，对整体成果的贡献度非常有限，赋1分。\n基础工作量：承担的目标任务规模较小，工作耗时相对较短，工作效率较为稳定，对整体成果的贡献度有限，赋2分。\n标准工作量：承担的目标任务规模适中，工作耗时适中，需要一定努力和时间管理来完成任务，对整体成果有一定的贡献，能够按照要求完成分配的任务，赋3分。\n较高工作量：承担的目标任务规模较大，工作耗时较长，需要投入更多的时间和精力来确保任务完成，对整体成果有较大贡献，能够承担重要任务并产生积极影响，赋4分。\n高工作量：承担的目标任务规模非常大，工作耗时非常长，需要超出常规的时间和精力，对整体成果有显著贡献，能够承担重大任务并推动项目成功，赋5分。\n2.工作难度评估：根据个人所承担的目标任务的挑战性、创新性、业务复杂度、协作难度、技术难度进行评估。\n较低难度：目标任务简单，能够轻松应对，业务范围窄，协作需求低，无技术要求，赋1分。\n基础难度：目标任务较为简单，具备一定难度，业务范围较窄，协作需求较低，技术要求基础，赋2分。\n标准难度：目标任务具有一定的挑战性，整体难度适中，业务范围适中，协作需求适中，技术要求适中，赋3分。\n较高难度：目标任务具有较高的挑战性，需要克服重重困难，业务范围较为复杂，协作需求较高，技术要求较高，赋4分。\n高难度：目标任务极具挑战性，需克服重大难题，业务范围极为复杂，协作需求极高，技术要求极高，赋5分。",
+          "points": 10,
+          "scoreType": "subjective"
+        }
+      ]
+    }
+  ]
+}

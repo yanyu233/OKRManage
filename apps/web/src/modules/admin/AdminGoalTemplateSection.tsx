@@ -39,6 +39,8 @@ const TEXT = {
   totalPoints: '\u603b\u5206\u503c',
   remove: '\u5220\u9664'
 } as const;
+const DEFAULT_GOAL_TEMPLATE_NAME = '\u65b0\u6a21\u677f\u76ee\u6807';
+const DEFAULT_GOAL_TEMPLATE_KR_NAME = '\u5173\u952e\u7ed3\u679c';
 
 export function AdminGoalTemplateSection({
   draft,
@@ -304,10 +306,10 @@ export function AdminGoalTemplateSection({
       items.map((item) =>
         item.id === templateId
           ? {
-              ...item,
+                ...item,
               keyResults: [
                 ...item.keyResults,
-                createGoalTemplateKeyResultRecord(`KR${length + 1}`, `关键结果${length + 1}`)
+                createGoalTemplateKeyResultRecord(`KR${length + 1}`, `${DEFAULT_GOAL_TEMPLATE_KR_NAME}${length + 1}`)
               ]
             }
           : item
@@ -354,11 +356,11 @@ export function AdminGoalTemplateSection({
     );
 
     let index = templates.length + 1;
-    let candidate = `新模板目标${index}`;
+    let candidate = `${DEFAULT_GOAL_TEMPLATE_NAME}${index}`;
 
     while (existingNames.has(candidate)) {
       index += 1;
-      candidate = `新模板目标${index}`;
+      candidate = `${DEFAULT_GOAL_TEMPLATE_NAME}${index}`;
     }
 
     return candidate;

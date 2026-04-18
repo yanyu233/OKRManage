@@ -461,10 +461,18 @@
 
 .leader-knowledge-card__tag {
   margin-inline-end: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding-inline: 5px;
   font-size: 10px;
   line-height: 16px;
   border-radius: 999px;
+}
+
+.leader-knowledge-card__tag--label {
+  min-width: 54px;
+  padding-inline: 8px;
 }
 
 .leader-knowledge-card__actions {

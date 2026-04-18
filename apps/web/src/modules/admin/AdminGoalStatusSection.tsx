@@ -5,30 +5,53 @@ import { getAdminGoalStatusControls, transitionAdminGoalStatuses } from '../../s
 import { ApiError } from '../../shared/api/http';
 import { getGoalStatusLabel } from '../../shared/i18n/labels';
 import { useSharedQuarterPeriod } from '../../shared/store/quarter-store';
-import type { AdminOrgBootstrapInput } from '../../shared/types/admin-config';
+import type {
+  AdminGoalStatusControlRecord,
+  AdminGoalStatusTransitionInput,
+  AdminGoalStatusTransitionResponse,
+  AdminOrgBootstrapInput
+} from '../../shared/types/admin-config';
 import { YearQuarterPickerPopover } from '../../shared/ui/PeriodPickerPopover';
 
 const START_YEAR = 2026;
 const TEXT = {
   title: '目标状态控制',
-  description: '按季度批量将员工目标在草稿与已确认之间切换。草稿状态不在员工前端显示，已确认后员工无法修改目标/KR内容。',
-  year: '年度',
-  quarter: '季度',
+  description: '按季度批量切换目标状态。若自动流转服务未启动，可在这里手工把草稿或已确认目标转为待评分。',
+  yearQuarter: '年度 / 季度',
   employee: '员工',
   allEmployees: '全部员工',
   refresh: '刷新列表',
   confirmAll: '当前范围改为已确认',
   reopenAll: '当前范围恢复草稿',
+  moveToPendingReview: '当前范围转为待评分',
   successConfirmed: '当前范围目标已改为已确认。',
   successDraft: '当前范围目标已恢复为草稿。',
-  loadFailed: '目标状态控制加载失败',
-  empty: '当前范围下没有目标',
+  successPendingReview: '当前范围目标已手工转为待评分。',
+  autoAdvanced: '当前范围目标已确认，其中 {count} 个已过季目标已自动进入待评分。',
+  loadFailed: '目标状态控制加载失败。',
+  empty: '当前范围下暂无目标。',
   owner: '员工',
   code: '目标编号',
   name: '目标名称',
   status: '当前状态',
-  actionsHint: '这里的切换仅影响目标/KR内容是否可修改，不影响证明材料上传入口。'
+  draftLabel: '草稿',
+  actionsHint: '手工转待评分仅作为自动服务未运行时的兜底操作；执行后当前范围内的草稿和已确认目标都会进入待评分。'
 } as const;
+
+type TransitionTargetStatus = AdminGoalStatusTransitionInput['targetStatus'];
+
+function getStatusTagColor(status: AdminGoalStatusControlRecord['status']) {
+  switch (status) {
+    case 'draft':
+      return 'default';
+    case 'completed':
+      return 'green';
+    case 'pending-review':
+      return 'gold';
+    default:
+      return 'blue';
+  }
+}
 
 export function AdminGoalStatusSection({ draft }: { draft: AdminOrgBootstrapInput }) {
   const { message } = App.useApp();
@@ -62,15 +85,26 @@ export function AdminGoalStatusSection({ draft }: { draft: AdminOrgBootstrapInpu
   });
 
   const transitionMutation = useMutation({
-    mutationFn: (targetStatus: 'draft' | 'confirmed') =>
+    mutationFn: (targetStatus: TransitionTargetStatus) =>
       transitionAdminGoalStatuses({
         year,
         quarter,
         userId,
         targetStatus
       }),
-    onSuccess: async (_payload, targetStatus) => {
+    onSuccess: async (payload: AdminGoalStatusTransitionResponse, targetStatus: TransitionTargetStatus) => {
       await controlsQuery.refetch();
+
+      if (targetStatus === 'confirmed' && payload.autoAdvancedGoalCount > 0) {
+        message.success(TEXT.autoAdvanced.replace('{count}', String(payload.autoAdvancedGoalCount)));
+        return;
+      }
+
+      if (targetStatus === 'pending-review') {
+        message.success(TEXT.successPendingReview);
+        return;
+      }
+
       message.success(targetStatus === 'confirmed' ? TEXT.successConfirmed : TEXT.successDraft);
     },
     onError: (error) => {
@@ -93,7 +127,7 @@ export function AdminGoalStatusSection({ draft }: { draft: AdminOrgBootstrapInpu
 
         <Space wrap size={[16, 16]}>
           <div>
-            <Typography.Text strong>{`${TEXT.year} / ${TEXT.quarter}`}</Typography.Text>
+            <Typography.Text strong>{TEXT.yearQuarter}</Typography.Text>
             <div style={{ marginTop: 8 }}>
               <YearQuarterPickerPopover
                 year={year}
@@ -128,6 +162,9 @@ export function AdminGoalStatusSection({ draft }: { draft: AdminOrgBootstrapInpu
           <Button loading={transitionMutation.isPending} onClick={() => transitionMutation.mutate('draft')}>
             {TEXT.reopenAll}
           </Button>
+          <Button loading={transitionMutation.isPending} onClick={() => transitionMutation.mutate('pending-review')}>
+            {TEXT.moveToPendingReview}
+          </Button>
         </Space>
 
         <Alert type="info" showIcon message={TEXT.actionsHint} />
@@ -140,7 +177,7 @@ export function AdminGoalStatusSection({ draft }: { draft: AdminOrgBootstrapInpu
             description={controlsQuery.error instanceof ApiError ? controlsQuery.error.message : undefined}
           />
         ) : controlsQuery.data?.records.length ? (
-          <Table
+          <Table<AdminGoalStatusControlRecord>
             rowKey="goalId"
             pagination={false}
             dataSource={controlsQuery.data.records}
@@ -153,8 +190,8 @@ export function AdminGoalStatusSection({ draft }: { draft: AdminOrgBootstrapInpu
                 key: 'status',
                 width: 140,
                 render: (_value, record) => (
-                  <Tag color={record.status === 'draft' ? 'default' : record.status === 'completed' ? 'green' : 'blue'}>
-                    {record.status === 'draft' ? '草稿（前端隐藏）' : getGoalStatusLabel(record.status)}
+                  <Tag color={getStatusTagColor(record.status)}>
+                    {record.status === 'draft' ? TEXT.draftLabel : getGoalStatusLabel(record.status)}
                   </Tag>
                 )
               }

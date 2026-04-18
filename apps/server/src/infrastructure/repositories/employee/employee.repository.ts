@@ -155,6 +155,23 @@ export type EmployeeGoalCreateResult = EmployeeGoalDetailRecord & {
   };
 };
 
+export type EmployeeGoalDeleteResult = {
+  goalId: string;
+  year: number;
+  quarter: number;
+  code: string;
+  name: string;
+  removedProofStorageKeys: string[];
+};
+
+export type EmployeeKeyResultDeleteResult = {
+  goalId: string;
+  keyResultId: string;
+  code: string;
+  name: string;
+  removedProofStorageKeys: string[];
+};
+
 export type EmployeeGoalStatusControlRecord = {
   goalId: string;
   ownerUserId: string;
@@ -189,8 +206,9 @@ export interface EmployeeRepository {
   ): Promise<EmployeeGoalTemplateImportResult>;
   createGoal(actor: AuthUser, input: EmployeeCreateGoalInput): Promise<EmployeeGoalCreateResult>;
   updateGoal(actor: AuthUser, goalId: string, input: EmployeeGoalUpdateInput): Promise<EmployeeGoalDetailRecord>;
+  deleteGoal(actor: AuthUser, goalId: string): Promise<EmployeeGoalDeleteResult>;
   getGoalDetail(actor: AuthUser, goalId: string): Promise<EmployeeGoalDetailRecord>;
-  submitGoalForReview(actor: AuthUser, goalId: string): Promise<EmployeeGoalDetailRecord>;
+  deleteKeyResult(actor: AuthUser, krId: string): Promise<EmployeeKeyResultDeleteResult>;
   updateKeyResultCompletion(actor: AuthUser, krId: string, completionState: string): Promise<EmployeeCompletionUpdateResult>;
   createProof(
     actor: AuthUser,

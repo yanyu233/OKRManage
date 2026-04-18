@@ -12,6 +12,9 @@ import type {
 } from '../../shared/types/admin-config';
 
 const REVIEW_GRADE_CODES: ReviewGradeCode[] = ['A+', 'A', 'B', 'C', 'D'];
+const ROLE_PRIORITY: UserRoleCode[] = ['system-admin', 'department-head', 'section-leader', 'group-leader', 'employee'];
+const DEFAULT_GOAL_TEMPLATE_NAME = '\u65b0\u6a21\u677f\u76ee\u6807';
+const DEFAULT_GOAL_TEMPLATE_KR_NAME = '\u5173\u952e\u7ed3\u679c';
 export type AdminOrgSectionKey = 'structure' | 'access' | 'leaders' | 'review-groups' | 'goal-templates';
 
 const COLLECTION_SECTION_MAP: Record<keyof AdminOrgBootstrapInput, AdminOrgSectionKey> = {
@@ -135,7 +138,7 @@ export function createReviewGroupRecord(): Omit<ReviewGroupRecord, 'memberCount'
 
 export function createGoalTemplateRecord(
   defaultDepartmentId: string | null = null,
-  defaultName = '新模板目标'
+  defaultName = DEFAULT_GOAL_TEMPLATE_NAME
 ): GoalTemplateRecord {
   return {
     id: createId('goal-template'),
@@ -143,11 +146,11 @@ export function createGoalTemplateRecord(
     name: defaultName,
     description: null,
     isActive: true,
-    keyResults: [createGoalTemplateKeyResultRecord('KR1', '关键结果1')]
+    keyResults: [createGoalTemplateKeyResultRecord('KR1', `${DEFAULT_GOAL_TEMPLATE_KR_NAME}1`)]
   };
 }
 
-export function createGoalTemplateKeyResultRecord(code = 'KR1', name = '关键结果1') {
+export function createGoalTemplateKeyResultRecord(code = 'KR1', name = `${DEFAULT_GOAL_TEMPLATE_KR_NAME}1`) {
   return {
     id: createId('goal-template-kr'),
     code,
@@ -206,25 +209,32 @@ export function buildAdminBootstrapSaveInput(
 ): AdminOrgBootstrapInput {
   const dirty = new Set(dirtySections);
   const baseline = toAdminBootstrapInput(bootstrap);
+  const sanitizedDraft = sanitizeBootstrapDraft(draft);
   const isSectionDirty = (section: AdminOrgSectionKey) =>
-    dirty.has(section) || (dirty.size === 0 && sectionDiffers(section, baseline, draft));
+    dirty.has(section) || (dirty.size === 0 && sectionDiffers(section, baseline, sanitizedDraft));
 
   return {
-    departments: isSectionDirty('structure') ? draft.departments.map((entry) => ({ ...entry })) : baseline.departments,
-    sections: isSectionDirty('structure') ? draft.sections.map((entry) => ({ ...entry })) : baseline.sections,
-    users: isSectionDirty('structure') ? draft.users.map((entry) => ({ ...entry })) : baseline.users,
-    localAccounts: isSectionDirty('access') ? draft.localAccounts.map((entry) => ({ ...entry })) : baseline.localAccounts,
+    departments: isSectionDirty('structure') ? sanitizedDraft.departments.map((entry) => ({ ...entry })) : baseline.departments,
+    sections: isSectionDirty('structure') ? sanitizedDraft.sections.map((entry) => ({ ...entry })) : baseline.sections,
+    users: isSectionDirty('structure') ? sanitizedDraft.users.map((entry) => ({ ...entry })) : baseline.users,
+    localAccounts: isSectionDirty('access')
+      ? sanitizedDraft.localAccounts
+          .filter((entry) => entry.userId.trim() && entry.loginName.trim())
+          .map((entry) => ({ ...entry }))
+      : baseline.localAccounts,
     roleAssignments: isSectionDirty('access')
-      ? draft.roleAssignments.map((entry) => applyDerivedRoleAssignmentScope({ ...entry }))
+      ? normalizePrimaryRoleAssignments(
+          sanitizedDraft.roleAssignments.map((entry) => applyDerivedRoleAssignmentScope({ ...entry }))
+        )
       : baseline.roleAssignments,
     sectionLeaderBindings: isSectionDirty('leaders')
-      ? draft.sectionLeaderBindings.map((entry) => ({ ...entry }))
+      ? sanitizedDraft.sectionLeaderBindings.map((entry) => ({ ...entry }))
       : baseline.sectionLeaderBindings,
     groupLeaderBindings: isSectionDirty('leaders')
-      ? draft.groupLeaderBindings.map((entry) => ({ ...entry }))
+      ? sanitizedDraft.groupLeaderBindings.map((entry) => ({ ...entry }))
       : baseline.groupLeaderBindings,
     reviewGroups: isSectionDirty('review-groups')
-      ? draft.reviewGroups.map((entry) => ({
+      ? sanitizedDraft.reviewGroups.map((entry) => ({
           ...entry,
           quotas: entry.quotas.map((quota) => ({
             ...quota,
@@ -233,7 +243,7 @@ export function buildAdminBootstrapSaveInput(
         }))
       : baseline.reviewGroups,
     goalTemplates: isSectionDirty('goal-templates')
-      ? draft.goalTemplates.map((template) => ({
+      ? sanitizedDraft.goalTemplates.map((template) => ({
           ...template,
           keyResults: template.keyResults.map((keyResult) => ({
             ...keyResult,
@@ -282,6 +292,65 @@ export function normalizeNonNegativeInteger(value: unknown) {
 function createId(prefix: string) {
   const random = Math.random().toString(36).slice(2, 8);
   return `${prefix}-${random}`;
+}
+
+export function sanitizeBootstrapDraft(draft: AdminOrgBootstrapInput): AdminOrgBootstrapInput {
+  const userIds = new Set(draft.users.map((user) => user.id));
+  const sectionIds = new Set(draft.sections.map((section) => section.id));
+  const reviewGroupIds = new Set(draft.reviewGroups.map((reviewGroup) => reviewGroup.id));
+
+  return {
+    ...draft,
+    users: draft.users.map((user) => ({
+      ...user,
+      sectionId: user.sectionId && sectionIds.has(user.sectionId) ? user.sectionId : null,
+        reviewGroupId: user.reviewGroupId && reviewGroupIds.has(user.reviewGroupId) ? user.reviewGroupId : null
+      })),
+    localAccounts: draft.localAccounts.filter((account) => !account.userId.trim() || userIds.has(account.userId)),
+    roleAssignments: draft.roleAssignments.filter((assignment) => userIds.has(assignment.userId)),
+    sectionLeaderBindings: draft.sectionLeaderBindings.filter(
+      (binding) => userIds.has(binding.leaderUserId) && sectionIds.has(binding.sectionId)
+    ),
+    groupLeaderBindings: draft.groupLeaderBindings.filter(
+      (binding) => userIds.has(binding.leaderUserId) && reviewGroupIds.has(binding.reviewGroupId)
+    )
+  };
+}
+
+function normalizePrimaryRoleAssignments(
+  assignments: AdminOrgBootstrapInput['roleAssignments']
+): AdminOrgBootstrapInput['roleAssignments'] {
+  const primaryRoleByUserId = new Map<string, string>();
+
+  for (const assignment of assignments) {
+    if (!assignment.isEnabled || !assignment.userId.trim()) {
+      continue;
+    }
+
+    const currentPrimaryRole = primaryRoleByUserId.get(assignment.userId);
+    if (!currentPrimaryRole) {
+      primaryRoleByUserId.set(assignment.userId, assignment.roleCode);
+      continue;
+    }
+
+    if (compareRolePriority(assignment.roleCode as UserRoleCode, currentPrimaryRole as UserRoleCode) < 0) {
+      primaryRoleByUserId.set(assignment.userId, assignment.roleCode);
+    }
+  }
+
+  return assignments.map((assignment) => ({
+    ...assignment,
+    isPrimary: assignment.isEnabled && primaryRoleByUserId.get(assignment.userId) === assignment.roleCode
+  }));
+}
+
+function compareRolePriority(left: UserRoleCode, right: UserRoleCode) {
+  return resolveRolePriority(left) - resolveRolePriority(right);
+}
+
+function resolveRolePriority(roleCode: UserRoleCode) {
+  const index = ROLE_PRIORITY.indexOf(roleCode);
+  return index === -1 ? Number.MAX_SAFE_INTEGER : index;
 }
 
 function sectionDiffers(section: AdminOrgSectionKey, baseline: AdminOrgBootstrapInput, draft: AdminOrgBootstrapInput) {
