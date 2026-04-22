@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsArray, IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class GoalStatusControlQueryDto {
   @Type(() => Number)
@@ -22,4 +22,10 @@ export class GoalStatusControlQueryDto {
 export class GoalStatusTransitionDto extends GoalStatusControlQueryDto {
   @IsIn(['draft', 'confirmed', 'pending-review'])
   targetStatus!: 'draft' | 'confirmed' | 'pending-review';
+}
+
+export class SaveQuarterParticipationExclusionsDto extends GoalStatusControlQueryDto {
+  @IsArray()
+  @IsString({ each: true })
+  userIds!: string[];
 }

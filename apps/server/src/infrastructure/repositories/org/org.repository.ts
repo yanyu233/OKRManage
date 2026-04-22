@@ -140,10 +140,37 @@ export type AdminGoalStatusTransitionInput = {
   targetStatus: 'draft' | 'confirmed' | 'pending-review';
 };
 
+export type AdminQuarterParticipationExclusionRecord = {
+  id: string;
+  userId: string;
+  userName: string;
+  employeeNo: string | null;
+  positionName: string | null;
+  sectionId: string | null;
+  sectionName: string | null;
+  reviewGroupId: string | null;
+  reviewGroupName: string | null;
+};
+
+export type AdminQuarterParticipationExclusionQuery = {
+  year: number;
+  quarter: number;
+};
+
+export type AdminQuarterParticipationExclusionSaveInput = {
+  year: number;
+  quarter: number;
+  userIds: string[];
+};
+
 export interface OrgRepository {
   countActiveUsersByReviewGroupId(reviewGroupId: string): Promise<number>;
   getAdminBootstrap(): Promise<AdminOrgBootstrap>;
   saveAdminBootstrap(input: AdminOrgBootstrapInput): Promise<void>;
   listGoalStatusControls(input: AdminGoalStatusControlQuery): Promise<AdminGoalStatusControlRecord[]>;
   transitionGoalStatuses(input: AdminGoalStatusTransitionInput): Promise<number>;
+  listQuarterParticipationExclusions(
+    input: AdminQuarterParticipationExclusionQuery
+  ): Promise<AdminQuarterParticipationExclusionRecord[]>;
+  saveQuarterParticipationExclusions(input: AdminQuarterParticipationExclusionSaveInput): Promise<void>;
 }

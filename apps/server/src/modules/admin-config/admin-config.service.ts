@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { GoalReviewTransitionService } from '../goal-review-transition/goal-review-transition.service';
 import { DomainValidationError } from '../../shared/errors/domain-validation.error';
@@ -8,6 +9,7 @@ import {
   type AdminGroupLeaderBindingRecord,
   type AdminLocalAccountInput,
   type AdminOrgBootstrapInput,
+  type AdminQuarterParticipationExclusionSaveInput,
   type AdminReviewGroupInput,
   type AdminRoleAssignmentRecord,
   type AdminSectionLeaderBindingRecord,
@@ -21,11 +23,41 @@ import {
 } from '../../infrastructure/repositories/review-groups/review-groups.repository';
 import { AuthUser } from '../../shared/types/auth-user';
 
+type HistoricalPerformanceQuarterSource = 'okr' | 'manual' | 'none';
+
+type HistoricalPerformanceQuarterRecord = {
+  quarter: 1 | 2 | 3 | 4;
+  systemScore: number | null;
+  manualScore: number | null;
+  effectiveScore: number;
+  source: HistoricalPerformanceQuarterSource;
+};
+
+type HistoricalPerformanceEmployeeRecord = {
+  employeeId: string;
+  employeeNo: string | null;
+  employeeName: string;
+  positionName: string | null;
+  sectionId: string | null;
+  sectionName: string | null;
+  reviewGroupId: string | null;
+  reviewGroupName: string | null;
+  annualScore: number;
+  quarters: HistoricalPerformanceQuarterRecord[];
+};
+
+type HistoricalPerformanceSaveItem = {
+  userId: string;
+  quarter: number;
+  score: number | null | undefined;
+};
+
 @Injectable()
 export class AdminConfigService {
   constructor(
     @Inject(REVIEW_GROUPS_REPOSITORY) private readonly reviewGroupsRepository: ReviewGroupsRepository,
     @Inject(ORG_REPOSITORY) private readonly orgRepository: OrgRepository,
+    private readonly prisma: PrismaService,
     private readonly goalReviewTransitionService: GoalReviewTransitionService,
     private readonly auditService: AuditService
   ) {}
@@ -34,7 +66,88 @@ export class AdminConfigService {
     return this.orgRepository.getAdminBootstrap();
   }
 
+  async getHistoricalPerformance(year: number) {
+    this.validateHistoricalPerformanceYear(year);
+
+    const employees = await this.prisma.user.findMany({
+      where: {
+        isActive: true,
+        roleAssignments: {
+          some: {
+            roleCode: 'employee',
+            isEnabled: true
+          }
+        }
+      },
+      include: {
+        section: true,
+        reviewGroup: true,
+        ownedGoals: {
+          where: {
+            year
+          },
+          include: {
+            keyResults: {
+              select: {
+                reviewScore: true
+              }
+            }
+          }
+        },
+        historicalScores: {
+          where: {
+            year
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'asc'
+      }
+    });
+
+    const records = employees
+      .map<HistoricalPerformanceEmployeeRecord>((employee) => {
+        const manualByQuarter = new Map(employee.historicalScores.map((item) => [item.quarter, item.score]));
+        const quarters = ([1, 2, 3, 4] as const).map<HistoricalPerformanceQuarterRecord>((quarter) => {
+          const quarterGoals = employee.ownedGoals.filter((goal) => goal.quarter === quarter);
+          const hasSystemGoals = quarterGoals.length > 0;
+          const systemScore = hasSystemGoals ? scoreFromGoalSummaries(quarterGoals) : null;
+          const manualScore = normalizeOptionalScore(manualByQuarter.get(quarter));
+          const effectiveScore = hasSystemGoals ? normalizeScore(systemScore ?? 0) : normalizeScore(manualScore ?? 0);
+
+          return {
+            quarter,
+            systemScore,
+            manualScore,
+            effectiveScore,
+            source: hasSystemGoals ? 'okr' : manualScore !== null ? 'manual' : 'none'
+          };
+        });
+
+        return {
+          employeeId: employee.id,
+          employeeNo: employee.employeeNo,
+          employeeName: employee.name,
+          positionName: employee.positionName,
+          sectionId: employee.sectionId,
+          sectionName: employee.section?.name ?? null,
+          reviewGroupId: employee.reviewGroupId,
+          reviewGroupName: employee.reviewGroup?.name ?? null,
+          annualScore: normalizeScore(quarters.reduce((sum, item) => sum + item.effectiveScore, 0)),
+          quarters
+        };
+      })
+      .sort(compareHistoricalPerformanceEmployees);
+
+    return {
+      year,
+      records
+    };
+  }
+
   async getGoalStatusControls(year: number, quarter: number, userId?: string | null) {
+    this.validateQuarter(year, quarter);
+
     return {
       year,
       quarter,
@@ -46,7 +159,82 @@ export class AdminConfigService {
     };
   }
 
+  async getQuarterParticipationExclusions(year: number, quarter: number) {
+    this.validateQuarter(year, quarter);
+
+    return {
+      year,
+      quarter,
+      records: await this.orgRepository.listQuarterParticipationExclusions({
+        year,
+        quarter
+      })
+    };
+  }
+
+  async saveQuarterParticipationExclusions(
+    input: AdminQuarterParticipationExclusionSaveInput,
+    actor: AuthUser
+  ) {
+    this.validateQuarter(input.year, input.quarter);
+
+    const userIds = Array.from(
+      new Set(
+        input.userIds
+          .map((userId) => userId.trim())
+          .filter((userId) => userId.length > 0)
+      )
+    );
+
+    if (userIds.length > 0) {
+      const employees = await this.prisma.user.findMany({
+        where: {
+          id: {
+            in: userIds
+          },
+          isActive: true,
+          roleAssignments: {
+            some: {
+              roleCode: 'employee',
+              isEnabled: true
+            }
+          }
+        },
+        select: {
+          id: true
+        }
+      });
+
+      if (employees.length !== userIds.length) {
+        throw new DomainValidationError('quarter participation exclusion target employee is invalid');
+      }
+    }
+
+    await this.orgRepository.saveQuarterParticipationExclusions({
+      year: input.year,
+      quarter: input.quarter,
+      userIds
+    });
+
+    await this.auditService.write({
+      actorUserId: actor.id,
+      actorRoleCode: actor.role,
+      action: 'admin.quarter-participation-exclusions.save',
+      entityType: 'quarter-participation-exclusion',
+      entityId: `${input.year}-Q${input.quarter}`,
+      afterJson: {
+        year: input.year,
+        quarter: input.quarter,
+        userIds
+      }
+    });
+
+    return this.getQuarterParticipationExclusions(input.year, input.quarter);
+  }
+
   async transitionGoalStatuses(input: AdminGoalStatusTransitionInput, actor: AuthUser) {
+    this.validateQuarter(input.year, input.quarter);
+
     const normalized = {
       year: input.year,
       quarter: input.quarter,
@@ -73,6 +261,112 @@ export class AdminConfigService {
     });
 
     return { affectedGoalCount, autoAdvancedGoalCount };
+  }
+
+  async saveHistoricalPerformance(year: number, items: HistoricalPerformanceSaveItem[], actor: AuthUser) {
+    this.validateHistoricalPerformanceYear(year);
+
+    const normalizedItems = dedupeHistoricalPerformanceItems(items).map((item) => {
+      if (!item.userId.trim()) {
+        throw new DomainValidationError('historical performance user is required');
+      }
+
+      if (!Number.isInteger(item.quarter) || item.quarter < 1 || item.quarter > 4) {
+        throw new DomainValidationError('historical performance quarter is invalid');
+      }
+
+      if (item.score === null || item.score === undefined) {
+        return {
+          userId: item.userId.trim(),
+          quarter: item.quarter,
+          score: null
+        };
+      }
+
+      if (!Number.isFinite(item.score) || item.score < 0 || item.score > 100) {
+        throw new DomainValidationError('historical performance score must be between 0 and 100');
+      }
+
+      return {
+        userId: item.userId.trim(),
+        quarter: item.quarter,
+        score: normalizeScore(item.score)
+      };
+    });
+
+    const employeeIds = Array.from(new Set(normalizedItems.map((item) => item.userId)));
+    const employees = await this.prisma.user.findMany({
+      where: {
+        id: {
+          in: employeeIds
+        },
+        isActive: true,
+        roleAssignments: {
+          some: {
+            roleCode: 'employee',
+            isEnabled: true
+          }
+        }
+      },
+      select: {
+        id: true
+      }
+    });
+    const validEmployeeIds = new Set(employees.map((employee) => employee.id));
+
+    for (const item of normalizedItems) {
+      if (!validEmployeeIds.has(item.userId)) {
+        throw new DomainValidationError('historical performance target employee is invalid');
+      }
+    }
+
+    await this.prisma.$transaction(async (transaction) => {
+      for (const item of normalizedItems) {
+        if (item.score === null) {
+          await transaction.historicalPerformanceScore.deleteMany({
+            where: {
+              userId: item.userId,
+              year,
+              quarter: item.quarter
+            }
+          });
+          continue;
+        }
+
+        await transaction.historicalPerformanceScore.upsert({
+          where: {
+            userId_year_quarter: {
+              userId: item.userId,
+              year,
+              quarter: item.quarter
+            }
+          },
+          update: {
+            score: item.score
+          },
+          create: {
+            userId: item.userId,
+            year,
+            quarter: item.quarter,
+            score: item.score
+          }
+        });
+      }
+    });
+
+    await this.auditService.write({
+      actorUserId: actor.id,
+      actorRoleCode: actor.role,
+      action: 'admin.historical-performance.save',
+      entityType: 'historical-performance',
+      entityId: String(year),
+      afterJson: {
+        year,
+        itemCount: normalizedItems.length
+      }
+    });
+
+    return this.getHistoricalPerformance(year);
   }
 
   async saveBootstrap(input: AdminOrgBootstrapInput, actor: AuthUser) {
@@ -158,6 +452,20 @@ export class AdminConfigService {
       entityType: 'review-group',
       entityId: id
     });
+  }
+
+  private validateHistoricalPerformanceYear(year: number) {
+    if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+      throw new DomainValidationError('historical performance year is invalid');
+    }
+  }
+
+  private validateQuarter(year: number, quarter: number) {
+    this.validateHistoricalPerformanceYear(year);
+
+    if (!Number.isInteger(quarter) || quarter < 1 || quarter > 4) {
+      throw new DomainValidationError('quarter is invalid');
+    }
   }
 
   private validateQuotas(quotas: ReviewGroupQuotaInput[]) {
@@ -493,4 +801,52 @@ export class AdminConfigService {
       throw new DomainValidationError(message);
     }
   }
+}
+
+function dedupeHistoricalPerformanceItems(items: HistoricalPerformanceSaveItem[]) {
+  return Array.from(
+    new Map(
+      items.map((item) => [`${item.userId.trim()}|${item.quarter}`, item])
+    ).values()
+  );
+}
+
+function scoreFromGoalSummaries(
+  goals: Array<{
+    keyResults: Array<{
+      reviewScore: number | null;
+    }>;
+  }>
+) {
+  return normalizeScore(
+    goals.reduce(
+      (sum, goal) => sum + goal.keyResults.reduce((goalSum, keyResult) => goalSum + (keyResult.reviewScore ?? 0), 0),
+      0
+    )
+  );
+}
+
+function normalizeScore(value: number) {
+  return Number(value.toFixed(1));
+}
+
+function normalizeOptionalScore(value: number | null | undefined) {
+  return value === null || value === undefined ? null : normalizeScore(value);
+}
+
+function compareHistoricalPerformanceEmployees(
+  left: HistoricalPerformanceEmployeeRecord,
+  right: HistoricalPerformanceEmployeeRecord
+) {
+  const sectionCompare = (left.sectionName ?? '').localeCompare(right.sectionName ?? '', 'zh-CN');
+  if (sectionCompare !== 0) {
+    return sectionCompare;
+  }
+
+  const groupCompare = (left.reviewGroupName ?? '').localeCompare(right.reviewGroupName ?? '', 'zh-CN');
+  if (groupCompare !== 0) {
+    return groupCompare;
+  }
+
+  return left.employeeName.localeCompare(right.employeeName, 'zh-CN');
 }

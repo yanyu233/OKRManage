@@ -4,18 +4,22 @@ import type {
   BulkLeaderKrScoreInput,
   BulkLeaderKrScoreResponse,
   LeaderKnowledgeBaseResponse,
+  LeaderKnowledgeAssetArchiveManifest,
   LeaderKnowledgeEntry,
   LeaderProof,
   LeaderRankingResponse,
   LeaderWorkbenchResponse,
+  SaveLeaderRankingTieBreakInput,
   UpdateLeaderProofKnowledgeInput,
   UpdateLeaderKrScoreInput
 } from '../types/leader';
+import type { ScoreType } from '../types/admin-config';
 import { apiRequest, apiRequestBlob } from './http';
 
 type WorkbenchQuery = {
   year: number;
   quarter: number;
+  scoreType?: ScoreType;
   employeeId?: string | null;
   goalId?: string | null;
 };
@@ -77,6 +81,12 @@ export function getLeaderKnowledgeBase() {
   });
 }
 
+export function getLeaderKnowledgeAssetArchiveManifest(assetId: string) {
+  return apiRequest<LeaderKnowledgeAssetArchiveManifest>(`/leader/knowledge-base/assets/${assetId}/archive`, {
+    method: 'GET'
+  });
+}
+
 export function updateLeaderKnowledgeProof(proofId: string, payload: FormData) {
   return apiRequest<LeaderKnowledgeEntry>(`/leader/knowledge-base/${proofId}`, {
     method: 'PUT',
@@ -98,6 +108,12 @@ export function updateLeaderManualKnowledgeAsset(assetId: string, payload: FormD
   });
 }
 
+export function deleteLeaderManualKnowledgeAsset(assetId: string) {
+  return apiRequest<void>(`/leader/knowledge-base/manual-assets/${assetId}`, {
+    method: 'DELETE'
+  });
+}
+
 export function downloadLeaderKnowledgeBase(proofIds: string[]) {
   return apiRequestBlob('/leader/knowledge-base/download', {
     method: 'POST',
@@ -108,6 +124,13 @@ export function downloadLeaderKnowledgeBase(proofIds: string[]) {
 export function getLeaderRanking(query: RankingQuery) {
   return apiRequest<LeaderRankingResponse>(`/leader/ranking${toQueryString(query)}`, {
     method: 'GET'
+  });
+}
+
+export function saveLeaderRankingTieBreak(payload: SaveLeaderRankingTieBreakInput) {
+  return apiRequest<{ ok: true }>('/leader/ranking/tie-breaks', {
+    method: 'POST',
+    body: JSON.stringify(payload)
   });
 }
 

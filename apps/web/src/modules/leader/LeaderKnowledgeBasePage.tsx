@@ -1,5 +1,6 @@
 import {
   ClockCircleOutlined,
+  DeleteOutlined,
   DownloadOutlined,
   EditOutlined,
   FileTextOutlined,
@@ -13,10 +14,12 @@ import { Alert, App, Button, Card, Checkbox, Empty, Input, Modal, Space, Tag, Ty
 import type { UploadFile } from 'antd/es/upload/interface';
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { ApiError, resolveApiUrl } from '../../shared/api/http';
+import { ApiError, resolveApiUrl, resolveAppAwareUrl } from '../../shared/api/http';
 import {
+  deleteLeaderManualKnowledgeAsset,
   downloadLeaderKnowledgeBase,
   getLeaderKnowledgeBase,
+  updateLeaderProofKnowledge,
   updateLeaderKnowledgeProof,
   updateLeaderManualKnowledgeAsset,
   uploadLeaderManualKnowledgeAsset
@@ -80,10 +83,16 @@ const T = {
   viewMore: '展开',
   unassignedSection: '未分配科室',
   unassignedGroup: '未分配小组'
+  , remove: '删除',
+  removeTitle: '确认从知识库移除',
+  removeImportedHint: '删除后不会移除原始证明材料，只会取消“标记为知识”并从知识库列表中移除。',
+  removeManualHint: '删除后会移除这份自由上传的知识文件，且无法恢复。',
+  removeSuccess: '已从知识库移除',
+  removeFailed: '从知识库移除失败'
 } as const;
 
 export function LeaderKnowledgeBasePage() {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const queryClient = useQueryClient();
   const isKnowledgeEditor = useSessionStore((state) =>
     (state.user?.roles ?? []).some((assignment) => assignment.role === 'section-leader' || assignment.role === 'group-leader')
@@ -124,6 +133,26 @@ export function LeaderKnowledgeBasePage() {
       closeUploader();
     },
     onError: (error) => message.error(error instanceof ApiError ? error.message : T.uploadFailed)
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: async (entry: LeaderKnowledgeEntry) => {
+      if (entry.entryType === 'manual') {
+        await deleteLeaderManualKnowledgeAsset(entry.id);
+        return;
+      }
+
+      await updateLeaderProofKnowledge(entry.id, { isKnowledge: false });
+    },
+    onSuccess: async (_data, entry) => {
+      await queryClient.invalidateQueries({ queryKey: ['leader-knowledge-base'] });
+      await queryClient.invalidateQueries({ queryKey: ['leader-workbench'] });
+      if (editingEntry?.entryKey === entry.entryKey) {
+        closeEditor();
+      }
+      message.success(T.removeSuccess);
+    },
+    onError: (error) => message.error(error instanceof ApiError ? error.message : T.removeFailed)
   });
 
   const downloadMutation = useMutation({
@@ -173,7 +202,6 @@ export function LeaderKnowledgeBasePage() {
     [filteredEntryKeys, selectedEntryKeySet]
   );
   const allVisibleSelected = filteredEntryKeys.length > 0 && selectedVisibleCount === filteredEntryKeys.length;
-  const partiallyVisibleSelected = selectedVisibleCount > 0 && !allVisibleSelected;
 
   if (knowledgeQuery.isLoading) {
     return <Card className="leader-detail-card">{T.loading}</Card>;
@@ -243,7 +271,6 @@ export function LeaderKnowledgeBasePage() {
             <Typography.Text type="secondary">
               {`${T.selectedCount} ${selectedEntryKeys.length} ${T.selectedUnit}`}
             </Typography.Text>
-            {partiallyVisibleSelected ? <Tag color="blue">{T.selectAll}</Tag> : null}
           </div>
 
           <div className="leader-knowledge-list">
@@ -289,6 +316,17 @@ export function LeaderKnowledgeBasePage() {
                       {entry.canManageKnowledge ? (
                         <Button size="small" type="primary" ghost icon={<EditOutlined />} onClick={() => openEditor(entry)}>
                           {T.edit}
+                        </Button>
+                      ) : null}
+                      {entry.canManageKnowledge ? (
+                        <Button
+                          size="small"
+                          danger
+                          icon={<DeleteOutlined />}
+                          loading={removeMutation.isPending && removeMutation.variables?.entryKey === entry.entryKey}
+                          onClick={() => confirmRemove(entry)}
+                        >
+                          {T.remove}
                         </Button>
                       ) : null}
                     </Space>
@@ -540,11 +578,26 @@ export function LeaderKnowledgeBasePage() {
   }
 
   function resolvePreviewUrl(entry: LeaderKnowledgeEntry) {
-    return resolveApiUrl(entry.previewUrl ?? entry.fileUrl);
+    return resolveAppAwareUrl(entry.previewUrl ?? entry.fileUrl);
   }
 
   function resolveDownloadUrl(entry: LeaderKnowledgeEntry) {
     return resolveApiUrl(entry.downloadUrl ?? entry.fileUrl);
+  }
+
+  function confirmRemove(entry: LeaderKnowledgeEntry) {
+    void modal.confirm({
+      title: T.removeTitle,
+      content: entry.entryType === 'manual' ? T.removeManualHint : T.removeImportedHint,
+      okText: T.remove,
+      cancelText: T.cancel,
+      okButtonProps: {
+        danger: true
+      },
+      onOk: async () => {
+        await removeMutation.mutateAsync(entry);
+      }
+    });
   }
 }
 

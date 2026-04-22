@@ -39,6 +39,9 @@ model User {
   reviewedKeyResults KeyResult[]            @relation("KeyResultReviewer")
   importedTemplates  ImportedGoalTemplate[] @relation("ImportedTemplateOwner")
   knowledgeAssets    KnowledgeAsset[]       @relation("KnowledgeAssetUploader")
+  historicalScores   HistoricalPerformanceScore[]
+  quarterParticipationExclusions QuarterParticipationExclusion[]
+  rankingTieBreakDecisions RankingTieBreakDecision[]
 }
 
 model LocalAccount {
@@ -103,6 +106,7 @@ model ReviewGroup {
   users          User[]
   quotas         ReviewGradeQuota[]
   leaderBindings GroupLeaderBinding[]
+  rankingTieBreakDecisions RankingTieBreakDecision[]
 }
 
 model ReviewGradeQuota {
@@ -115,6 +119,25 @@ model ReviewGradeQuota {
   reviewGroup   ReviewGroup @relation(fields: [reviewGroupId], references: [id], onDelete: Cascade)
 
   @@unique([reviewGroupId, gradeCode])
+}
+
+model RankingTieBreakDecision {
+  id            String      @id @default(cuid())
+  year          Int
+  quarter       Int
+  reviewGroupId String
+  groupKey      String
+  employeeId    String
+  orderIndex    Int
+  decidedByUserId String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  reviewGroup   ReviewGroup @relation(fields: [reviewGroupId], references: [id], onDelete: Cascade)
+  employee      User        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([year, quarter, reviewGroupId, employeeId])
+  @@unique([year, quarter, reviewGroupId, groupKey, orderIndex])
+  @@index([year, quarter, reviewGroupId, groupKey])
 }
 
 model UserRoleAssignment {
@@ -284,4 +307,30 @@ model KnowledgeAsset {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   uploadedBy       User     @relation("KnowledgeAssetUploader", fields: [uploadedByUserId], references: [id], onDelete: Cascade)
+}
+
+model HistoricalPerformanceScore {
+  id        String   @id @default(cuid())
+  userId    String
+  year      Int
+  quarter   Int
+  score     Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, year, quarter])
+}
+
+model QuarterParticipationExclusion {
+  id        String   @id @default(cuid())
+  userId    String
+  year      Int
+  quarter   Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, year, quarter])
+  @@index([year, quarter])
 }

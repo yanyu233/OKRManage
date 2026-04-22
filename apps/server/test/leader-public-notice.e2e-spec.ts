@@ -1,7 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import * as JSZip from 'jszip';
 import { closeTestDatabase, resetTestDatabase } from './support/test-db';
-import { createTestApp, loginAsSectionLeader } from './support/test-app';
+import { createTestApp, loginAsSectionLeader, loginAsSysadmin } from './support/test-app';
 import { CURRENT_DEMO_EMPLOYEES, CURRENT_DEMO_PUBLIC_NOTICE } from './support/current-demo-data';
 
 describe('Leader public notice export', () => {
@@ -17,8 +17,13 @@ describe('Leader public notice export', () => {
     await closeTestDatabase();
   });
 
-  it('exports quarterly public notice as a docx document', async () => {
+  it('blocks quarterly public notice export for non-system-admins before scores are published', async () => {
     const agent = await loginAsSectionLeader(app);
+    await agent.get('/api/leader/ranking/public-notice?year=2026&quarter=1').expect(400);
+  });
+
+  it('exports quarterly public notice as a docx document', async () => {
+    const agent = await loginAsSysadmin(app);
     const response = await agent
       .get('/api/leader/ranking/public-notice?year=2026&quarter=1')
       .buffer(true)
@@ -32,17 +37,20 @@ describe('Leader public notice export', () => {
 
     const documentXml = await readWordDocumentXml(response.body);
     expect(documentXml).toContain(CURRENT_DEMO_PUBLIC_NOTICE.quarterlyTitle);
-    expect(documentXml).toContain('部门内绩效考核等级');
+    expect(documentXml).toContain('\u90e8\u95e8\u5185\u7ee9\u6548\u8003\u6838\u7b49\u7ea7');
     expect(documentXml).toContain(CURRENT_DEMO_EMPLOYEES.employeeLeader.name);
     expect(documentXml).toContain('1700066');
-    expect(documentXml).toContain('负责人');
+    expect(documentXml).toContain('\u8d1f\u8d23\u4eba');
     expect(documentXml).toContain(CURRENT_DEMO_EMPLOYEES.topRankEmployee.name);
-    expect(documentXml).toContain('A+');
-    expect(documentXml).toContain('A');
+  });
+
+  it('blocks annual public notice export for non-system-admins before annual scores are published', async () => {
+    const agent = await loginAsSectionLeader(app);
+    await agent.get('/api/leader/annual-ranking/public-notice?year=2026').expect(400);
   });
 
   it('exports annual public notice as a docx document', async () => {
-    const agent = await loginAsSectionLeader(app);
+    const agent = await loginAsSysadmin(app);
     const response = await agent
       .get('/api/leader/annual-ranking/public-notice?year=2026')
       .buffer(true)
@@ -58,8 +66,7 @@ describe('Leader public notice export', () => {
     expect(documentXml).toContain(CURRENT_DEMO_EMPLOYEES.topRankEmployee.name);
     expect(documentXml).toContain(CURRENT_DEMO_EMPLOYEES.employeeLeader.name);
     expect(documentXml).toContain('1700066');
-    expect(documentXml).toContain('负责人');
-    expect(documentXml).toContain('A+');
+    expect(documentXml).toContain('\u8d1f\u8d23\u4eba');
   });
 });
 

@@ -41,6 +41,20 @@ require_command() {
   fi
 }
 
+find_mysql_service_name() {
+  local candidate
+  local -a candidates=("$MYSQL_SERVICE_NAME" mysql mysqld mariadb)
+
+  for candidate in "${candidates[@]}"; do
+    if systemctl list-unit-files | grep -q "^${candidate}\.service"; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
 ensure_apt_environment() {
   require_command apt-get
   run_privileged apt-get update
@@ -110,13 +124,10 @@ start_mysql_service_best_effort() {
     return 0
   fi
 
-  if systemctl list-unit-files | grep -q "^${MYSQL_SERVICE_NAME}\.service"; then
-    run_privileged systemctl start "$MYSQL_SERVICE_NAME" || warn "Failed to start ${MYSQL_SERVICE_NAME}; please inspect manually"
-    return 0
-  fi
-
-  if systemctl list-unit-files | grep -q '^mariadb\.service'; then
-    run_privileged systemctl start mariadb || warn 'Failed to start mariadb; please inspect manually'
+  local mysql_service_name=''
+  mysql_service_name="$(find_mysql_service_name || true)"
+  if [[ -n "$mysql_service_name" ]]; then
+    run_privileged systemctl start "$mysql_service_name" || warn "Failed to start ${mysql_service_name}; please inspect manually"
   fi
 }
 

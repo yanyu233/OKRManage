@@ -14,8 +14,8 @@ import type { UploadRequestOption } from 'rc-upload/lib/interface';
 import type { ChangeEvent } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { uploadEmployeeProof } from '../../shared/api/employee';
-import { ApiError, resolveApiUrl } from '../../shared/api/http';
-import { formatNullableScore, getCompletionStateLabel, getScoreTypeLabel } from '../../shared/i18n/labels';
+import { ApiError, resolveApiUrl, resolveAppAwareUrl } from '../../shared/api/http';
+import { formatNullableScore, getScoreTypeLabel } from '../../shared/i18n/labels';
 import type { EmployeeGoalDetail, EmployeeKeyResult } from '../../shared/types/employee';
 import { filterEmployeeGoalKeyResults, formatProofSize, isEmployeeKeyResultActionRequired } from './employee.helpers';
 
@@ -66,8 +66,8 @@ export function EmployeeGoalKeyResultWorkspace({
   const quickUploadInputs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const visibleKeyResults = useMemo(
-    () => filterEmployeeGoalKeyResults(goal.keyResults, onlyActionRequired),
-    [goal.keyResults, onlyActionRequired]
+    () => filterEmployeeGoalKeyResults(goal.keyResults, onlyActionRequired, { suppressProofMissing: goal.isTemplateGoal }),
+    [goal.isTemplateGoal, goal.keyResults, onlyActionRequired]
   );
 
   useEffect(() => {
@@ -80,11 +80,11 @@ export function EmployeeGoalKeyResultWorkspace({
     }
 
     const nextActionIds = visibleKeyResults
-      .filter((keyResult) => isEmployeeKeyResultActionRequired(keyResult))
+      .filter((keyResult) => isEmployeeKeyResultActionRequired(keyResult, { suppressProofMissing: goal.isTemplateGoal }))
       .map((keyResult) => keyResult.id);
 
     setExpandedKrIds((current) => Array.from(new Set([...current, ...nextActionIds])));
-  }, [onlyActionRequired, visibleKeyResults]);
+  }, [goal.isTemplateGoal, onlyActionRequired, visibleKeyResults]);
 
   const uploadMutation = useMutation({
     mutationFn: ({ krId, file, note }: { krId: string; file: File; note?: string }) => uploadEmployeeProof(krId, file, note),
@@ -100,7 +100,7 @@ export function EmployeeGoalKeyResultWorkspace({
 
   return (
     <Space direction="vertical" size={16} style={{ width: '100%' }}>
-      {goal.missingProofKeyResultCount > 0 ? (
+      {!goal.isTemplateGoal && goal.missingProofKeyResultCount > 0 ? (
         <Alert
           type={goal.status === 'pending-review' || goal.status === 'completed' ? 'warning' : 'info'}
           showIcon
@@ -131,12 +131,11 @@ export function EmployeeGoalKeyResultWorkspace({
                     </div>
 
                     <Space wrap size={[8, 8]} className="employee-kr-panel__tags">
-                      <Tag color={keyResult.completionState === 'completed' ? 'green' : 'red'}>
-                        {getCompletionStateLabel(keyResult.completionState)}
-                      </Tag>
-                      <Tag color={keyResult.isProofMissing ? 'gold' : 'blue'}>
-                        {keyResult.isProofMissing ? TEXT.proofMissing : TEXT.proofReady}
-                      </Tag>
+                      {!goal.isTemplateGoal || keyResult.hasProofs ? (
+                        <Tag color={keyResult.isProofMissing ? 'gold' : 'blue'}>
+                          {keyResult.isProofMissing ? TEXT.proofMissing : TEXT.proofReady}
+                        </Tag>
+                      ) : null}
                       <Tag>{`${keyResult.points} 分`}</Tag>
                       <Tag color={keyResult.scoreType === 'objective' ? 'blue' : 'purple'}>
                         {getScoreTypeLabel(keyResult.scoreType)}
@@ -353,7 +352,7 @@ async function invalidateGoalRelatedQueries(queryClient: ReturnType<typeof useQu
 }
 
 function resolveProofPreviewUrl(proof: EmployeeKeyResult['proofs'][number]) {
-  return resolveApiUrl(proof.previewUrl ?? proof.fileUrl);
+  return resolveAppAwareUrl(proof.previewUrl ?? proof.fileUrl);
 }
 
 function resolveProofDownloadUrl(proof: EmployeeKeyResult['proofs'][number]) {

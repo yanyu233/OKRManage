@@ -9,6 +9,7 @@ export class ApiError extends Error {
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:3000/api';
+const FRONTEND_ROUTE_PREFIXES = ['/proofs/', '/knowledge-base/'];
 
 export function resolveApiUrl(path: string) {
   if (/^https?:\/\//.test(path)) {
@@ -16,6 +17,27 @@ export function resolveApiUrl(path: string) {
   }
 
   return `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
+}
+
+export function resolveAppAwareUrl(path: string) {
+  if (/^https?:\/\//.test(path)) {
+    try {
+      const url = new URL(path);
+      if (isFrontendRoutePath(url.pathname)) {
+        return `${url.pathname}${url.search}${url.hash}`;
+      }
+    } catch {
+      return path;
+    }
+
+    return path;
+  }
+
+  if (isFrontendRoutePath(path)) {
+    return path;
+  }
+
+  return resolveApiUrl(path);
 }
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
@@ -92,4 +114,8 @@ function extractApiErrorMessage(body: unknown, status: number) {
   }
 
   return `Request failed: ${status}`;
+}
+
+function isFrontendRoutePath(path: string) {
+  return FRONTEND_ROUTE_PREFIXES.some((prefix) => path.startsWith(prefix));
 }

@@ -38,6 +38,7 @@ export type EmployeeGoalSummaryRecord = {
   description: string | null;
   status: string;
   totalPoints: number;
+  isTemplateGoal: boolean;
   keyResultCount: number;
   completedKeyResultCount: number;
   missingProofKeyResultCount: number;

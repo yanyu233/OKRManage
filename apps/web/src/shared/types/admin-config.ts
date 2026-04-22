@@ -145,3 +145,66 @@ export type AdminGoalStatusTransitionResponse = {
   affectedGoalCount: number;
   autoAdvancedGoalCount: number;
 };
+
+export type AdminQuarterParticipationExclusionRecord = {
+  id: string;
+  userId: string;
+  userName: string;
+  employeeNo: string | null;
+  positionName: string | null;
+  sectionId: string | null;
+  sectionName: string | null;
+  reviewGroupId: string | null;
+  reviewGroupName: string | null;
+};
+
+export type AdminQuarterParticipationExclusionResponse = {
+  year: number;
+  quarter: number;
+  records: AdminQuarterParticipationExclusionRecord[];
+};
+
+export type AdminQuarterParticipationExclusionSaveInput = {
+  year: number;
+  quarter: number;
+  userIds: string[];
+};
+
+export type AdminHistoricalPerformanceQuarterSource = 'okr' | 'manual' | 'none';
+
+export type AdminHistoricalPerformanceQuarterRecord = {
+  quarter: 1 | 2 | 3 | 4;
+  systemScore: number | null;
+  manualScore: number | null;
+  effectiveScore: number;
+  source: AdminHistoricalPerformanceQuarterSource;
+};
+
+export type AdminHistoricalPerformanceEmployeeRecord = {
+  employeeId: string;
+  employeeNo: string | null;
+  employeeName: string;
+  positionName: string | null;
+  sectionId: string | null;
+  sectionName: string | null;
+  reviewGroupId: string | null;
+  reviewGroupName: string | null;
+  annualScore: number;
+  quarters: AdminHistoricalPerformanceQuarterRecord[];
+};
+
+export type AdminHistoricalPerformanceResponse = {
+  year: number;
+  records: AdminHistoricalPerformanceEmployeeRecord[];
+};
+
+export type AdminHistoricalPerformanceSaveItem = {
+  userId: string;
+  quarter: 1 | 2 | 3 | 4;
+  score: number | null;
+};
+
+export type AdminHistoricalPerformanceSaveInput = {
+  year: number;
+  items: AdminHistoricalPerformanceSaveItem[];
+};

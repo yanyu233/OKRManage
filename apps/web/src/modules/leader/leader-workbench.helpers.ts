@@ -12,9 +12,20 @@ export function resolveWorkbenchSelection(
   payload: LeaderWorkbenchResponse,
   current?: { employeeId?: string | null; goalId?: string | null }
 ) {
+  const employeeIds = new Set(payload.employees.map((employee) => employee.id));
+  const goalIds = new Set(payload.goals.map((goal) => goal.id));
+  const currentEmployeeId =
+    current?.employeeId && employeeIds.has(current.employeeId) ? current.employeeId : null;
+  const currentGoalId = current?.goalId && goalIds.has(current.goalId) ? current.goalId : null;
+
   return {
-    employeeId: current?.employeeId ?? payload.selectedEmployee?.id ?? payload.employees[0]?.id ?? null,
-    goalId: current?.goalId ?? payload.selectedGoal?.id ?? payload.goals[0]?.id ?? null
+    employeeId:
+      currentEmployeeId ??
+      payload.selectedEmployee?.id ??
+      payload.employees.find((employee) => employee.goalCount > 0)?.id ??
+      payload.employees[0]?.id ??
+      null,
+    goalId: currentGoalId ?? payload.selectedGoal?.id ?? payload.goals[0]?.id ?? null
   };
 }
 
@@ -307,6 +318,33 @@ export function selectAllBulkKeyResultIds(
       ),
     (entry) => entry
   );
+}
+
+export function isSameScoreDraftMap(
+  current: Record<string, ScoreDraft>,
+  next: Record<string, ScoreDraft>
+) {
+  const currentKeys = Object.keys(current);
+  const nextKeys = Object.keys(next);
+
+  if (currentKeys.length !== nextKeys.length) {
+    return false;
+  }
+
+  for (const key of currentKeys) {
+    const currentDraft = current[key];
+    const nextDraft = next[key];
+
+    if (!nextDraft) {
+      return false;
+    }
+
+    if (currentDraft.score !== nextDraft.score || currentDraft.comment !== nextDraft.comment) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 export function selectAllUnscoredBulkKeyResultIds(

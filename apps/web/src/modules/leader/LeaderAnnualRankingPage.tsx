@@ -18,24 +18,27 @@ import './leader.css';
 
 const START_YEAR = 2026;
 const TEXT = {
-  title: '年度评分排名',
-  description: '查看指定年度内员工四个季度实际得分的汇总排名，缺失季度按 0 分计入年度总分。',
-  loading: '正在加载年度评分排名...',
-  loadFailed: '年度评分排名加载失败。',
-  refresh: '刷新',
-  searchPlaceholder: '搜索员工、科室或小组',
-  rankingListTitle: '年度排名列表',
-  sectionFilter: '按科室筛选',
-  groupFilter: '按小组筛选',
-  allFilter: '全部',
-  noEmployeeSelected: '未选择员工',
-  emptyRanking: '当前条件下没有匹配的年度评分排名',
-  annualScore: '年度总分',
-  sectionFallback: '未分配科室',
-  reviewGroupFallback: '未分配小组',
-  exportNotice: '生成公示表',
-  exportSuccess: '公示表已开始下载。',
-  exportFailed: '公示表生成失败。'
+  title: '\u5e74\u5ea6\u8bc4\u5206\u6392\u540d',
+  description:
+    '\u67e5\u770b\u6307\u5b9a\u5e74\u5ea6\u5185\u5458\u5de5\u56db\u4e2a\u5b63\u5ea6\u5b9e\u9645\u5f97\u5206\u7684\u6c47\u603b\u6392\u540d\uff0c\u7f3a\u5931\u5b63\u5ea6\u6309 0 \u5206\u8ba1\u5165\u5e74\u5ea6\u603b\u5206\u3002',
+  loading: '\u6b63\u5728\u52a0\u8f7d\u5e74\u5ea6\u8bc4\u5206\u6392\u540d...',
+  loadFailed: '\u5e74\u5ea6\u8bc4\u5206\u6392\u540d\u52a0\u8f7d\u5931\u8d25\u3002',
+  refresh: '\u5237\u65b0',
+  searchPlaceholder: '\u641c\u7d22\u5458\u5de5\u3001\u79d1\u5ba4\u6216\u5c0f\u7ec4',
+  rankingListTitle: '\u5e74\u5ea6\u6392\u540d\u5217\u8868',
+  sectionFilter: '\u6309\u79d1\u5ba4\u7b5b\u9009',
+  groupFilter: '\u6309\u5c0f\u7ec4\u7b5b\u9009',
+  allFilter: '\u5168\u90e8',
+  noEmployeeSelected: '\u672a\u9009\u62e9\u5458\u5de5',
+  emptyRanking: '\u5f53\u524d\u6761\u4ef6\u4e0b\u6ca1\u6709\u5339\u914d\u7684\u5e74\u5ea6\u8bc4\u5206\u6392\u540d',
+  annualScore: '\u5e74\u5ea6\u603b\u5206',
+  scoresLocked:
+    '\u5f53\u524d\u5e74\u5ea6\u6d89\u53ca\u7684\u5b63\u5ea6\u8bc4\u5206\u5c1a\u672a\u5168\u90e8\u5b8c\u6210\uff0c\u5e74\u5ea6\u5f97\u5206\u6682\u4e0d\u5bf9\u975e\u7cfb\u7edf\u7ba1\u7406\u5458\u5f00\u653e\u3002',
+  sectionFallback: '\u672a\u5206\u914d\u79d1\u5ba4',
+  reviewGroupFallback: '\u672a\u5206\u914d\u5c0f\u7ec4',
+  exportNotice: '\u751f\u6210\u516c\u793a\u8868',
+  exportSuccess: '\u516c\u793a\u8868\u5df2\u5f00\u59cb\u4e0b\u8f7d\u3002',
+  exportFailed: '\u516c\u793a\u8868\u751f\u6210\u5931\u8d25\u3002'
 } as const;
 
 export function LeaderAnnualRankingPage() {
@@ -57,6 +60,7 @@ export function LeaderAnnualRankingPage() {
   });
 
   const payload = annualRankingQuery.data;
+  const scoresVisible = payload?.scoresVisible ?? true;
   const filterOptions = useMemo(
     () => buildAnnualRankingFilterOptions(payload?.ranking ?? [], sectionId),
     [payload?.ranking, sectionId]
@@ -98,7 +102,7 @@ export function LeaderAnnualRankingPage() {
     onSuccess: ({ blob, headers }) => {
       downloadBlobFile(
         blob,
-        resolveDownloadFileName(headers.get('content-disposition'), `${year}年年度绩效考评结果表.docx`)
+        resolveDownloadFileName(headers.get('content-disposition'), `${year}\u5e74\u5e74\u5ea6\u7ee9\u6548\u8003\u8bc4\u7ed3\u679c\u8868.docx`)
       );
       message.success(TEXT.exportSuccess);
     },
@@ -182,7 +186,7 @@ export function LeaderAnnualRankingPage() {
               type="primary"
               icon={<DownloadOutlined />}
               loading={exportMutation.isPending}
-              disabled={!filteredRanking.length}
+              disabled={!(scoresVisible && filteredRanking.length)}
               onClick={() => void exportMutation.mutateAsync()}
             >
               {TEXT.exportNotice}
@@ -190,6 +194,8 @@ export function LeaderAnnualRankingPage() {
           </div>
         </div>
       </Card>
+
+      {!scoresVisible ? <Alert type="info" showIcon message={TEXT.scoresLocked} /> : null}
 
       <Row gutter={[20, 20]}>
         <Col xs={24} xl={9}>
@@ -235,20 +241,22 @@ export function LeaderAnnualRankingPage() {
                       <div className="leader-ranking-entry">
                         <div>
                           <Typography.Title level={4} style={{ marginTop: 0, marginBottom: 6 }}>
-                            {`#${index + 1} ${entry.employeeName}`}
+                            {scoresVisible ? `#${index + 1} ${entry.employeeName}` : entry.employeeName}
                           </Typography.Title>
                           <Typography.Paragraph type="secondary" style={{ marginBottom: 8 }}>
                             {`${entry.sectionName ?? TEXT.sectionFallback} / ${entry.reviewGroupName ?? TEXT.reviewGroupFallback}`}
                           </Typography.Paragraph>
-                          <Space wrap size={[8, 8]}>
-                            {entry.quarterScores.map((item) => (
-                              <Tag key={`${entry.employeeId}-${item.quarter}`}>{`Q${item.quarter} ${formatAnnualScore(item.score)}`}</Tag>
-                            ))}
-                          </Space>
+                          {scoresVisible ? (
+                            <Space wrap size={[8, 8]}>
+                              {entry.quarterScores.map((item) => (
+                                <Tag key={`${entry.employeeId}-${item.quarter}`}>{`Q${item.quarter} ${formatAnnualScore(item.score)}`}</Tag>
+                              ))}
+                            </Space>
+                          ) : null}
                         </div>
                         <div style={{ textAlign: 'right' }}>
                           <Typography.Title level={2} style={{ margin: '12px 0 4px' }}>
-                            {formatAnnualScore(entry.annualScore)}
+                            {scoresVisible ? formatAnnualScore(entry.annualScore) : '-'}
                           </Typography.Title>
                           <Typography.Text type="secondary">{TEXT.annualScore}</Typography.Text>
                         </div>
@@ -274,7 +282,7 @@ export function LeaderAnnualRankingPage() {
                   <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
                     {`${selectedEmployee?.sectionName ?? TEXT.sectionFallback} / ${
                       selectedEmployee?.reviewGroupName ?? TEXT.reviewGroupFallback
-                    } / ${year} 年度`}
+                    } / ${year} \u5e74\u5ea6`}
                   </Typography.Paragraph>
                 </div>
                 <Tag color="blue" icon={<FundOutlined />}>
@@ -282,16 +290,18 @@ export function LeaderAnnualRankingPage() {
                 </Tag>
               </div>
 
-              <div className="leader-summary-grid" style={{ marginTop: 20 }}>
-                <Card variant="borderless">
-                  <Statistic title={TEXT.annualScore} value={selectedEmployee?.annualScore ?? 0} precision={1} />
-                </Card>
-                {(selectedEmployee?.quarterScores ?? []).map((item) => (
-                  <Card key={`quarter-${item.quarter}`} variant="borderless">
-                    <Statistic title={`Q${item.quarter}`} value={item.score} precision={1} />
+              {scoresVisible ? (
+                <div className="leader-summary-grid" style={{ marginTop: 20 }}>
+                  <Card variant="borderless">
+                    <Statistic title={TEXT.annualScore} value={selectedEmployee?.annualScore ?? 0} precision={1} />
                   </Card>
-                ))}
-              </div>
+                  {(selectedEmployee?.quarterScores ?? []).map((item) => (
+                    <Card key={`quarter-${item.quarter}`} variant="borderless">
+                      <Statistic title={`Q${item.quarter}`} value={item.score ?? 0} precision={1} />
+                    </Card>
+                  ))}
+                </div>
+              ) : null}
             </Card>
           </Space>
         </Col>

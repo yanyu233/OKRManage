@@ -3,8 +3,12 @@ import type {
   AdminGoalStatusControlResponse,
   AdminGoalStatusTransitionInput,
   AdminGoalStatusTransitionResponse,
+  AdminHistoricalPerformanceResponse,
+  AdminHistoricalPerformanceSaveInput,
   AdminOrgBootstrap,
-  AdminOrgBootstrapInput
+  AdminOrgBootstrapInput,
+  AdminQuarterParticipationExclusionResponse,
+  AdminQuarterParticipationExclusionSaveInput
 } from '../types/admin-config';
 import { apiRequest, apiRequestBlob } from './http';
 
@@ -47,6 +51,51 @@ export function transitionAdminGoalStatuses(payload: AdminGoalStatusTransitionIn
   return apiRequest<AdminGoalStatusTransitionResponse>('/admin/goal-status-control/transition', {
     method: 'POST',
     body: JSON.stringify(payload)
+  });
+}
+
+export function getAdminQuarterParticipationExclusions(query: AdminGoalStatusControlQuery) {
+  return apiRequest<AdminQuarterParticipationExclusionResponse>(
+    `/admin/quarter-participation-exclusions${toQueryString(query)}`,
+    {
+      method: 'GET'
+    }
+  );
+}
+
+export function saveAdminQuarterParticipationExclusions(payload: AdminQuarterParticipationExclusionSaveInput) {
+  return apiRequest<AdminQuarterParticipationExclusionResponse>('/admin/quarter-participation-exclusions', {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  });
+}
+
+export function getAdminHistoricalPerformance(year: number) {
+  return apiRequest<AdminHistoricalPerformanceResponse>(`/admin/historical-performance${toQueryString({ year })}`, {
+    method: 'GET'
+  });
+}
+
+export function saveAdminHistoricalPerformance(payload: AdminHistoricalPerformanceSaveInput) {
+  return apiRequest<AdminHistoricalPerformanceResponse>('/admin/historical-performance', {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  });
+}
+
+export function exportAdminHistoricalPerformanceExcel(year: number) {
+  return apiRequestBlob(`/admin/historical-performance/excel${toQueryString({ year })}`, {
+    method: 'GET'
+  });
+}
+
+export function importAdminHistoricalPerformanceExcel(year: number, file: File) {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  return apiRequest<AdminHistoricalPerformanceResponse>(`/admin/historical-performance/excel${toQueryString({ year })}`, {
+    method: 'POST',
+    body: formData
   });
 }
 

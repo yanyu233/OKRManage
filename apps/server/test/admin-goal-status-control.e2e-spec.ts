@@ -177,4 +177,106 @@ describe('Admin goal status control', () => {
     expect(afterConfirmedMove.body.records.length).toBeGreaterThan(0);
     expect(afterConfirmedMove.body.records.every((entry: { status: string }) => entry.status === 'pending-review')).toBe(true);
   });
+
+  it('auto-advances confirmed past-quarter goals into pending review', async () => {
+    const admin = await loginAsSysadmin(app);
+    const employee = await loginAsEmployee(app);
+
+    const elapsedYear = 2024;
+    const elapsedQuarter = 1;
+    const created = await employee
+      .post('/api/employee/goals')
+      .send({
+        year: elapsedYear,
+        quarter: elapsedQuarter,
+        name: 'Elapsed quarter auto transition',
+        description: 'Used to verify automatic pending-review transition after confirmation',
+        keyResults: [
+          {
+            code: 'KR1',
+            name: 'Elapsed KR',
+            description: null,
+            points: 10
+          }
+        ]
+      })
+      .expect(201);
+
+    const employeeId = created.body.owner.id as string;
+    const confirmElapsedGoal = await admin
+      .post('/api/admin/goal-status-control/transition')
+      .send({
+        year: elapsedYear,
+        quarter: elapsedQuarter,
+        userId: employeeId,
+        targetStatus: 'confirmed'
+      })
+      .expect(200);
+
+    expect(confirmElapsedGoal.body.affectedGoalCount).toBeGreaterThan(0);
+    expect(confirmElapsedGoal.body.autoAdvancedGoalCount).toBeGreaterThan(0);
+
+    const afterTransition = await admin
+      .get(`/api/admin/goal-status-control?year=${elapsedYear}&quarter=${elapsedQuarter}&userId=${employeeId}`)
+      .expect(200);
+
+    expect(afterTransition.body.records.length).toBeGreaterThan(0);
+    expect(afterTransition.body.records.every((entry: { status: string }) => entry.status === 'pending-review')).toBe(true);
+  });
+
+  it('allows system admins to configure employees who do not participate in a quarter', async () => {
+    const admin = await loginAsSysadmin(app);
+    const employee = await loginAsEmployee(app);
+
+    const created = await employee
+      .post('/api/employee/goals')
+      .send({
+        year: 2029,
+        quarter: 1,
+        name: 'Quarter exclusion target',
+        description: 'Used to verify quarter participation exclusions',
+        keyResults: [
+          {
+            code: 'KR1',
+            name: 'Quarter exclusion KR',
+            description: null,
+            points: 10
+          }
+        ]
+      })
+      .expect(201);
+
+    const employeeId = created.body.owner.id as string;
+    const employeeName = created.body.owner.name as string;
+
+    const saved = await admin
+      .put('/api/admin/quarter-participation-exclusions')
+      .send({
+        year: 2029,
+        quarter: 1,
+        userIds: [employeeId]
+      })
+      .expect(200);
+
+    expect(saved.body.records).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          userId: employeeId,
+          userName: employeeName
+        })
+      ])
+    );
+
+    const fetched = await admin
+      .get('/api/admin/quarter-participation-exclusions?year=2029&quarter=1')
+      .expect(200);
+
+    expect(fetched.body.records).toHaveLength(1);
+    expect(fetched.body.records[0]).toEqual(
+      expect.objectContaining({
+        userId: employeeId,
+        userName: employeeName
+      })
+    );
+  });
 });

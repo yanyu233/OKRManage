@@ -1,6 +1,9 @@
-export function resolveAdminExcelFilename(contentDisposition: string | null | undefined) {
+export function resolveAdminExcelFilename(
+  contentDisposition: string | null | undefined,
+  fallback = '系统配置.xlsx'
+) {
   if (!contentDisposition) {
-    return '系统配置.xlsx';
+    return fallback;
   }
 
   const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
@@ -13,7 +16,7 @@ export function resolveAdminExcelFilename(contentDisposition: string | null | un
     return quotedMatch[1];
   }
 
-  return '系统配置.xlsx';
+  return fallback;
 }
 
 export function downloadAdminExcelFile(blob: Blob, fileName: string) {

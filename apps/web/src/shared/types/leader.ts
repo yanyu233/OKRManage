@@ -127,6 +127,7 @@ export type AllOkrEmployee = {
 export type AllOkrResponse = {
   year: number;
   quarter: number;
+  scoresVisible: boolean;
   employees: AllOkrEmployee[];
 };
 
@@ -164,6 +165,7 @@ export type LeaderBulkCatalogEmployee = {
 export type LeaderWorkbenchResponse = {
   year: number;
   quarter: number;
+  scoreType: ScoreType;
   employees: LeaderEmployeeSummary[];
   selectedEmployee: LeaderEmployeeSummary | null;
   goals: LeaderGoalSummary[];
@@ -217,6 +219,17 @@ export type LeaderSeatSummary = {
   occupiedCount: number;
 };
 
+export type LeaderRankingTieBreakMetrics = {
+  customGoalScore: number;
+  objectiveTaskScore: number;
+  workAttitudeScore: number;
+  workCapabilityScore: number;
+  innovationScore: number;
+  learningShareScore: number;
+};
+
+export type LeaderRankingTieBreakStatus = 'none' | 'pending' | 'resolved';
+
 export type LeaderRankingEntry = {
   employeeId: string;
   employeeName: string;
@@ -228,6 +241,7 @@ export type LeaderRankingEntry = {
   proofCount: number;
   currentGrade: string | null;
   status: string;
+  tieBreakStatus: LeaderRankingTieBreakStatus;
 };
 
 export type LeaderRankingGoalBreakdown = {
@@ -253,22 +267,53 @@ export type LeaderRankingSelectedEmployee = {
   reviewGroupName: string | null;
   quarterScore: number | null;
   currentGrade: string | null;
+  tieBreakStatus: LeaderRankingTieBreakStatus;
   goalBreakdown: LeaderRankingGoalBreakdown[];
+};
+
+export type LeaderRankingTieBreakEmployee = {
+  employeeId: string;
+  employeeName: string;
+  sectionName: string | null;
+  quarterScore: number | null;
+  currentGrade: string | null;
+  tieBreakMetrics: LeaderRankingTieBreakMetrics;
+};
+
+export type LeaderRankingTieGroup = {
+  groupKey: string;
+  reviewGroupId: string;
+  reviewGroupName: string;
+  rankStart: number;
+  rankEnd: number;
+  affectedGradeCodes: string[];
+  employees: LeaderRankingTieBreakEmployee[];
 };
 
 export type LeaderRankingResponse = {
   year: number;
   quarter: number;
+  scoresVisible: boolean;
+  canManageTieBreaks: boolean;
   reviewGroups: LeaderReviewGroup[];
   selectedReviewGroup: LeaderReviewGroup | null;
   seatSummary: LeaderSeatSummary[];
   ranking: LeaderRankingEntry[];
   selectedEmployee: LeaderRankingSelectedEmployee | null;
+  pendingTieGroups: LeaderRankingTieGroup[];
+};
+
+export type SaveLeaderRankingTieBreakInput = {
+  year: number;
+  quarter: number;
+  reviewGroupId: string;
+  groupKey: string;
+  orderedEmployeeIds: string[];
 };
 
 export type LeaderAnnualQuarterScore = {
   quarter: number;
-  score: number;
+  score: number | null;
 };
 
 export type LeaderAnnualRankingEntry = {
@@ -278,7 +323,7 @@ export type LeaderAnnualRankingEntry = {
   sectionName: string | null;
   reviewGroupId: string | null;
   reviewGroupName: string | null;
-  annualScore: number;
+  annualScore: number | null;
   quarterScores: LeaderAnnualQuarterScore[];
 };
 
@@ -286,6 +331,7 @@ export type LeaderAnnualRankingSelectedEmployee = LeaderAnnualRankingEntry;
 
 export type LeaderAnnualRankingResponse = {
   year: number;
+  scoresVisible: boolean;
   ranking: LeaderAnnualRankingEntry[];
   selectedEmployee: LeaderAnnualRankingSelectedEmployee | null;
 };
@@ -319,6 +365,23 @@ export type LeaderKnowledgeEntry = {
   keyResultId: string | null;
   keyResultCode: string | null;
   keyResultName: string | null;
+};
+
+export type LeaderKnowledgeArchiveEntry = {
+  path: string;
+  name: string;
+  fileSize: number | null;
+  extension: string | null;
+  previewUrl: string;
+  downloadUrl: string;
+};
+
+export type LeaderKnowledgeAssetArchiveManifest = {
+  assetId: string;
+  fileName: string;
+  downloadUrl: string;
+  entryCount: number;
+  entries: LeaderKnowledgeArchiveEntry[];
 };
 
 export type LeaderKnowledgeBaseResponse = {

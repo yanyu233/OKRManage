@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, User } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
@@ -37,6 +38,11 @@ import {
   LeaderRankingGoalBreakdownRecord,
   LeaderRankingRecord,
   LeaderRankingSelectedEmployeeRecord,
+  LeaderRankingTieBreakEmployeeRecord,
+  LeaderRankingTieBreakMetricsRecord,
+  LeaderRankingTieBreakSaveInput,
+  LeaderRankingTieBreakStatusRecord,
+  LeaderRankingTieGroupRecord,
   LeaderRepository,
   LeaderReviewGroupRecord,
   LeaderScoreUpdateResult,
@@ -49,6 +55,7 @@ type EmployeeWithQuarterData = Prisma.UserGetPayload<{
     department: true;
     section: true;
     reviewGroup: true;
+    quarterParticipationExclusions: true;
     ownedGoals: {
       include: {
         importedTemplates: true;
@@ -61,6 +68,26 @@ type EmployeeWithQuarterData = Prisma.UserGetPayload<{
     };
   };
 }>;
+type EmployeeWithAnnualData = Prisma.UserGetPayload<{
+  include: {
+    department: true;
+    section: true;
+    reviewGroup: true;
+    quarterParticipationExclusions: true;
+    ownedGoals: {
+      include: {
+        importedTemplates: true;
+        keyResults: {
+          include: {
+            proofs: true;
+          };
+        };
+      };
+    };
+    historicalScores: true;
+  };
+}>;
+type RankingTieBreakDecisionData = Prisma.RankingTieBreakDecisionGetPayload<Record<string, never>>;
 type GoalWithQuarterData = EmployeeWithQuarterData['ownedGoals'][number];
 type KeyResultWithProofs = GoalWithQuarterData['keyResults'][number];
 type ProofWithRelations = Prisma.ProofGetPayload<{
@@ -91,6 +118,13 @@ type LeaderScoringScope = {
   sectionIds: Set<string>;
   reviewGroupIds: Set<string>;
 };
+
+type QuarterRankingCandidate = LeaderRankingEntryRecord & {
+  reviewGroupId: string;
+  reviewGroupName: string;
+  tieBreakMetrics: LeaderRankingTieBreakMetricsRecord;
+  tieGroupKey: string | null;
+};
 type KnowledgeManagementScope = {
   enabled: boolean;
   sectionIds: Set<string>;
@@ -104,13 +138,16 @@ export class PrismaLeaderRepository implements LeaderRepository {
     private readonly runtimeConfig: RuntimeConfigService
   ) {}
 
-  async getAllOkr(year: number, quarter: number): Promise<AllOkrRecord> {
+  async getAllOkr(actor: AuthUser, year: number, quarter: number): Promise<AllOkrRecord> {
     const employees = await this.getVisibleEmployees(year, quarter);
+    const scoresVisible = this.canExposeQuarterScores(actor, employees);
+    const visibleEmployees = scoresVisible ? employees : this.maskQuarterScoreEmployees(employees);
 
     return {
       year,
       quarter,
-      employees: employees.map((employee) => this.toAllOkrEmployeeRecord(employee))
+      scoresVisible,
+      employees: visibleEmployees.map((employee) => this.toAllOkrEmployeeRecord(employee))
     };
   }
 
@@ -118,23 +155,34 @@ export class PrismaLeaderRepository implements LeaderRepository {
     actor: AuthUser,
     year: number,
     quarter: number,
+    scoreType: 'objective' | 'subjective',
     employeeId?: string | null,
     goalId?: string | null
   ): Promise<LeaderWorkbenchRecord> {
-    const employees = await this.getVisibleEmployees(year, quarter);
-    const scoringScope = await this.getScoringScope(actor);
-    const employeeSummaries = employees.map((employee) => this.toEmployeeSummary(employee, canScoreEmployee(employee, scoringScope)));
-    const selectedEmployee = this.pickEmployee(employees, employeeId);
+    const employees = this.filterEmployeesByScoreType(await this.getVisibleEmployees(year, quarter), scoreType);
+    const scoringScope = await this.getScoringScope(actor, scoreType);
+    const scopedEmployees =
+      scoreType === 'subjective' && !scoringScope.allowAll
+        ? employees.filter((employee) => canScoreEmployee(employee, scoringScope))
+        : employees;
+    const employeeSummaries = scopedEmployees.map((employee) =>
+      this.toEmployeeSummary(employee, canScoreEmployee(employee, scoringScope))
+    );
+    const selectedEmployee = this.pickEmployee(scopedEmployees, employeeId);
 
     if (!selectedEmployee) {
       return {
         year,
         quarter,
+        scoreType,
         employees: employeeSummaries,
         selectedEmployee: null,
         goals: [],
         selectedGoal: null,
-        bulkCatalog: employees.map((employee) => this.toBulkCatalogEmployee(employee, canScoreEmployee(employee, scoringScope)))
+        bulkCatalog:
+          scoreType === 'objective'
+            ? scopedEmployees.map((employee) => this.toBulkCatalogEmployee(employee, canScoreEmployee(employee, scoringScope)))
+            : []
       };
     }
 
@@ -146,13 +194,17 @@ export class PrismaLeaderRepository implements LeaderRepository {
     return {
       year,
       quarter,
+      scoreType,
       employees: employeeSummaries,
       selectedEmployee: this.toEmployeeSummary(selectedEmployee, selectedEmployeeCanScore),
       goals: goalSummaries,
       selectedGoal: selectedGoal
         ? this.toGoalDetail(selectedGoal, selectedEmployeeCanScore, selectedEmployeeCanManageKnowledge)
         : null,
-      bulkCatalog: employees.map((employee) => this.toBulkCatalogEmployee(employee, canScoreEmployee(employee, scoringScope)))
+      bulkCatalog:
+        scoreType === 'objective'
+          ? scopedEmployees.map((employee) => this.toBulkCatalogEmployee(employee, canScoreEmployee(employee, scoringScope)))
+          : []
     };
   }
 
@@ -184,7 +236,7 @@ export class PrismaLeaderRepository implements LeaderRepository {
         throw new ForbiddenException('key result not found');
       }
 
-      const canScore = await this.canScoreEmployee(actor, keyResult.goal.owner);
+      const canScore = canScoreEmployee(keyResult.goal.owner, await this.getScoringScope(actor, keyResult.scoreType));
       if (!canScore) {
         throw new ForbiddenException('leader scope mismatch');
       }
@@ -237,13 +289,12 @@ export class PrismaLeaderRepository implements LeaderRepository {
     });
   }
 
-  private async canScoreEmployee(actor: AuthUser, employee: User) {
-    return canScoreEmployee(employee, await this.getScoringScope(actor));
-  }
-
   async batchScore(actor: AuthUser, input: LeaderBulkScoreInput): Promise<LeaderBulkScoreResult> {
     const employees = await this.getVisibleEmployees(input.year, input.quarter);
-    const scoringScope = await this.getScoringScope(actor);
+    const [objectiveScoringScope, subjectiveScoringScope] = await Promise.all([
+      this.getScoringScope(actor, 'objective'),
+      this.getScoringScope(actor, 'subjective')
+    ]);
     const employeeIdFilter = new Set(input.employeeIds ?? []);
     const goalIdFilter = new Set(input.goalIds ?? []);
     const keyResultIdFilter = new Set(input.keyResultIds ?? []);
@@ -292,6 +343,8 @@ export class PrismaLeaderRepository implements LeaderRepository {
     const uniqueCandidates = Array.from(new Map(candidates.map((entry) => [entry.keyResult.id, entry])).values());
     const skipped: LeaderBulkScoreResult['skipped'] = [];
     const updatable = uniqueCandidates.filter((entry) => {
+      const scoringScope = entry.keyResult.scoreType === 'subjective' ? subjectiveScoringScope : objectiveScoringScope;
+
       if (!canScoreEmployee(entry.employee, scoringScope)) {
         skipped.push({
           keyResultId: entry.keyResult.id,
@@ -316,7 +369,7 @@ export class PrismaLeaderRepository implements LeaderRepository {
         return false;
       }
 
-      if (!input.allowMissingProofs && entry.keyResult.proofs.length === 0) {
+      if (!input.allowMissingProofs && !isTemplateGoal(entry.goal) && entry.keyResult.proofs.length === 0) {
         skipped.push({
           keyResultId: entry.keyResult.id,
           reason: 'proof-missing'
@@ -572,6 +625,22 @@ export class PrismaLeaderRepository implements LeaderRepository {
     };
   }
 
+  async deleteManualKnowledgeAsset(actor: AuthUser, assetId: string) {
+    const asset = await this.requireKnowledgeAssetWithUploader(assetId);
+    await this.assertManualKnowledgeManagementAccess(actor, asset);
+
+    await this.prisma.knowledgeAsset.delete({
+      where: { id: assetId }
+    });
+
+    return {
+      id: asset.id,
+      fileName: asset.fileName,
+      note: asset.note,
+      storageKey: asset.fileUrl
+    };
+  }
+
   async getKnowledgeEntryDownloads(actor: AuthUser, entryKeys: string[]): Promise<LeaderKnowledgeDownloadRecord[]> {
     void actor;
     const normalizedEntries = Array.from(
@@ -681,51 +750,203 @@ export class PrismaLeaderRepository implements LeaderRepository {
     const employees = await this.getVisibleEmployees(year, quarter);
     const reviewGroups = await this.listVisibleReviewGroups();
     const selectedReviewGroup = this.pickReviewGroup(reviewGroups, reviewGroupId);
+    const scoresVisible = this.canExposeQuarterScores(actor, employees);
+    const canManageTieBreaks = hasAssignedRole(actor, ['system-admin']);
 
     if (!selectedReviewGroup) {
       return {
         year,
         quarter,
+        scoresVisible,
+        canManageTieBreaks,
         reviewGroups,
         selectedReviewGroup: null,
         seatSummary: [],
         ranking: [],
-        selectedEmployee: null
+        selectedEmployee: null,
+        pendingTieGroups: []
       };
     }
 
-    const filteredEmployees = employees.filter((employee) => employee.reviewGroupId === selectedReviewGroup.id);
+    if (!scoresVisible) {
+      return {
+        year,
+        quarter,
+        scoresVisible,
+        canManageTieBreaks,
+        reviewGroups,
+        selectedReviewGroup,
+        seatSummary: [],
+        ranking: [],
+        selectedEmployee: null,
+        pendingTieGroups: []
+      };
+    }
+
+    const reviewGroupIds = reviewGroups.map((reviewGroup) => reviewGroup.id);
     const quotas = await this.prisma.reviewGradeQuota.findMany({
       where: {
-        reviewGroupId: selectedReviewGroup.id
+        reviewGroupId: {
+          in: reviewGroupIds
+        }
       },
-      orderBy: {
-        gradeCode: 'asc'
-      }
+      orderBy: [{ reviewGroupId: 'asc' }, { gradeCode: 'asc' }]
     });
-
-    const ranking = this.assignGrades(
-      filteredEmployees
-        .map((employee) => this.toRankingEntry(employee))
-        .sort((left, right) => compareRanking(left, right)),
-      quotas.map((quota) => ({
+    const quotasByReviewGroupId = new Map<string, Array<{ gradeCode: string; seatCount: number }>>();
+    for (const quota of quotas) {
+      const current = quotasByReviewGroupId.get(quota.reviewGroupId) ?? [];
+      current.push({
         gradeCode: quota.gradeCode,
         seatCount: quota.seatCount
-      }))
-    );
+      });
+      quotasByReviewGroupId.set(quota.reviewGroupId, current);
+    }
+    const tieBreakDecisions = await this.prisma.rankingTieBreakDecision.findMany({
+      where: {
+        year,
+        quarter,
+        reviewGroupId: {
+          in: reviewGroupIds
+        }
+      },
+      orderBy: [{ reviewGroupId: 'asc' }, { groupKey: 'asc' }, { orderIndex: 'asc' }]
+    });
+    const tieBreakDecisionsByReviewGroupId = groupTieBreakDecisionsByReviewGroupId(tieBreakDecisions);
 
-    const seatSummary = buildSeatSummary(quotas, ranking);
+    let ranking: LeaderRankingEntryRecord[] = [];
+    const pendingTieGroups: LeaderRankingTieGroupRecord[] = [];
+
+    for (const reviewGroup of reviewGroups) {
+      const groupEmployees = employees.filter((employee) => employee.reviewGroupId === reviewGroup.id);
+      const analysis = this.buildQuarterlyRankingState({
+        year,
+        quarter,
+        reviewGroupId: reviewGroup.id,
+        reviewGroupName: reviewGroup.name,
+        employees: groupEmployees,
+        quotas: quotasByReviewGroupId.get(reviewGroup.id) ?? [],
+        decisions: tieBreakDecisionsByReviewGroupId.get(reviewGroup.id) ?? []
+      });
+
+      if (reviewGroup.id === selectedReviewGroup.id) {
+        ranking = analysis.ranking;
+      }
+
+      if (canManageTieBreaks) {
+        pendingTieGroups.push(...analysis.pendingTieGroups);
+      }
+    }
+
+    const seatSummary = buildSeatSummary(
+      quotas.filter((quota) => quota.reviewGroupId === selectedReviewGroup.id),
+      ranking
+    );
+    const filteredEmployees = employees.filter((employee) => employee.reviewGroupId === selectedReviewGroup.id);
     const selectedEmployeeRecord = this.pickRankingEmployee(filteredEmployees, ranking, employeeId);
 
     return {
       year,
       quarter,
+      scoresVisible,
+      canManageTieBreaks,
       reviewGroups,
       selectedReviewGroup,
       seatSummary,
       ranking,
-      selectedEmployee: selectedEmployeeRecord
+      selectedEmployee: selectedEmployeeRecord,
+      pendingTieGroups: pendingTieGroups.sort((left, right) => {
+        const reviewGroupCompare = left.reviewGroupName.localeCompare(right.reviewGroupName, 'zh-CN');
+        if (reviewGroupCompare !== 0) {
+          return reviewGroupCompare;
+        }
+
+        return left.rankStart - right.rankStart;
+      })
     };
+  }
+
+  async saveRankingTieBreakDecision(input: LeaderRankingTieBreakSaveInput): Promise<void> {
+    const employees = await this.getVisibleEmployees(input.year, input.quarter);
+    if (!areQuarterScoresPublished(employees)) {
+      throw new DomainValidationError('quarterly ranking is not ready');
+    }
+
+    const reviewGroup = await this.prisma.reviewGroup.findUnique({
+      where: { id: input.reviewGroupId }
+    });
+    if (!reviewGroup) {
+      throw new NotFoundException('review group not found');
+    }
+
+    const quotas = await this.prisma.reviewGradeQuota.findMany({
+      where: {
+        reviewGroupId: input.reviewGroupId
+      },
+      orderBy: {
+        gradeCode: 'asc'
+      }
+    });
+    const decisions = await this.prisma.rankingTieBreakDecision.findMany({
+      where: {
+        year: input.year,
+        quarter: input.quarter,
+        reviewGroupId: input.reviewGroupId
+      },
+      orderBy: [{ groupKey: 'asc' }, { orderIndex: 'asc' }]
+    });
+    const analysis = this.buildQuarterlyRankingState({
+      year: input.year,
+      quarter: input.quarter,
+      reviewGroupId: input.reviewGroupId,
+      reviewGroupName: reviewGroup.name,
+      employees: employees.filter((employee) => employee.reviewGroupId === input.reviewGroupId),
+      quotas: quotas.map((quota) => ({
+        gradeCode: quota.gradeCode,
+        seatCount: quota.seatCount
+      })),
+      decisions
+    });
+    const targetTieGroup = analysis.pendingTieGroups.find((group) => group.groupKey === input.groupKey);
+    if (!targetTieGroup) {
+      throw new DomainValidationError('ranking tie group is not pending');
+    }
+
+    const orderedEmployeeIds = Array.from(
+      new Set(input.orderedEmployeeIds.map((employeeId) => employeeId.trim()).filter((employeeId) => employeeId.length > 0))
+    );
+    const expectedEmployeeIds = targetTieGroup.employees.map((employee) => employee.employeeId);
+
+    if (
+      orderedEmployeeIds.length !== expectedEmployeeIds.length ||
+      expectedEmployeeIds.some((employeeId) => !orderedEmployeeIds.includes(employeeId))
+    ) {
+      throw new DomainValidationError('invalid ranking tie break order');
+    }
+
+    await this.prisma.$transaction(async (transaction) => {
+      await transaction.rankingTieBreakDecision.deleteMany({
+        where: {
+          year: input.year,
+          quarter: input.quarter,
+          reviewGroupId: input.reviewGroupId,
+          employeeId: {
+            in: expectedEmployeeIds
+          }
+        }
+      });
+
+      await transaction.rankingTieBreakDecision.createMany({
+        data: orderedEmployeeIds.map((employeeId, index) => ({
+          year: input.year,
+          quarter: input.quarter,
+          reviewGroupId: input.reviewGroupId,
+          groupKey: input.groupKey,
+          employeeId,
+          orderIndex: index,
+          decidedByUserId: input.decidedByUserId
+        }))
+      });
+    });
   }
 
   async getQuarterlyPublicNotice(
@@ -734,8 +955,11 @@ export class PrismaLeaderRepository implements LeaderRepository {
     quarter: number,
     reviewGroupId?: string | null
   ): Promise<LeaderQuarterlyPublicNoticeRecord> {
-    void actor;
     const employees = await this.getVisibleEmployees(year, quarter);
+    if (!this.canExposeQuarterScores(actor, employees)) {
+      throw new DomainValidationError('quarterly ranking is not ready');
+    }
+
     const filteredEmployees = reviewGroupId
       ? employees.filter((employee) => employee.reviewGroupId === reviewGroupId)
       : employees;
@@ -745,17 +969,21 @@ export class PrismaLeaderRepository implements LeaderRepository {
       quarter,
       departmentName: resolveSingleDepartmentName(filteredEmployees),
       reviewGroupName: resolveSingleReviewGroupName(filteredEmployees),
-      entries: await this.buildQuarterlyPublicNoticeEntries(filteredEmployees)
+      entries: await this.buildQuarterlyPublicNoticeEntries(year, quarter, filteredEmployees)
     };
   }
 
   async getAnnualRanking(actor: AuthUser, year: number, employeeId?: string | null): Promise<LeaderAnnualRankingRecord> {
     const employees = await this.getVisibleEmployeesForYear(year);
-    const ranking = employees.map((employee) => this.toAnnualRankingEntry(employee)).sort(compareAnnualRanking);
+    const scoresVisible = this.canExposeAnnualScores(actor, employees);
+    const ranking = scoresVisible
+      ? employees.map((employee) => this.toAnnualRankingEntry(employee)).sort(compareAnnualRanking)
+      : employees.map((employee) => this.toMaskedAnnualRankingEntry(employee)).sort(compareAnnualRankingIdentity);
     const selectedEmployee = this.pickAnnualRankingEmployee(ranking, employeeId);
 
     return {
       year,
+      scoresVisible,
       ranking,
       selectedEmployee
     };
@@ -767,8 +995,12 @@ export class PrismaLeaderRepository implements LeaderRepository {
     sectionId?: string | null,
     reviewGroupId?: string | null
   ): Promise<LeaderAnnualPublicNoticeRecord> {
-    void actor;
-    const employees = filterAnnualRankingEmployees(await this.getVisibleEmployeesForYear(year), {
+    const visibleEmployees = await this.getVisibleEmployeesForYear(year);
+    if (!this.canExposeAnnualScores(actor, visibleEmployees)) {
+      throw new DomainValidationError('annual ranking is not ready');
+    }
+
+    const employees = filterAnnualRankingEmployees(visibleEmployees, {
       sectionId,
       reviewGroupId
     });
@@ -798,6 +1030,12 @@ export class PrismaLeaderRepository implements LeaderRepository {
         department: true,
         section: true,
         reviewGroup: true,
+        quarterParticipationExclusions: {
+          where: {
+            year,
+            quarter
+          }
+        },
         ownedGoals: {
           where: {
             year,
@@ -821,14 +1059,16 @@ export class PrismaLeaderRepository implements LeaderRepository {
         }
       }
     }).then((employees) =>
-      employees.map((employee) => ({
-        ...employee,
-        ownedGoals: employee.ownedGoals.slice().sort((left, right) => compareGoalCode(left.code, right.code))
-      }))
+      employees
+        .filter((employee) => !isQuarterParticipationExcluded(employee))
+        .map((employee) => ({
+          ...employee,
+          ownedGoals: employee.ownedGoals.slice().sort((left, right) => compareGoalCode(left.code, right.code))
+        }))
     );
   }
 
-  private async getVisibleEmployeesForYear(year: number): Promise<EmployeeWithQuarterData[]> {
+  private async getVisibleEmployeesForYear(year: number): Promise<EmployeeWithAnnualData[]> {
     return this.prisma.user.findMany({
       where: {
         isActive: true,
@@ -846,6 +1086,11 @@ export class PrismaLeaderRepository implements LeaderRepository {
         department: true,
         section: true,
         reviewGroup: true,
+        quarterParticipationExclusions: {
+          where: {
+            year
+          }
+        },
         ownedGoals: {
           where: {
             year
@@ -865,6 +1110,11 @@ export class PrismaLeaderRepository implements LeaderRepository {
               }
             }
           }
+        },
+        historicalScores: {
+          where: {
+            year
+          }
         }
       }
     }).then((employees) =>
@@ -875,6 +1125,35 @@ export class PrismaLeaderRepository implements LeaderRepository {
           .sort((left, right) => left.quarter - right.quarter || compareGoalCode(left.code, right.code))
       }))
     );
+  }
+
+  private filterEmployeesByScoreType(
+    employees: EmployeeWithQuarterData[],
+    scoreType: 'objective' | 'subjective'
+  ): EmployeeWithQuarterData[] {
+    return employees.map((employee) => ({
+      ...employee,
+      ownedGoals: employee.ownedGoals
+        .map((goal) => ({
+          ...goal,
+          keyResults: goal.keyResults.filter((keyResult) => keyResult.scoreType === scoreType)
+        }))
+        .filter((goal) => goal.keyResults.length > 0)
+    }));
+  }
+
+  private maskQuarterScoreEmployees(employees: EmployeeWithQuarterData[]): EmployeeWithQuarterData[] {
+    return employees.map((employee) => ({
+      ...employee,
+      ownedGoals: employee.ownedGoals.map((goal) => ({
+        ...goal,
+        keyResults: goal.keyResults.map((keyResult) => ({
+          ...keyResult,
+          reviewScore: null,
+          reviewComment: null
+        }))
+      }))
+    }));
   }
 
   private pickEmployee(employees: EmployeeWithQuarterData[], employeeId?: string | null) {
@@ -889,7 +1168,7 @@ export class PrismaLeaderRepository implements LeaderRepository {
       }
     }
 
-    return employees[0];
+    return employees.find((employee) => employee.ownedGoals.length > 0) ?? employees[0];
   }
 
   private pickGoal(goals: GoalWithQuarterData[], goalId?: string | null) {
@@ -965,6 +1244,7 @@ export class PrismaLeaderRepository implements LeaderRepository {
       reviewGroupName: employee.reviewGroup?.name ?? null,
       quarterScore: selectedRankingEntry.quarterScore,
       currentGrade: selectedRankingEntry.currentGrade,
+      tieBreakStatus: selectedRankingEntry.tieBreakStatus,
       goalBreakdown: employee.ownedGoals.map((goal) => this.toRankingGoalBreakdown(goal))
     };
   }
@@ -988,29 +1268,31 @@ export class PrismaLeaderRepository implements LeaderRepository {
   }
 
   private async buildQuarterlyPublicNoticeEntries(
+    year: number,
+    quarter: number,
     employees: EmployeeWithQuarterData[]
   ): Promise<LeaderPublicNoticeEntryRecord[]> {
-    const gradesByEmployeeId = await this.buildQuarterlyGradeLookup(employees);
+    const gradesByEmployeeId = await this.buildQuarterlyGradeLookup(year, quarter, employees);
 
     return employees
       .map((employee) => {
         const score = scoreFromKeyResults(employee.ownedGoals.flatMap((goal) => goal.keyResults));
         return this.toPublicNoticeEntry(
           employee,
-          gradesByEmployeeId.get(employee.id) || scoreToNoticeLabel(score)
+          gradesByEmployeeId.get(employee.id) ?? scoreToNoticeLabel(score)
         );
       })
       .sort(comparePublicNoticeEntry);
   }
 
   private async buildAnnualPublicNoticeEntries(
-    employees: EmployeeWithQuarterData[]
+    employees: EmployeeWithAnnualData[]
   ): Promise<LeaderPublicNoticeEntryRecord[]> {
     const gradesByEmployeeId = await this.buildAnnualGradeLookup(employees);
 
     return employees
       .map((employee) => {
-        const annualScore = this.toAnnualRankingEntry(employee).annualScore;
+        const annualScore = this.toAnnualRankingEntry(employee).annualScore ?? 0;
         return this.toPublicNoticeEntry(
           employee,
           gradesByEmployeeId.get(employee.id) || scoreToNoticeLabel(annualScore / 4)
@@ -1019,25 +1301,61 @@ export class PrismaLeaderRepository implements LeaderRepository {
       .sort(comparePublicNoticeEntry);
   }
 
-  private async buildQuarterlyGradeLookup(employees: EmployeeWithQuarterData[]) {
+  private async buildQuarterlyGradeLookup(year: number, quarter: number, employees: EmployeeWithQuarterData[]) {
     const quotasByReviewGroupId = await this.getReviewGroupQuotaMap(employees);
+    const reviewGroupIds = Array.from(
+      new Set(employees.map((employee) => employee.reviewGroupId).filter((reviewGroupId): reviewGroupId is string => Boolean(reviewGroupId)))
+    );
+    const reviewGroups = reviewGroupIds.length
+      ? await this.prisma.reviewGroup.findMany({
+          where: {
+            id: {
+              in: reviewGroupIds
+            }
+          },
+          select: {
+            id: true,
+            name: true
+          }
+        })
+      : [];
+    const tieBreakDecisions = reviewGroupIds.length
+      ? await this.prisma.rankingTieBreakDecision.findMany({
+          where: {
+            year,
+            quarter,
+            reviewGroupId: {
+              in: reviewGroupIds
+            }
+          },
+          orderBy: [{ reviewGroupId: 'asc' }, { groupKey: 'asc' }, { orderIndex: 'asc' }]
+        })
+      : [];
+    const tieBreakDecisionsByReviewGroupId = groupTieBreakDecisionsByReviewGroupId(tieBreakDecisions);
     const grades = new Map<string, string>();
 
     for (const [reviewGroupId, groupEmployees] of groupEmployeesByReviewGroup(employees)) {
-      const ranking = this.assignGrades(
-        groupEmployees.map((employee) => this.toRankingEntry(employee)).sort(compareRanking),
-        quotasByReviewGroupId.get(reviewGroupId) ?? []
-      );
+      const reviewGroupName =
+        reviewGroups.find((reviewGroup) => reviewGroup.id === reviewGroupId)?.name ?? groupEmployees[0]?.reviewGroup?.name ?? '未分配评价组';
+      const ranking = this.buildQuarterlyRankingState({
+        year,
+        quarter,
+        reviewGroupId,
+        reviewGroupName,
+        employees: groupEmployees,
+        quotas: quotasByReviewGroupId.get(reviewGroupId) ?? [],
+        decisions: tieBreakDecisionsByReviewGroupId.get(reviewGroupId) ?? []
+      }).ranking;
 
       for (const entry of ranking) {
-        grades.set(entry.employeeId, gradeCodeToNoticeLabel(entry.currentGrade) ?? '');
+        grades.set(entry.employeeId, gradeCodeToNoticeLabel(entry.currentGrade) ?? PENDING_REVIEW_GRADE_LABEL);
       }
     }
 
     return grades;
   }
 
-  private async buildAnnualGradeLookup(employees: EmployeeWithQuarterData[]) {
+  private async buildAnnualGradeLookup(employees: EmployeeWithAnnualData[]) {
     const quotasByReviewGroupId = await this.getReviewGroupQuotaMap(employees);
     const grades = new Map<string, string>();
 
@@ -1055,7 +1373,9 @@ export class PrismaLeaderRepository implements LeaderRepository {
     return grades;
   }
 
-  private async getReviewGroupQuotaMap(employees: EmployeeWithQuarterData[]) {
+  private async getReviewGroupQuotaMap(
+    employees: Array<Pick<EmployeeWithQuarterData, 'reviewGroupId'> | Pick<EmployeeWithAnnualData, 'reviewGroupId'>>
+  ) {
     const reviewGroupIds = Array.from(
       new Set(employees.map((employee) => employee.reviewGroupId).filter((reviewGroupId): reviewGroupId is string => Boolean(reviewGroupId)))
     );
@@ -1102,7 +1422,10 @@ export class PrismaLeaderRepository implements LeaderRepository {
   private toEmployeeSummary(employee: EmployeeWithQuarterData, canScore: boolean): LeaderEmployeeSummaryRecord {
     const keyResults = employee.ownedGoals.flatMap((goal) => goal.keyResults);
     const scoredKeyResults = keyResults.filter((keyResult) => keyResult.reviewScore !== null);
-    const missingProofKeyResultCount = keyResults.filter((keyResult) => keyResult.proofs.length === 0).length;
+    const proofRequiredKeyResults = employee.ownedGoals
+      .filter((goal) => !isTemplateGoal(goal))
+      .flatMap((goal) => goal.keyResults);
+    const missingProofKeyResultCount = proofRequiredKeyResults.filter((keyResult) => keyResult.proofs.length === 0).length;
 
     return {
       id: employee.id,
@@ -1128,7 +1451,10 @@ export class PrismaLeaderRepository implements LeaderRepository {
     const keyResults = employee.ownedGoals.flatMap((goal) => goal.keyResults);
     const completedKeyResultCount = keyResults.filter((keyResult) => keyResult.completionState === 'completed').length;
     const scoredKeyResultCount = keyResults.filter((keyResult) => keyResult.reviewScore !== null).length;
-    const missingProofKeyResultCount = keyResults.filter((keyResult) => keyResult.proofs.length === 0).length;
+    const proofRequiredKeyResults = employee.ownedGoals
+      .filter((goal) => !isTemplateGoal(goal))
+      .flatMap((goal) => goal.keyResults);
+    const missingProofKeyResultCount = proofRequiredKeyResults.filter((keyResult) => keyResult.proofs.length === 0).length;
 
     return {
       id: employee.id,
@@ -1155,7 +1481,8 @@ export class PrismaLeaderRepository implements LeaderRepository {
     const keyResults = goal.keyResults;
     const scoredKeyResultCount = keyResults.filter((keyResult) => keyResult.reviewScore !== null).length;
     const goalCanScore = canScore && isGoalReviewEditableStatus(goal.status);
-    const missingProofKeyResultCount = keyResults.filter((keyResult) => keyResult.proofs.length === 0).length;
+    const templateGoal = isTemplateGoal(goal);
+    const missingProofKeyResultCount = templateGoal ? 0 : keyResults.filter((keyResult) => keyResult.proofs.length === 0).length;
 
     return {
       id: goal.id,
@@ -1163,9 +1490,9 @@ export class PrismaLeaderRepository implements LeaderRepository {
       name: goal.name,
       description: goal.description,
       status: goal.status,
-      totalPoints: goal.totalPoints,
+      totalPoints: keyResults.reduce((sum, keyResult) => sum + keyResult.points, 0),
       canScore: goalCanScore,
-      isTemplateGoal: goal.importedTemplates.length > 0,
+      isTemplateGoal: templateGoal,
       keyResultCount: keyResults.length,
       scoredKeyResultCount,
       missingProofKeyResultCount,
@@ -1177,7 +1504,8 @@ export class PrismaLeaderRepository implements LeaderRepository {
   private toAllOkrGoalRecord(goal: GoalWithQuarterData): AllOkrGoalRecord {
     const completedKeyResultCount = goal.keyResults.filter((keyResult) => keyResult.completionState === 'completed').length;
     const scoredKeyResultCount = goal.keyResults.filter((keyResult) => keyResult.reviewScore !== null).length;
-    const missingProofKeyResultCount = goal.keyResults.filter((keyResult) => keyResult.proofs.length === 0).length;
+    const templateGoal = isTemplateGoal(goal);
+    const missingProofKeyResultCount = templateGoal ? 0 : goal.keyResults.filter((keyResult) => keyResult.proofs.length === 0).length;
 
     return {
       id: goal.id,
@@ -1186,14 +1514,14 @@ export class PrismaLeaderRepository implements LeaderRepository {
       description: goal.description,
       status: goal.status,
       totalPoints: goal.totalPoints,
-      isTemplateGoal: goal.importedTemplates.length > 0,
+      isTemplateGoal: templateGoal,
       keyResultCount: goal.keyResults.length,
       completedKeyResultCount,
       scoredKeyResultCount,
       missingProofKeyResultCount,
       proofCount: goal.keyResults.reduce((sum, keyResult) => sum + keyResult.proofs.length, 0),
       currentScore: scoreFromKeyResults(goal.keyResults),
-      keyResults: goal.keyResults.map((keyResult) => this.toAllOkrKeyResultRecord(keyResult))
+      keyResults: goal.keyResults.map((keyResult) => this.toAllOkrKeyResultRecord(keyResult, templateGoal))
     };
   }
 
@@ -1206,7 +1534,7 @@ export class PrismaLeaderRepository implements LeaderRepository {
     return {
       ...summary,
       keyResults: goal.keyResults.map((keyResult) =>
-        this.toKeyResultRecord(keyResult, summary.canScore, canManageKnowledge)
+        this.toKeyResultRecord(keyResult, summary.canScore, canManageKnowledge, summary.isTemplateGoal)
       )
     };
   }
@@ -1220,30 +1548,35 @@ export class PrismaLeaderRepository implements LeaderRepository {
       reviewGroupId: employee.reviewGroupId ?? null,
       reviewGroupName: employee.reviewGroup?.name ?? null,
       canScore,
-      goals: employee.ownedGoals.map((goal) => ({
-        id: goal.id,
-        code: goal.code,
-        name: goal.name,
-        isTemplateGoal: goal.importedTemplates.length > 0,
-        keyResults: goal.keyResults.map((keyResult) => ({
-          id: keyResult.id,
-          code: keyResult.code,
-          name: keyResult.name,
-          points: keyResult.points,
-          scoreType: keyResult.scoreType,
-          reviewScore: keyResult.reviewScore,
-          proofCount: keyResult.proofs.length,
-          hasProofs: keyResult.proofs.length > 0,
-          isProofMissing: keyResult.proofs.length === 0
-        }))
-      }))
+      goals: employee.ownedGoals.map((goal) => {
+        const templateGoal = isTemplateGoal(goal);
+
+        return {
+          id: goal.id,
+          code: goal.code,
+          name: goal.name,
+          isTemplateGoal: templateGoal,
+          keyResults: goal.keyResults.map((keyResult) => ({
+            id: keyResult.id,
+            code: keyResult.code,
+            name: keyResult.name,
+            points: keyResult.points,
+            scoreType: keyResult.scoreType,
+            reviewScore: keyResult.reviewScore,
+            proofCount: keyResult.proofs.length,
+            hasProofs: keyResult.proofs.length > 0,
+            isProofMissing: !templateGoal && keyResult.proofs.length === 0
+          }))
+        };
+      })
     };
   }
 
   private toKeyResultRecord(
     keyResult: KeyResultWithProofs,
     canScore = true,
-    canManageKnowledge = false
+    canManageKnowledge = false,
+    suppressProofMissing = false
   ): LeaderKeyResultRecord {
     const latestProof = keyResult.proofs[0] ?? null;
 
@@ -1259,14 +1592,14 @@ export class PrismaLeaderRepository implements LeaderRepository {
       reviewScore: keyResult.reviewScore,
       reviewComment: keyResult.reviewComment,
       hasProofs: keyResult.proofs.length > 0,
-      isProofMissing: keyResult.proofs.length === 0,
+      isProofMissing: !suppressProofMissing && keyResult.proofs.length === 0,
       proofCount: keyResult.proofs.length,
       latestProofUploadedAt: latestProof?.uploadedAt.toISOString() ?? null,
       proofs: keyResult.proofs.map((proof) => this.toProofRecord(proof, canManageKnowledge))
     };
   }
 
-  private toAllOkrKeyResultRecord(keyResult: KeyResultWithProofs): AllOkrKeyResultRecord {
+  private toAllOkrKeyResultRecord(keyResult: KeyResultWithProofs, suppressProofMissing = false): AllOkrKeyResultRecord {
     const latestProof = keyResult.proofs[0] ?? null;
 
     return {
@@ -1280,7 +1613,7 @@ export class PrismaLeaderRepository implements LeaderRepository {
       reviewScore: keyResult.reviewScore,
       reviewComment: keyResult.reviewComment,
       hasProofs: keyResult.proofs.length > 0,
-      isProofMissing: keyResult.proofs.length === 0,
+      isProofMissing: !suppressProofMissing && keyResult.proofs.length === 0,
       proofCount: keyResult.proofs.length,
       latestProofUploadedAt: latestProof?.uploadedAt.toISOString() ?? null
     };
@@ -1417,13 +1750,58 @@ export class PrismaLeaderRepository implements LeaderRepository {
       scoredKeyResultCount: summary.scoredKeyResultCount,
       proofCount: summary.proofCount,
       currentGrade: null,
-      status: summary.status
+      status: summary.status,
+      tieBreakStatus: 'none'
     };
   }
 
-  private toAnnualRankingEntry(employee: EmployeeWithQuarterData): LeaderAnnualRankingEntryRecord {
-    const quarterScores = buildAnnualQuarterScores(employee.ownedGoals);
-    const annualScore = Number(quarterScores.reduce((sum, item) => sum + item.score, 0).toFixed(1));
+  private toRankingTieBreakMetrics(employee: EmployeeWithQuarterData): LeaderRankingTieBreakMetricsRecord {
+    const customGoalScore = Number(
+      employee.ownedGoals
+        .filter((goal) => goal.importedTemplates.length === 0)
+        .reduce((sum, goal) => sum + (scoreFromKeyResults(goal.keyResults) ?? 0), 0)
+        .toFixed(1)
+    );
+    const metrics: LeaderRankingTieBreakMetricsRecord = {
+      customGoalScore,
+      objectiveTaskScore: 0,
+      workAttitudeScore: 0,
+      workCapabilityScore: 0,
+      innovationScore: 0,
+      learningShareScore: 0
+    };
+
+    for (const goal of employee.ownedGoals) {
+      for (const keyResult of goal.keyResults) {
+        const score = keyResult.reviewScore ?? 0;
+        switch (resolveQuarterRankingMetricKey(keyResult.name)) {
+          case 'objectiveTaskScore':
+            metrics.objectiveTaskScore = accumulateQuarterRankingMetric(metrics.objectiveTaskScore, score);
+            break;
+          case 'workAttitudeScore':
+            metrics.workAttitudeScore = accumulateQuarterRankingMetric(metrics.workAttitudeScore, score);
+            break;
+          case 'workCapabilityScore':
+            metrics.workCapabilityScore = accumulateQuarterRankingMetric(metrics.workCapabilityScore, score);
+            break;
+          case 'innovationScore':
+            metrics.innovationScore = accumulateQuarterRankingMetric(metrics.innovationScore, score);
+            break;
+          case 'learningShareScore':
+            metrics.learningShareScore = accumulateQuarterRankingMetric(metrics.learningShareScore, score);
+            break;
+          default:
+            break;
+        }
+      }
+    }
+
+    return metrics;
+  }
+
+  private toAnnualRankingEntry(employee: EmployeeWithAnnualData): LeaderAnnualRankingEntryRecord {
+    const quarterScores = buildAnnualQuarterScores(employee.ownedGoals, employee.historicalScores);
+    const annualScore = Number(quarterScores.reduce((sum, item) => sum + (item.score ?? 0), 0).toFixed(1));
 
     return {
       employeeId: employee.id,
@@ -1434,6 +1812,19 @@ export class PrismaLeaderRepository implements LeaderRepository {
       reviewGroupName: employee.reviewGroup?.name ?? null,
       annualScore,
       quarterScores
+    };
+  }
+
+  private toMaskedAnnualRankingEntry(employee: EmployeeWithAnnualData): LeaderAnnualRankingEntryRecord {
+    const entry = this.toAnnualRankingEntry(employee);
+
+    return {
+      ...entry,
+      annualScore: null,
+      quarterScores: entry.quarterScores.map((item) => ({
+        ...item,
+        score: null
+      }))
     };
   }
 
@@ -1475,7 +1866,169 @@ export class PrismaLeaderRepository implements LeaderRepository {
     return ranking;
   }
 
-  private async getScoringScope(actor: AuthUser): Promise<LeaderScoringScope> {
+  private buildQuarterlyRankingState(args: {
+    year: number;
+    quarter: number;
+    reviewGroupId: string;
+    reviewGroupName: string;
+    employees: EmployeeWithQuarterData[];
+    quotas: Array<{ gradeCode: string; seatCount: number }>;
+    decisions: RankingTieBreakDecisionData[];
+  }): {
+    ranking: LeaderRankingEntryRecord[];
+    pendingTieGroups: LeaderRankingTieGroupRecord[];
+  } {
+    const candidates = args.employees
+      .map((employee) => {
+        const entry = this.toRankingEntry(employee);
+        const tieBreakMetrics = this.toRankingTieBreakMetrics(employee);
+        return {
+          ...entry,
+          reviewGroupId: args.reviewGroupId,
+          reviewGroupName: args.reviewGroupName,
+          tieBreakMetrics,
+          tieGroupKey: null
+        } as QuarterRankingCandidate;
+      })
+      .sort(compareQuarterRankingCandidate);
+
+    const eligible = candidates.filter((entry) => entry.scoredKeyResultCount > 0);
+    const gradeByPosition = resolveQuarterRankingGradeByPosition(eligible.length, args.quotas);
+    const decisionsByGroupKey = groupTieBreakDecisionsByGroupKey(args.decisions);
+    const pendingTieGroups: LeaderRankingTieGroupRecord[] = [];
+
+    let cursor = 0;
+    while (cursor < eligible.length) {
+      const groupEnd = findQuarterRankingTieGroupEnd(eligible, cursor);
+      const group = eligible.slice(cursor, groupEnd + 1);
+
+      if (group.length > 1) {
+        const groupKey = buildQuarterRankingTieGroupKey({
+          year: args.year,
+          quarter: args.quarter,
+          reviewGroupId: args.reviewGroupId,
+          entries: group
+        });
+        for (const entry of group) {
+          entry.tieGroupKey = groupKey;
+        }
+
+        const resolvedOrder = resolveQuarterRankingTieBreakOrder(group, decisionsByGroupKey.get(groupKey) ?? []);
+        if (resolvedOrder) {
+          eligible.splice(cursor, group.length, ...resolvedOrder);
+          for (const entry of resolvedOrder) {
+            entry.tieBreakStatus = 'resolved';
+          }
+        } else {
+          const affectedGradeCodes = Array.from(
+            new Set(
+              gradeByPosition
+                .slice(cursor, groupEnd + 1)
+                .filter((gradeCode): gradeCode is string => Boolean(gradeCode))
+            )
+          );
+          if (affectedGradeCodes.length > 0) {
+            for (const entry of group) {
+              entry.tieBreakStatus = 'pending';
+            }
+            pendingTieGroups.push({
+              groupKey,
+              reviewGroupId: args.reviewGroupId,
+              reviewGroupName: args.reviewGroupName,
+              rankStart: cursor + 1,
+              rankEnd: groupEnd + 1,
+              affectedGradeCodes,
+              employees: group.map((entry) => ({
+                employeeId: entry.employeeId,
+                employeeName: entry.employeeName,
+                sectionName: entry.sectionName,
+                quarterScore: entry.quarterScore,
+                currentGrade: null,
+                tieBreakMetrics: entry.tieBreakMetrics
+              }))
+            });
+          }
+        }
+      }
+
+      cursor = groupEnd + 1;
+    }
+
+    eligible.forEach((entry, index) => {
+      entry.currentGrade = entry.tieBreakStatus === 'pending' ? null : gradeByPosition[index] ?? null;
+    });
+
+    return {
+      ranking: candidates.map((entry) => ({
+        employeeId: entry.employeeId,
+        employeeName: entry.employeeName,
+        sectionName: entry.sectionName,
+        quarterScore: entry.quarterScore,
+        goalCount: entry.goalCount,
+        keyResultCount: entry.keyResultCount,
+        scoredKeyResultCount: entry.scoredKeyResultCount,
+        proofCount: entry.proofCount,
+        currentGrade: entry.currentGrade,
+        status: entry.status,
+        tieBreakStatus: entry.tieBreakStatus
+      })),
+      pendingTieGroups
+    };
+  }
+
+  private canExposeQuarterScores(actor: AuthUser, employees: EmployeeWithQuarterData[]) {
+    if (hasAssignedRole(actor, ['system-admin'])) {
+      return true;
+    }
+
+    return areQuarterScoresPublished(employees);
+  }
+
+  private canExposeAnnualScores(actor: AuthUser, employees: EmployeeWithAnnualData[]) {
+    if (hasAssignedRole(actor, ['system-admin'])) {
+      return true;
+    }
+
+    return areAnnualScoresPublished(employees);
+  }
+
+  private async getScoringScope(
+    actor: AuthUser,
+    scoreType: 'objective' | 'subjective'
+  ): Promise<LeaderScoringScope> {
+    if (hasAssignedRole(actor, ['system-admin'])) {
+      return {
+        allowAll: true,
+        sectionIds: new Set<string>(),
+        reviewGroupIds: new Set<string>()
+      };
+    }
+
+    if (scoreType === 'subjective') {
+      if (actor.role !== 'section-leader') {
+        return {
+          allowAll: false,
+          sectionIds: new Set<string>(),
+          reviewGroupIds: new Set<string>()
+        };
+      }
+
+      const sectionBindings = await this.prisma.sectionLeaderBinding.findMany({
+        where: {
+          leaderUserId: actor.id
+        },
+        select: {
+          sectionId: true
+        }
+      });
+
+      return {
+        allowAll: false,
+        sectionIds: new Set(sectionBindings.map((binding) => binding.sectionId)),
+        reviewGroupIds: new Set<string>()
+      };
+    }
+
     if (actor.role === 'department-head') {
       return {
         allowAll: true,
@@ -1646,6 +2199,65 @@ function scoreFromKeyResults(
   return Number(total.toFixed(1));
 }
 
+function accumulateQuarterRankingMetric(current: number, next: number) {
+  return Number((current + next).toFixed(1));
+}
+
+function areQuarterScoresPublished(employees: EmployeeWithQuarterData[]) {
+  return employees.length > 0 && employees.every((employee) => hasPublishedQuarterGoals(employee.ownedGoals));
+}
+
+function areAnnualScoresPublished(employees: EmployeeWithAnnualData[]) {
+  const activeQuarters = [1, 2, 3, 4].filter((quarter) =>
+    employees.some(
+      (employee) =>
+        !isAnnualQuarterParticipationExcluded(employee, quarter) &&
+        (
+          employee.ownedGoals.some((goal) => goal.quarter === quarter) ||
+          employee.historicalScores.some((score) => score.quarter === quarter))
+    )
+  );
+
+  return (
+    activeQuarters.length > 0 &&
+    activeQuarters.every((quarter) =>
+      employees
+        .filter((employee) => !isAnnualQuarterParticipationExcluded(employee, quarter))
+        .every((employee) => hasPublishedAnnualQuarterScore(employee, quarter))
+    )
+  );
+}
+
+function isQuarterParticipationExcluded(employee: Pick<EmployeeWithQuarterData, 'quarterParticipationExclusions'>) {
+  return employee.quarterParticipationExclusions.length > 0;
+}
+
+function isAnnualQuarterParticipationExcluded(
+  employee: Pick<EmployeeWithAnnualData, 'quarterParticipationExclusions'>,
+  quarter: number
+) {
+  return employee.quarterParticipationExclusions.some((record) => record.quarter === quarter);
+}
+
+function hasPublishedQuarterGoals(goals: GoalWithQuarterData[]) {
+  return (
+    goals.length > 0 &&
+    goals.every(
+      (goal) =>
+        goal.keyResults.length > 0 && goal.keyResults.every((keyResult) => keyResult.reviewScore !== null)
+    )
+  );
+}
+
+function hasPublishedAnnualQuarterScore(employee: EmployeeWithAnnualData, quarter: number) {
+  const quarterGoals = employee.ownedGoals.filter((goal) => goal.quarter === quarter);
+  if (quarterGoals.length > 0) {
+    return hasPublishedQuarterGoals(quarterGoals);
+  }
+
+  return employee.historicalScores.some((score) => score.quarter === quarter);
+}
+
 function statusFromCounts(scoredKeyResultCount: number, keyResultCount: number) {
   if (keyResultCount === 0 || scoredKeyResultCount === 0) {
     return 'pending';
@@ -1656,6 +2268,181 @@ function statusFromCounts(scoredKeyResultCount: number, keyResultCount: number) 
   }
 
   return 'completed';
+}
+
+const PENDING_REVIEW_GRADE_LABEL = '待定';
+const QUARTER_RANKING_METRIC_PRIORITY: Array<keyof LeaderRankingTieBreakMetricsRecord> = [
+  'customGoalScore',
+  'objectiveTaskScore',
+  'workAttitudeScore',
+  'workCapabilityScore',
+  'innovationScore',
+  'learningShareScore'
+];
+
+function compareQuarterRankingCandidate(left: QuarterRankingCandidate, right: QuarterRankingCandidate) {
+  const metricCompare = compareQuarterRankingCandidateMetrics(left, right);
+  if (metricCompare !== 0) {
+    return metricCompare;
+  }
+
+  return left.employeeName.localeCompare(right.employeeName, 'zh-CN');
+}
+
+function compareQuarterRankingCandidateMetrics(left: QuarterRankingCandidate, right: QuarterRankingCandidate) {
+  const leftScore = left.quarterScore ?? -1;
+  const rightScore = right.quarterScore ?? -1;
+  if (leftScore !== rightScore) {
+    return rightScore - leftScore;
+  }
+
+  for (const metricKey of QUARTER_RANKING_METRIC_PRIORITY) {
+    const leftValue = left.tieBreakMetrics[metricKey];
+    const rightValue = right.tieBreakMetrics[metricKey];
+    if (leftValue !== rightValue) {
+      return rightValue - leftValue;
+    }
+  }
+
+  return 0;
+}
+
+function findQuarterRankingTieGroupEnd(entries: QuarterRankingCandidate[], startIndex: number) {
+  let endIndex = startIndex;
+
+  while (
+    endIndex + 1 < entries.length &&
+    compareQuarterRankingCandidateMetrics(entries[startIndex], entries[endIndex + 1]) === 0
+  ) {
+    endIndex += 1;
+  }
+
+  return endIndex;
+}
+
+function resolveQuarterRankingGradeByPosition(
+  eligibleCount: number,
+  quotas: Array<{ gradeCode: string; seatCount: number }>
+) {
+  const gradeByPosition = Array<string | null>(eligibleCount).fill(null);
+  let cursor = 0;
+
+  for (const gradeCode of REVIEW_GRADE_CODES) {
+    const seatCount = quotas.find((quota) => quota.gradeCode === gradeCode)?.seatCount ?? 0;
+    for (let index = 0; index < seatCount && cursor < eligibleCount; index += 1) {
+      gradeByPosition[cursor] = gradeCode;
+      cursor += 1;
+    }
+  }
+
+  return gradeByPosition;
+}
+
+function buildQuarterRankingTieGroupKey(args: {
+  year: number;
+  quarter: number;
+  reviewGroupId: string;
+  entries: QuarterRankingCandidate[];
+}) {
+  return createHash('sha1')
+    .update(
+      JSON.stringify({
+        year: args.year,
+        quarter: args.quarter,
+        reviewGroupId: args.reviewGroupId,
+        employeeIds: args.entries.map((entry) => entry.employeeId).sort(),
+        quarterScore: args.entries[0]?.quarterScore ?? null,
+        tieBreakMetrics: args.entries[0]?.tieBreakMetrics ?? null
+      })
+    )
+    .digest('hex');
+}
+
+function resolveQuarterRankingTieBreakOrder(
+  entries: QuarterRankingCandidate[],
+  decisions: RankingTieBreakDecisionData[]
+) {
+  if (decisions.length !== entries.length) {
+    return null;
+  }
+
+  const expectedEmployeeIds = entries.map((entry) => entry.employeeId);
+  const orderIndexByEmployeeId = new Map<string, number>();
+
+  for (const decision of decisions) {
+    if (!expectedEmployeeIds.includes(decision.employeeId)) {
+      return null;
+    }
+
+    orderIndexByEmployeeId.set(decision.employeeId, decision.orderIndex);
+  }
+
+  if (orderIndexByEmployeeId.size !== entries.length) {
+    return null;
+  }
+
+  const sortedOrderIndexes = Array.from(orderIndexByEmployeeId.values()).sort((left, right) => left - right);
+  if (sortedOrderIndexes.some((orderIndex, index) => orderIndex !== index)) {
+    return null;
+  }
+
+  return [...entries].sort((left, right) => {
+    const leftOrder = orderIndexByEmployeeId.get(left.employeeId) ?? Number.MAX_SAFE_INTEGER;
+    const rightOrder = orderIndexByEmployeeId.get(right.employeeId) ?? Number.MAX_SAFE_INTEGER;
+    return leftOrder - rightOrder;
+  });
+}
+
+function groupTieBreakDecisionsByReviewGroupId(decisions: RankingTieBreakDecisionData[]) {
+  const grouped = new Map<string, RankingTieBreakDecisionData[]>();
+
+  for (const decision of decisions) {
+    const current = grouped.get(decision.reviewGroupId) ?? [];
+    current.push(decision);
+    grouped.set(decision.reviewGroupId, current);
+  }
+
+  return grouped;
+}
+
+function groupTieBreakDecisionsByGroupKey(decisions: RankingTieBreakDecisionData[]) {
+  const grouped = new Map<string, RankingTieBreakDecisionData[]>();
+
+  for (const decision of decisions) {
+    const current = grouped.get(decision.groupKey) ?? [];
+    current.push(decision);
+    grouped.set(decision.groupKey, current);
+  }
+
+  return grouped;
+}
+
+function resolveQuarterRankingMetricKey(
+  value: string
+): Exclude<keyof LeaderRankingTieBreakMetricsRecord, 'customGoalScore'> | null {
+  const normalized = value.replace(/\s+/g, '');
+
+  if (normalized.includes('目标任务综合评价')) {
+    return 'objectiveTaskScore';
+  }
+
+  if (normalized.includes('工作态度')) {
+    return 'workAttitudeScore';
+  }
+
+  if (normalized.includes('工作能力')) {
+    return 'workCapabilityScore';
+  }
+
+  if (normalized.includes('创优争先') || normalized.includes('创新能力')) {
+    return 'innovationScore';
+  }
+
+  if (normalized.includes('学习分享')) {
+    return 'learningShareScore';
+  }
+
+  return null;
 }
 
 function compareRanking(left: LeaderRankingEntryRecord, right: LeaderRankingEntryRecord) {
@@ -1670,15 +2457,27 @@ function compareRanking(left: LeaderRankingEntryRecord, right: LeaderRankingEntr
 }
 
 function compareAnnualRanking(left: LeaderAnnualRankingEntryRecord, right: LeaderAnnualRankingEntryRecord) {
-  if (left.annualScore !== right.annualScore) {
-    return right.annualScore - left.annualScore;
+  const leftScore = left.annualScore ?? -1;
+  const rightScore = right.annualScore ?? -1;
+
+  if (leftScore !== rightScore) {
+    return rightScore - leftScore;
   }
 
-  return left.employeeName.localeCompare(right.employeeName);
+  return left.employeeName.localeCompare(right.employeeName, 'zh-CN');
+}
+
+function compareAnnualRankingIdentity(left: LeaderAnnualRankingEntryRecord, right: LeaderAnnualRankingEntryRecord) {
+  const sectionCompare = (left.sectionName ?? '').localeCompare(right.sectionName ?? '', 'zh-CN');
+  if (sectionCompare !== 0) {
+    return sectionCompare;
+  }
+
+  return left.employeeName.localeCompare(right.employeeName, 'zh-CN');
 }
 
 function filterAnnualRankingEmployees(
-  employees: EmployeeWithQuarterData[],
+  employees: EmployeeWithAnnualData[],
   filters: { sectionId?: string | null; reviewGroupId?: string | null }
 ) {
   return employees.filter((employee) => {
@@ -1738,11 +2537,26 @@ function compareKnowledgeEntry(left: LeaderKnowledgeEntryRecord, right: LeaderKn
   return left.fileName.localeCompare(right.fileName, 'zh-CN');
 }
 
-function buildAnnualQuarterScores(goals: GoalWithQuarterData[]): LeaderAnnualQuarterScoreRecord[] {
-  return [1, 2, 3, 4].map((quarter) => ({
-    quarter,
-    score: scoreFromGoals(goals.filter((goal) => goal.quarter === quarter))
-  }));
+function buildAnnualQuarterScores(
+  goals: GoalWithQuarterData[],
+  historicalScores: Array<{ quarter: number; score: number }>
+): LeaderAnnualQuarterScoreRecord[] {
+  const historicalScoreByQuarter = new Map(historicalScores.map((item) => [item.quarter, Number(item.score.toFixed(1))]));
+
+  return [1, 2, 3, 4].map((quarter) => {
+    const quarterGoals = goals.filter((goal) => goal.quarter === quarter);
+    if (quarterGoals.length > 0) {
+      return {
+        quarter,
+        score: scoreFromGoals(quarterGoals)
+      };
+    }
+
+    return {
+      quarter,
+      score: historicalScoreByQuarter.get(quarter) ?? 0
+    };
+  });
 }
 
 function scoreFromGoals(goals: GoalWithQuarterData[]) {
@@ -1769,7 +2583,7 @@ function assignAnnualGrades(
     ...entry,
     currentGrade: null as string | null
   }));
-  const eligible = entries.filter((entry) => entry.annualScore > 0);
+  const eligible = entries.filter((entry) => (entry.annualScore ?? 0) > 0);
   let cursor = 0;
 
   for (const gradeCode of REVIEW_GRADE_CODES) {
@@ -1785,8 +2599,10 @@ function assignAnnualGrades(
   return entries;
 }
 
-function groupEmployeesByReviewGroup(employees: EmployeeWithQuarterData[]) {
-  const groups = new Map<string, EmployeeWithQuarterData[]>();
+function groupEmployeesByReviewGroup<T extends Pick<EmployeeWithQuarterData, 'reviewGroupId'>>(
+  employees: T[]
+) {
+  const groups = new Map<string, T[]>();
 
   for (const employee of employees) {
     const reviewGroupId = employee.reviewGroupId ?? '__ungrouped__';
@@ -1905,6 +2721,10 @@ function hasAssignedRole(
 
 function isGoalReviewEditableStatus(status: string) {
   return status === 'pending-review' || status === 'completed';
+}
+
+function isTemplateGoal(goal: { importedTemplates: unknown[] }) {
+  return goal.importedTemplates.length > 0;
 }
 
 function compareGoalCode(left: string, right: string) {

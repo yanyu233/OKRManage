@@ -1,13 +1,15 @@
-import { Inject, Injectable, StreamableFile } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, StreamableFile } from '@nestjs/common';
 import { extname } from 'node:path';
 import JSZip = require('jszip');
 import { AuditService } from '../audit/audit.service';
 import { normalizeUploadedFileName } from '../../shared/http/upload-file-name';
 import { LocalProofStorageService } from '../../infrastructure/storage/local-proof-storage.service';
+import { ProofArchiveService } from '../../infrastructure/storage/proof-archive.service';
 import {
   AllOkrRecord,
   LEADER_REPOSITORY,
   LeaderBulkScoreInput,
+  LeaderScoreType,
   LeaderRepository
 } from '../../infrastructure/repositories/leader/leader.repository';
 import { AuthUser } from '../../shared/types/auth-user';
@@ -21,20 +23,27 @@ export class LeaderService {
   constructor(
     @Inject(LEADER_REPOSITORY) private readonly leaderRepository: LeaderRepository,
     private readonly proofStorage: LocalProofStorageService,
+    private readonly proofArchive: ProofArchiveService,
     private readonly auditService: AuditService,
     private readonly runtimeConfig: RuntimeConfigService,
     private readonly publicNoticeDocxService: LeaderPublicNoticeDocxService
   ) {}
 
   getAllOkr(actor: AuthUser, year: number, quarter: number): Promise<AllOkrRecord> {
-    void actor;
     this.validateQuarter(year, quarter);
-    return this.leaderRepository.getAllOkr(year, quarter);
+    return this.leaderRepository.getAllOkr(actor, year, quarter);
   }
 
-  getWorkbench(actor: AuthUser, year: number, quarter: number, employeeId?: string, goalId?: string) {
+  getWorkbench(
+    actor: AuthUser,
+    year: number,
+    quarter: number,
+    scoreType: LeaderScoreType,
+    employeeId?: string,
+    goalId?: string
+  ) {
     this.validateQuarter(year, quarter);
-    return this.leaderRepository.getWorkbench(actor, year, quarter, employeeId, goalId);
+    return this.leaderRepository.getWorkbench(actor, year, quarter, scoreType, employeeId, goalId);
   }
 
   async updateKeyResultScore(actor: AuthUser, krId: string, score: number, comment?: string) {
@@ -318,6 +327,23 @@ export class LeaderService {
     }
   }
 
+  async deleteManualKnowledgeAsset(actor: AuthUser, assetId: string) {
+    const result = await this.leaderRepository.deleteManualKnowledgeAsset(actor, assetId);
+    await this.proofStorage.delete(result.storageKey);
+
+    await this.auditService.write({
+      actorUserId: actor.id,
+      actorRoleCode: actor.role,
+      action: 'leader.knowledge-asset.delete',
+      entityType: 'knowledge-asset',
+      entityId: assetId,
+      beforeJson: {
+        fileName: result.fileName,
+        note: result.note
+      }
+    });
+  }
+
   async downloadManualKnowledgeAsset(actor: AuthUser, assetId: string) {
     const asset = await this.leaderRepository.getManualKnowledgeAssetDownload(actor, assetId);
     const stream = await this.proofStorage.open(asset.storageKey);
@@ -328,17 +354,69 @@ export class LeaderService {
     };
   }
 
-  async resolveManualKnowledgeAssetDirectPreviewUrl(assetId: string) {
+  async getManualKnowledgeAssetArchive(actor: AuthUser, assetId: string) {
+    const asset = await this.leaderRepository.getManualKnowledgeAssetDownload(actor, assetId);
+
+    if (!isKnowledgeAssetArchiveFile(asset.fileName)) {
+      throw new BadRequestException('knowledge archive preview is only supported for ZIP files');
+    }
+
+    const entries = await this.proofArchive.listEntries(asset.storageKey);
+
+    return {
+      assetId,
+      fileName: asset.fileName,
+      downloadUrl: buildKnowledgeAssetDownloadUrl(assetId),
+      entryCount: entries.length,
+      entries: entries.map((entry) => ({
+        path: entry.path,
+        name: entry.name,
+        fileSize: entry.fileSize,
+        extension: entry.extension,
+        previewUrl: buildKnowledgeAssetArchiveEntryPreviewUrl(assetId, entry.path),
+        downloadUrl: buildKnowledgeAssetArchiveEntryDownloadUrl(assetId, entry.path)
+      }))
+    };
+  }
+
+  async downloadManualKnowledgeAssetArchiveEntry(actor: AuthUser, assetId: string, entryPath: string) {
+    const asset = await this.leaderRepository.getManualKnowledgeAssetDownload(actor, assetId);
+
+    if (!isKnowledgeAssetArchiveFile(asset.fileName)) {
+      throw new BadRequestException('knowledge archive preview is only supported for ZIP files');
+    }
+
+    const entry = await this.proofArchive.openEntry(asset.storageKey, entryPath);
+
+    return {
+      fileName: entry.fileName,
+      file: new StreamableFile(entry.file)
+    };
+  }
+
+  async resolveManualKnowledgeAssetDirectPreviewUrl(assetId: string, entryPath?: string | null) {
     const asset = await this.leaderRepository.getManualKnowledgeAssetStorage(assetId);
-    const previewFileName = buildSafeProofPreviewFileName(asset.fileName, `knowledge:${assetId}`);
-    const classification = classifyProofPreview(asset.fileName, {
-      allowArchive: false
+    const normalizedEntryPath = entryPath?.trim() ? normalizeKnowledgeArchiveEntryPath(entryPath) : null;
+    const fileName = normalizedEntryPath
+      ? await this.resolveManualKnowledgeArchiveEntryName(asset.storageKey, asset.fileName, normalizedEntryPath)
+      : asset.fileName;
+    const previewFileName = buildSafeProofPreviewFileName(
+      fileName,
+      normalizedEntryPath ? `knowledge:${assetId}:${normalizedEntryPath}` : `knowledge:${assetId}`
+    );
+    const classification = classifyProofPreview(fileName, {
+      allowArchive: !normalizedEntryPath
     });
+
+    if (classification.mode === 'archive') {
+      return buildKnowledgeAssetArchivePageUrl(assetId, this.runtimeConfig.webBaseUrl);
+    }
 
     if (classification.mode === 'kkfileview') {
       return buildKnowledgeAssetKkFileViewPreviewUrl({
         assetId,
-        fileName: asset.fileName,
+        entryPath: normalizedEntryPath ?? undefined,
+        fileName,
         previewFileName,
         sourceBaseUrl: this.runtimeConfig.kkFileViewSourceBaseUrl,
         previewBaseUrl: this.runtimeConfig.kkFileViewPublicBaseUrl,
@@ -349,15 +427,26 @@ export class LeaderService {
 
     return buildKnowledgeAssetSourceUrl({
       assetId,
-      fileName: asset.fileName,
+      entryPath: normalizedEntryPath ?? undefined,
+      fileName,
       previewFileName,
       sourceBaseUrl: this.runtimeConfig.kkFileViewSourceBaseUrl,
       previewToken: this.runtimeConfig.kkFileViewPreviewToken
     });
   }
 
-  async getManualKnowledgeAssetPreviewSource(assetId: string) {
+  async getManualKnowledgeAssetPreviewSource(assetId: string, entryPath?: string | null) {
     const asset = await this.leaderRepository.getManualKnowledgeAssetStorage(assetId);
+
+    if (entryPath?.trim()) {
+      const entry = await this.proofArchive.openEntry(asset.storageKey, entryPath);
+
+      return {
+        fileName: entry.fileName,
+        file: new StreamableFile(entry.file)
+      };
+    }
+
     const stream = await this.proofStorage.open(asset.storageKey);
 
     return {
@@ -369,6 +458,44 @@ export class LeaderService {
   getRanking(actor: AuthUser, year: number, quarter: number, reviewGroupId?: string, employeeId?: string) {
     this.validateQuarter(year, quarter);
     return this.leaderRepository.getRanking(actor, year, quarter, reviewGroupId, employeeId);
+  }
+
+  async saveRankingTieBreak(
+    actor: AuthUser,
+    input: {
+      year: number;
+      quarter: number;
+      reviewGroupId: string;
+      groupKey: string;
+      orderedEmployeeIds: string[];
+    }
+  ) {
+    this.validateQuarter(input.year, input.quarter);
+
+    await this.leaderRepository.saveRankingTieBreakDecision({
+      year: input.year,
+      quarter: input.quarter,
+      reviewGroupId: input.reviewGroupId,
+      groupKey: input.groupKey,
+      orderedEmployeeIds: input.orderedEmployeeIds,
+      decidedByUserId: actor.id
+    });
+
+    await this.auditService.write({
+      actorUserId: actor.id,
+      actorRoleCode: actor.role,
+      action: 'leader.ranking.tie-break.save',
+      entityType: 'leader-ranking',
+      entityId: input.groupKey,
+      afterJson: {
+        year: input.year,
+        quarter: input.quarter,
+        reviewGroupId: input.reviewGroupId,
+        orderedEmployeeIds: input.orderedEmployeeIds
+      }
+    });
+
+    return { ok: true };
   }
 
   async downloadQuarterlyPublicNotice(actor: AuthUser, year: number, quarter: number, reviewGroupId?: string) {
@@ -444,6 +571,21 @@ export class LeaderService {
       throw new DomainValidationError('invalid year');
     }
   }
+
+  private async resolveManualKnowledgeArchiveEntryName(storageKey: string, archiveFileName: string, entryPath: string) {
+    if (!isKnowledgeAssetArchiveFile(archiveFileName)) {
+      throw new BadRequestException('knowledge archive preview is only supported for ZIP files');
+    }
+
+    const entries = await this.proofArchive.listEntries(storageKey);
+    const entry = entries.find((item) => item.path === entryPath);
+
+    if (!entry) {
+      throw new BadRequestException('archive entry not found');
+    }
+
+    return entry.name;
+  }
 }
 
 function sanitizeZipSegment(value: string | null | undefined, fallback: string) {
@@ -483,10 +625,14 @@ function buildKnowledgeAssetSourceUrl(options: {
   previewFileName?: string;
   sourceBaseUrl: string;
   previewToken: string;
+  entryPath?: string;
 }) {
   const sourceUrl = new URL(`/api/internal/knowledge-assets/${options.assetId}/source`, options.sourceBaseUrl);
   sourceUrl.searchParams.set('accessToken', options.previewToken);
   sourceUrl.searchParams.set('fullfilename', options.previewFileName ?? options.fileName);
+  if (options.entryPath) {
+    sourceUrl.searchParams.set('entryPath', options.entryPath);
+  }
   return sourceUrl.toString();
 }
 
@@ -497,6 +643,7 @@ function buildKnowledgeAssetKkFileViewPreviewUrl(options: {
   sourceBaseUrl: string;
   previewBaseUrl: string;
   previewToken: string;
+  entryPath?: string;
   officePreviewType?: 'pdf' | 'image' | 'html';
 }) {
   const sourceUrl = buildKnowledgeAssetSourceUrl({
@@ -504,7 +651,8 @@ function buildKnowledgeAssetKkFileViewPreviewUrl(options: {
     fileName: options.fileName,
     previewFileName: options.previewFileName,
     sourceBaseUrl: options.sourceBaseUrl,
-    previewToken: options.previewToken
+    previewToken: options.previewToken,
+    entryPath: options.entryPath
   });
   const encodedSourceUrl = Buffer.from(sourceUrl, 'utf8').toString('base64');
   const normalizedPreviewBaseUrl = options.previewBaseUrl.replace(/\/+$/, '');
@@ -515,6 +663,44 @@ function buildKnowledgeAssetKkFileViewPreviewUrl(options: {
   }
 
   return `${normalizedPreviewBaseUrl}/onlinePreview?${params.toString()}`;
+}
+
+function buildKnowledgeAssetDownloadUrl(assetId: string) {
+  return `/leader/knowledge-base/assets/${assetId}/download`;
+}
+
+function buildKnowledgeAssetArchivePageUrl(assetId: string, webBaseUrl: string) {
+  return new URL(`/knowledge-base/archive/${assetId}`, webBaseUrl).toString();
+}
+
+function buildKnowledgeAssetArchiveEntryPreviewUrl(assetId: string, entryPath: string) {
+  const params = new URLSearchParams();
+  params.set('entryPath', entryPath);
+  return `/leader/knowledge-base/assets/${assetId}/preview?${params.toString()}`;
+}
+
+function buildKnowledgeAssetArchiveEntryDownloadUrl(assetId: string, entryPath: string) {
+  const params = new URLSearchParams();
+  params.set('entryPath', entryPath);
+  return `/leader/knowledge-base/assets/${assetId}/archive/entry?${params.toString()}`;
+}
+
+function isKnowledgeAssetArchiveFile(fileName: string) {
+  return extname(fileName).toLowerCase() === '.zip';
+}
+
+function normalizeKnowledgeArchiveEntryPath(input: string) {
+  const normalized = input
+    .replace(/\\/g, '/')
+    .split('/')
+    .map((segment) => segment.trim())
+    .filter((segment) => Boolean(segment) && segment !== '.');
+
+  if (!normalized.length || normalized.some((segment) => segment === '..')) {
+    throw new BadRequestException('archive entry path is invalid');
+  }
+
+  return normalized.join('/');
 }
 
 function buildKnowledgeArchiveFileName(date: Date) {

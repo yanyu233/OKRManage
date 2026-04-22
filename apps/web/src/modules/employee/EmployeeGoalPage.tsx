@@ -152,7 +152,9 @@ export function EmployeeGoalPage() {
             {showStatusTag ? <Tag color={goal.status === 'completed' ? 'green' : 'blue'}>{getGoalStatusLabel(goal.status)}</Tag> : null}
             <Tag>{`${goal.keyResultCount} 条 KR`}</Tag>
             <Tag>{`${goal.proofCount} 份材料`}</Tag>
-            {goal.missingProofKeyResultCount > 0 ? <Tag color="gold">{`待上传 ${goal.missingProofKeyResultCount} 项`}</Tag> : null}
+            {!goal.isTemplateGoal && goal.missingProofKeyResultCount > 0 ? (
+              <Tag color="gold">{`待上传 ${goal.missingProofKeyResultCount} 项`}</Tag>
+            ) : null}
             <Tag>{`当前得分 ${formatNullableScore(goal.currentScore)}`}</Tag>
           </Space>
         </div>

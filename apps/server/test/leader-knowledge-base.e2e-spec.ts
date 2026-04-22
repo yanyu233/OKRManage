@@ -1,3 +1,4 @@
+import JSZip = require('jszip');
 import * as request from 'supertest';
 import { INestApplication } from '@nestjs/common';
 import { closeTestDatabase, resetTestDatabase } from './support/test-db';
@@ -58,6 +59,21 @@ describe('Leader knowledge base permissions', () => {
         canManageKnowledge: true
       })
     );
+
+    const remove = await sectionLeader
+      .put(`/api/leader/proofs/${proofId}/knowledge`)
+      .send({ isKnowledge: false })
+      .expect(200);
+
+    expect(remove.body).toEqual(
+      expect.objectContaining({
+        id: proofId,
+        isKnowledge: false
+      })
+    );
+
+    const knowledgeBaseAfterRemove = await sectionLeader.get('/api/leader/knowledge-base').expect(200);
+    expect(knowledgeBaseAfterRemove.body.entries.find((item: { id: string }) => item.id === proofId)).toBeUndefined();
   });
 
   it('rejects system admins from marking proofs as knowledge or editing knowledge files', async () => {
@@ -188,6 +204,29 @@ describe('Leader knowledge base permissions', () => {
       .expect(200);
   });
 
+  it('allows knowledge editors to delete manual knowledge files from the knowledge base', async () => {
+    const sectionLeader = await loginAsSectionLeader(app);
+    const upload = await sectionLeader
+      .post('/api/leader/knowledge-base/manual-assets')
+      .field('note', 'manual knowledge to delete')
+      .attach('file', Buffer.from('manual-knowledge-delete', 'utf8'), {
+        filename: 'manual-delete.txt',
+        contentType: 'text/plain'
+      })
+      .expect(201);
+
+    await sectionLeader
+      .delete(`/api/leader/knowledge-base/manual-assets/${upload.body.id}`)
+      .expect(204);
+
+    const knowledgeBase = await sectionLeader.get('/api/leader/knowledge-base').expect(200);
+    expect(knowledgeBase.body.entries.find((entry: { id: string }) => entry.id === upload.body.id)).toBeUndefined();
+
+    await sectionLeader
+      .get(`/api/leader/knowledge-base/assets/${upload.body.id}/download`)
+      .expect(404);
+  });
+
   it('returns a downloadable zip for knowledge bulk download', async () => {
     const employee = await loginAsEmployee(app);
     const employeeOkr = await employee.get('/api/employee/okr?year=2026&quarter=1').expect(200);
@@ -239,6 +278,57 @@ describe('Leader knowledge base permissions', () => {
     expect(download.headers['content-type']).toContain('application/zip');
     expect(download.headers['content-disposition']).toContain('.zip');
     expect(download.body.slice(0, 2).toString('utf8')).toBe('PK');
+  });
+
+  it('opens manual knowledge ZIP files through the archive manifest instead of direct download', async () => {
+    const sectionLeader = await loginAsSectionLeader(app);
+    const archive = new JSZip();
+    archive.file('材料/说明.txt', Buffer.from('knowledge-zip-preview', 'utf8'));
+    archive.file('材料/封面.png', Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+    const archiveBuffer = await archive.generateAsync({ type: 'nodebuffer' });
+
+    const upload = await sectionLeader
+      .post('/api/leader/knowledge-base/manual-assets')
+      .field('note', 'manual knowledge zip preview')
+      .attach('file', archiveBuffer, {
+        filename: 'manual-knowledge-preview.zip',
+        contentType: 'application/zip'
+      })
+      .expect(201);
+
+    const previewRedirect = await sectionLeader
+      .get(`/api/leader/knowledge-base/assets/${upload.body.id}/preview`)
+      .redirects(0)
+      .expect(302);
+
+    expect(previewRedirect.headers.location).toContain(`/knowledge-base/archive/${upload.body.id}`);
+
+    const archiveManifest = await sectionLeader
+      .get(`/api/leader/knowledge-base/assets/${upload.body.id}/archive`)
+      .expect(200);
+
+    expect(archiveManifest.body.fileName).toBe('manual-knowledge-preview.zip');
+    expect(archiveManifest.body.entryCount).toBe(2);
+    expect(archiveManifest.body.entries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: '材料/说明.txt',
+          previewUrl: expect.stringContaining(`/leader/knowledge-base/assets/${upload.body.id}/preview?`),
+          downloadUrl: expect.stringContaining(`/leader/knowledge-base/assets/${upload.body.id}/archive/entry?`)
+        })
+      ])
+    );
+
+    const textEntry = archiveManifest.body.entries.find((entry: { path: string }) => entry.path === '材料/说明.txt');
+    expect(textEntry).toBeDefined();
+
+    const entryDownload = await sectionLeader
+      .get(`/api${textEntry.downloadUrl}`)
+      .buffer(true)
+      .parse(binaryParser)
+      .expect(200);
+
+    expect(entryDownload.text || entryDownload.body.toString('utf8')).toContain('knowledge-zip-preview');
   });
 });
 

@@ -66,7 +66,9 @@ export function EmployeeGoalAccordionItem({
             <Tag>{`${goal.totalPoints} 分`}</Tag>
             <Tag>{`${goal.keyResultCount} 条 KR`}</Tag>
             <Tag>{`${goal.proofCount} 份材料`}</Tag>
-            {goal.missingProofKeyResultCount > 0 ? <Tag color="gold">{TEXT.missingProofTag(goal.missingProofKeyResultCount)}</Tag> : null}
+            {!goal.isTemplateGoal && goal.missingProofKeyResultCount > 0 ? (
+              <Tag color="gold">{TEXT.missingProofTag(goal.missingProofKeyResultCount)}</Tag>
+            ) : null}
             <Tag>{`当前得分 ${formatNullableScore(goal.currentScore)}`}</Tag>
           </Space>
         </button>

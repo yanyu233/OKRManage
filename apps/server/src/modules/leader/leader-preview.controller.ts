@@ -24,13 +24,14 @@ export class LeaderPreviewController {
   async getKnowledgeAssetSource(
     @Param('assetId') assetId: string,
     @Query('accessToken') accessToken: string | undefined,
+    @Query('entryPath') entryPath: string | undefined,
     @Res({ passthrough: true }) response: Response
   ): Promise<StreamableFile> {
     if (!accessToken || accessToken !== this.runtimeConfig.kkFileViewPreviewToken) {
       throw new UnauthorizedException('invalid preview access token');
     }
 
-    const result = await this.leaderService.getManualKnowledgeAssetPreviewSource(assetId);
+    const result = await this.leaderService.getManualKnowledgeAssetPreviewSource(assetId, entryPath);
     response.setHeader('Content-Disposition', buildInlineContentDisposition(result.fileName));
     response.setHeader('Content-Type', getProofContentType(result.fileName) ?? 'application/octet-stream');
     return result.file;

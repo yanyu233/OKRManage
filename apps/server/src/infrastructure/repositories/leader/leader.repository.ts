@@ -131,6 +131,7 @@ export type AllOkrEmployeeRecord = {
 export type AllOkrRecord = {
   year: number;
   quarter: number;
+  scoresVisible: boolean;
   employees: AllOkrEmployeeRecord[];
 };
 
@@ -168,6 +169,7 @@ export type LeaderBulkCatalogEmployeeRecord = {
 export type LeaderWorkbenchRecord = {
   year: number;
   quarter: number;
+  scoreType: LeaderScoreType;
   employees: LeaderEmployeeSummaryRecord[];
   selectedEmployee: LeaderEmployeeSummaryRecord | null;
   goals: LeaderGoalSummaryRecord[];
@@ -186,6 +188,17 @@ export type LeaderSeatSummaryRecord = {
   occupiedCount: number;
 };
 
+export type LeaderRankingTieBreakMetricsRecord = {
+  customGoalScore: number;
+  objectiveTaskScore: number;
+  workAttitudeScore: number;
+  workCapabilityScore: number;
+  innovationScore: number;
+  learningShareScore: number;
+};
+
+export type LeaderRankingTieBreakStatusRecord = 'none' | 'pending' | 'resolved';
+
 export type LeaderRankingEntryRecord = {
   employeeId: string;
   employeeName: string;
@@ -197,6 +210,7 @@ export type LeaderRankingEntryRecord = {
   proofCount: number;
   currentGrade: string | null;
   status: string;
+  tieBreakStatus: LeaderRankingTieBreakStatusRecord;
 };
 
 export type LeaderRankingGoalBreakdownRecord = {
@@ -222,22 +236,45 @@ export type LeaderRankingSelectedEmployeeRecord = {
   reviewGroupName: string | null;
   quarterScore: number | null;
   currentGrade: string | null;
+  tieBreakStatus: LeaderRankingTieBreakStatusRecord;
   goalBreakdown: LeaderRankingGoalBreakdownRecord[];
+};
+
+export type LeaderRankingTieBreakEmployeeRecord = {
+  employeeId: string;
+  employeeName: string;
+  sectionName: string | null;
+  quarterScore: number | null;
+  currentGrade: string | null;
+  tieBreakMetrics: LeaderRankingTieBreakMetricsRecord;
+};
+
+export type LeaderRankingTieGroupRecord = {
+  groupKey: string;
+  reviewGroupId: string;
+  reviewGroupName: string;
+  rankStart: number;
+  rankEnd: number;
+  affectedGradeCodes: string[];
+  employees: LeaderRankingTieBreakEmployeeRecord[];
 };
 
 export type LeaderRankingRecord = {
   year: number;
   quarter: number;
+  scoresVisible: boolean;
+  canManageTieBreaks: boolean;
   reviewGroups: LeaderReviewGroupRecord[];
   selectedReviewGroup: LeaderReviewGroupRecord | null;
   seatSummary: LeaderSeatSummaryRecord[];
   ranking: LeaderRankingEntryRecord[];
   selectedEmployee: LeaderRankingSelectedEmployeeRecord | null;
+  pendingTieGroups: LeaderRankingTieGroupRecord[];
 };
 
 export type LeaderAnnualQuarterScoreRecord = {
   quarter: number;
-  score: number;
+  score: number | null;
 };
 
 export type LeaderAnnualRankingEntryRecord = {
@@ -247,7 +284,7 @@ export type LeaderAnnualRankingEntryRecord = {
   sectionName: string | null;
   reviewGroupId: string | null;
   reviewGroupName: string | null;
-  annualScore: number;
+  annualScore: number | null;
   quarterScores: LeaderAnnualQuarterScoreRecord[];
 };
 
@@ -255,6 +292,7 @@ export type LeaderAnnualRankingSelectedEmployeeRecord = LeaderAnnualRankingEntry
 
 export type LeaderAnnualRankingRecord = {
   year: number;
+  scoresVisible: boolean;
   ranking: LeaderAnnualRankingEntryRecord[];
   selectedEmployee: LeaderAnnualRankingSelectedEmployeeRecord | null;
 };
@@ -325,6 +363,15 @@ export type LeaderBulkScoreResult = {
   updatedCount: number;
   skippedCount: number;
   skipped: LeaderBulkScoreSkipRecord[];
+};
+
+export type LeaderRankingTieBreakSaveInput = {
+  year: number;
+  quarter: number;
+  reviewGroupId: string;
+  groupKey: string;
+  orderedEmployeeIds: string[];
+  decidedByUserId: string;
 };
 
 export type LeaderProofKnowledgeToggleResult = {
@@ -412,12 +459,20 @@ export type LeaderKnowledgeAssetFileRecord = {
   storageKey: string;
 };
 
+export type LeaderKnowledgeAssetDeleteResult = {
+  id: string;
+  fileName: string;
+  note: string | null;
+  storageKey: string;
+};
+
 export interface LeaderRepository {
-  getAllOkr(year: number, quarter: number): Promise<AllOkrRecord>;
+  getAllOkr(actor: AuthUser, year: number, quarter: number): Promise<AllOkrRecord>;
   getWorkbench(
     actor: AuthUser,
     year: number,
     quarter: number,
+    scoreType: LeaderScoreType,
     employeeId?: string | null,
     goalId?: string | null
   ): Promise<LeaderWorkbenchRecord>;
@@ -439,6 +494,7 @@ export interface LeaderRepository {
     assetId: string,
     input: LeaderKnowledgeEntryUpdateInput
   ): Promise<LeaderKnowledgeEntryUpdateResult>;
+  deleteManualKnowledgeAsset(actor: AuthUser, assetId: string): Promise<LeaderKnowledgeAssetDeleteResult>;
   getKnowledgeEntryDownloads(actor: AuthUser, entryKeys: string[]): Promise<LeaderKnowledgeDownloadRecord[]>;
   getManualKnowledgeAssetDownload(actor: AuthUser, assetId: string): Promise<LeaderKnowledgeAssetFileRecord>;
   getManualKnowledgeAssetStorage(assetId: string): Promise<LeaderKnowledgeAssetFileRecord>;
@@ -449,6 +505,7 @@ export interface LeaderRepository {
     reviewGroupId?: string | null,
     employeeId?: string | null
   ): Promise<LeaderRankingRecord>;
+  saveRankingTieBreakDecision(input: LeaderRankingTieBreakSaveInput): Promise<void>;
   getQuarterlyPublicNotice(
     actor: AuthUser,
     year: number,

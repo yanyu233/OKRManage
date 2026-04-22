@@ -10,6 +10,9 @@ import {
   type AdminLocalAccountInput,
   type AdminOrgBootstrap,
   type AdminOrgBootstrapInput,
+  type AdminQuarterParticipationExclusionQuery,
+  type AdminQuarterParticipationExclusionRecord,
+  type AdminQuarterParticipationExclusionSaveInput,
   type AdminReviewGroupInput,
   ORG_REPOSITORY,
   OrgRepository
@@ -101,6 +104,68 @@ export class PrismaOrgRepository implements OrgRepository {
     });
 
     return result.count;
+  }
+
+  async listQuarterParticipationExclusions(
+    input: AdminQuarterParticipationExclusionQuery
+  ): Promise<AdminQuarterParticipationExclusionRecord[]> {
+    const exclusions = await this.prisma.quarterParticipationExclusion.findMany({
+      where: {
+        year: input.year,
+        quarter: input.quarter,
+        user: {
+          isActive: true,
+          roleAssignments: {
+            some: {
+              roleCode: 'employee',
+              isEnabled: true
+            }
+          }
+        }
+      },
+      orderBy: [{ user: { createdAt: 'asc' } }],
+      include: {
+        user: {
+          include: {
+            section: true,
+            reviewGroup: true
+          }
+        }
+      }
+    });
+
+    return exclusions.map((exclusion) => ({
+      id: exclusion.id,
+      userId: exclusion.userId,
+      userName: exclusion.user.name,
+      employeeNo: exclusion.user.employeeNo,
+      positionName: exclusion.user.positionName,
+      sectionId: exclusion.user.sectionId,
+      sectionName: exclusion.user.section?.name ?? null,
+      reviewGroupId: exclusion.user.reviewGroupId,
+      reviewGroupName: exclusion.user.reviewGroup?.name ?? null
+    }));
+  }
+
+  async saveQuarterParticipationExclusions(input: AdminQuarterParticipationExclusionSaveInput): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.quarterParticipationExclusion.deleteMany({
+        where: {
+          year: input.year,
+          quarter: input.quarter
+        }
+      });
+
+      if (input.userIds.length > 0) {
+        await tx.quarterParticipationExclusion.createMany({
+          data: input.userIds.map((userId) => ({
+            userId,
+            year: input.year,
+            quarter: input.quarter
+          }))
+        });
+      }
+    });
   }
 
   async getAdminBootstrap(): Promise<AdminOrgBootstrap> {

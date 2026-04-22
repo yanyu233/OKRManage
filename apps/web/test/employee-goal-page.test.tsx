@@ -46,6 +46,7 @@ describe('EmployeeGoalPage proof actions', () => {
       description: 'proof flow goal desc',
       status: 'confirmed',
       totalPoints: 10,
+      isTemplateGoal: false,
       keyResultCount: 1,
       completedKeyResultCount: 1,
       missingProofKeyResultCount: 0,
@@ -112,6 +113,7 @@ describe('EmployeeGoalPage', () => {
       description: 'AI 项目',
       status: 'draft',
       totalPoints: 20,
+      isTemplateGoal: false,
       keyResultCount: 2,
       completedKeyResultCount: 0,
       missingProofKeyResultCount: 2,
@@ -178,6 +180,51 @@ describe('EmployeeGoalPage', () => {
     expect(document.querySelectorAll('input[type="file"]').length).toBeGreaterThan(0);
   });
 
+  it('does not show pending proof prompts for template goals without uploaded materials', async () => {
+    mockGetEmployeeGoalDetail.mockResolvedValueOnce({
+      id: 'goal-template-english',
+      code: 'O1',
+      name: 'template goal',
+      description: 'template description',
+      status: 'confirmed',
+      totalPoints: 30,
+      isTemplateGoal: true,
+      keyResultCount: 1,
+      completedKeyResultCount: 1,
+      missingProofKeyResultCount: 0,
+      proofCount: 0,
+      currentScore: null,
+      year: 2026,
+      quarter: 1,
+      keyResults: [
+        {
+          id: 'kr-template-english',
+          code: 'KR1',
+          name: 'template key result',
+          description: null,
+          points: 10,
+          scoreType: 'subjective',
+          completionState: 'completed',
+          reviewScore: null,
+          reviewComment: null,
+          hasProofs: false,
+          isProofMissing: true,
+          proofCount: 0,
+          latestProofUploadedAt: null,
+          proofs: []
+        }
+      ]
+    });
+
+    renderWithProviders(<EmployeeGoalPage />);
+
+    const keyResultButton = await screen.findByRole('button', { name: /KR1 template key result/i });
+    expect(keyResultButton).toBeInTheDocument();
+    expect(screen.queryByText(/待上传 1 项|待上传材料/)).toBeNull();
+    fireEvent.click(keyResultButton);
+    expect(screen.queryByText('待上传材料')).toBeNull();
+  });
+
   it('keeps confirmed goals in material maintenance mode without manual completion editing', async () => {
     mockGetEmployeeGoalDetail.mockResolvedValueOnce({
       id: 'goal-1',
@@ -186,6 +233,7 @@ describe('EmployeeGoalPage', () => {
       description: '补充评分前的确认链路',
       status: 'confirmed',
       totalPoints: 30,
+      isTemplateGoal: false,
       keyResultCount: 2,
       completedKeyResultCount: 2,
       missingProofKeyResultCount: 1,

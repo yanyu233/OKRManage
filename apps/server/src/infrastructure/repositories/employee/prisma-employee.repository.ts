@@ -865,7 +865,10 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
 
   private toEmployeeQuarterSummary(employee: EmployeeWithQuarterData): EmployeeQuarterSummaryRecord {
     const keyResults = employee.ownedGoals.flatMap((goal) => goal.keyResults);
-    const missingProofKeyResultCount = keyResults.filter((keyResult) => keyResult.proofs.length === 0).length;
+    const proofRequiredKeyResults = employee.ownedGoals
+      .filter((goal) => !isTemplateGoal(goal))
+      .flatMap((goal) => goal.keyResults);
+    const missingProofKeyResultCount = proofRequiredKeyResults.filter((keyResult) => keyResult.proofs.length === 0).length;
 
     return {
       id: employee.id,
@@ -882,7 +885,8 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
   }
 
   private toGoalSummary(goal: GoalWithQuarterData): EmployeeGoalSummaryRecord {
-    const missingProofKeyResultCount = goal.keyResults.filter((keyResult) => keyResult.proofs.length === 0).length;
+    const templateGoal = isTemplateGoal(goal);
+    const missingProofKeyResultCount = templateGoal ? 0 : goal.keyResults.filter((keyResult) => keyResult.proofs.length === 0).length;
 
     return {
       id: goal.id,
@@ -891,6 +895,7 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
       description: goal.description,
       status: goal.status,
       totalPoints: goal.totalPoints,
+      isTemplateGoal: templateGoal,
       keyResultCount: goal.keyResults.length,
       completedKeyResultCount: goal.keyResults.filter((keyResult) => keyResult.completionState === 'completed').length,
       missingProofKeyResultCount,
@@ -1107,6 +1112,10 @@ function scoreFromKeyResults(
 
   const total = scored.reduce((sum, keyResult) => sum + (keyResult.reviewScore ?? 0), 0);
   return Number(total.toFixed(1));
+}
+
+function isTemplateGoal(goal: { importedTemplates: unknown[] }) {
+  return goal.importedTemplates.length > 0;
 }
 
 function compareGoalCode(left: string, right: string) {

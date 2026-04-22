@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { PrismaLeaderRepository } from '../../infrastructure/repositories/leader/prisma-leader.repository';
 import { LocalProofStorageService } from '../../infrastructure/storage/local-proof-storage.service';
+import { ProofArchiveService } from '../../infrastructure/storage/proof-archive.service';
 import { LEADER_REPOSITORY } from '../../infrastructure/repositories/leader/leader.repository';
 import { AuditModule } from '../audit/audit.module';
 import { SessionModule } from '../session/session.module';
@@ -17,6 +18,7 @@ import { LeaderService } from './leader.service';
     LeaderPublicNoticeDocxService,
     PrismaLeaderRepository,
     LocalProofStorageService,
+    ProofArchiveService,
     {
       provide: LEADER_REPOSITORY,
       useExisting: PrismaLeaderRepository

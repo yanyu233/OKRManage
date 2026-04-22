@@ -1,4 +1,12 @@
-import { CloseOutlined, FileTextOutlined, ReloadOutlined, SearchOutlined, TrophyOutlined } from '@ant-design/icons';
+import {
+  CloseOutlined,
+  FileTextOutlined,
+  LeftOutlined,
+  ReloadOutlined,
+  RightOutlined,
+  SearchOutlined,
+  TrophyOutlined
+} from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
@@ -17,11 +25,10 @@ import {
   Space,
   Statistic,
   Tag,
-  Tabs,
   Typography
 } from 'antd';
-import { useEffect, useMemo, useState } from 'react';
-import { ApiError, resolveApiUrl } from '../../shared/api/http';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ApiError, resolveApiUrl, resolveAppAwareUrl } from '../../shared/api/http';
 import { bulkLeaderKrScore, getLeaderWorkbench, updateLeaderKrScore, updateLeaderProofKnowledge } from '../../shared/api/leader';
 import {
   formatNullableScore,
@@ -47,6 +54,7 @@ import {
   filterWorkbenchGoalsByProofStatus,
   filterWorkbenchKeyResults,
   filterWorkbenchKeyResultsByProofStatus,
+  isSameScoreDraftMap,
   resolveObjectiveBulkEmployeeIds,
   resolveWorkbenchSelection,
   selectAllBulkEmployeeIds,
@@ -165,9 +173,32 @@ const BATCH_UI = {
   readonlyRows: '预览列表仅展示你有评分权限的关键结果，其他员工可在主界面中继续查看。'
 } as const;
 
-export function LeaderWorkbenchPage() {
+const WORKBENCH_META = {
+  objective: {
+    title: '客观项评分工作台',
+    description: '按现有评分范围查看并评价客观评分项，支持批量赋分和材料核验。',
+    bulkEnabled: true
+  },
+  subjective: {
+    title: '主观项评分工作台',
+    description: '仅按科室负责人权限查看并评价主观评分项，严格按科室范围隔离。',
+    bulkEnabled: false
+  }
+} as const;
+
+export function LeaderObjectiveWorkbenchPage() {
+  return <LeaderWorkbenchPageInner scoreType="objective" />;
+}
+
+export function LeaderSubjectiveWorkbenchPage() {
+  return <LeaderWorkbenchPageInner scoreType="subjective" />;
+}
+
+function LeaderWorkbenchPageInner({ scoreType }: { scoreType: 'objective' | 'subjective' }) {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
+  const workbenchMeta = WORKBENCH_META[scoreType];
+  const isObjectiveWorkbench = workbenchMeta.bulkEnabled;
   const isKnowledgeEditor = useSessionStore((state) =>
     (state.user?.roles ?? []).some((assignment) => assignment.role === 'section-leader' || assignment.role === 'group-leader')
   );
@@ -194,10 +225,24 @@ export function LeaderWorkbenchPage() {
   const [bulkExcludeTemplates, setBulkExcludeTemplates] = useState(false);
   const [bulkAllowMissingProofs, setBulkAllowMissingProofs] = useState(false);
   const [onlyWithProofs, setOnlyWithProofs] = useState(false);
+  const goalStripViewportRef = useRef<HTMLDivElement | null>(null);
+  const goalStripMomentumFrameRef = useRef<number | null>(null);
+  const goalStripSuppressClickUntilRef = useRef(0);
+  const goalStripPointerRef = useRef({
+    startX: 0,
+    startScrollLeft: 0,
+    lastX: 0,
+    lastTimestamp: 0,
+    velocity: 0,
+    moved: false
+  });
+  const [goalStripCanScrollLeft, setGoalStripCanScrollLeft] = useState(false);
+  const [goalStripCanScrollRight, setGoalStripCanScrollRight] = useState(false);
+  const [isGoalStripDragging, setIsGoalStripDragging] = useState(false);
 
   const workbenchQuery = useQuery({
-    queryKey: ['leader-workbench', year, quarter, employeeId, goalId],
-    queryFn: () => getLeaderWorkbench({ year, quarter, employeeId, goalId })
+    queryKey: ['leader-workbench', scoreType, year, quarter, employeeId, goalId],
+    queryFn: () => getLeaderWorkbench({ year, quarter, scoreType, employeeId, goalId })
   });
 
   useEffect(() => {
@@ -212,7 +257,8 @@ export function LeaderWorkbenchPage() {
     if (nextSelection.goalId !== goalId) {
       setGoalId(nextSelection.goalId);
     }
-    setDrafts(createScoreDrafts(workbenchQuery.data.selectedGoal));
+    const nextDrafts = createScoreDrafts(workbenchQuery.data.selectedGoal);
+    setDrafts((currentDrafts) => (isSameScoreDraftMap(currentDrafts, nextDrafts) ? currentDrafts : nextDrafts));
   }, [employeeId, goalId, workbenchQuery.data]);
 
   const scoreMutation = useMutation({
@@ -358,9 +404,104 @@ export function LeaderWorkbenchPage() {
   }, [displaySelectedGoal, keyword, onlyWithProofs]);
 
   const goalTabs = useMemo(
-    () => visibleGoals.map((goal) => ({ key: goal.id, label: `${goal.code} ${goal.name}` })),
+    () => visibleGoals.map((goal) => ({ id: goal.id, label: `${goal.code} ${goal.name}` })),
     [visibleGoals]
   );
+  const activeGoalTabId = displaySelectedGoal?.id ?? visibleGoals[0]?.id ?? null;
+
+  const updateGoalStripAffordance = () => {
+    const viewport = goalStripViewportRef.current;
+    if (!viewport) {
+      setGoalStripCanScrollLeft(false);
+      setGoalStripCanScrollRight(false);
+      return;
+    }
+
+    setGoalStripCanScrollLeft(viewport.scrollLeft > 4);
+    setGoalStripCanScrollRight(viewport.scrollLeft + viewport.clientWidth < viewport.scrollWidth - 4);
+  };
+
+  const stopGoalStripMomentum = () => {
+    if (goalStripMomentumFrameRef.current !== null) {
+      window.cancelAnimationFrame(goalStripMomentumFrameRef.current);
+      goalStripMomentumFrameRef.current = null;
+    }
+  };
+
+  const startGoalStripMomentum = (initialVelocity: number) => {
+    stopGoalStripMomentum();
+    const viewport = goalStripViewportRef.current;
+    if (!viewport) {
+      return;
+    }
+
+    let velocity = initialVelocity;
+    let lastTimestamp = Date.now();
+
+    const tick = () => {
+      const currentViewport = goalStripViewportRef.current;
+      if (!currentViewport) {
+        stopGoalStripMomentum();
+        return;
+      }
+
+      const now = Date.now();
+      const deltaTime = Math.max(1, now - lastTimestamp);
+      lastTimestamp = now;
+      const previousScrollLeft = currentViewport.scrollLeft;
+      currentViewport.scrollLeft += velocity * deltaTime;
+      const movedDistance = Math.abs(currentViewport.scrollLeft - previousScrollLeft);
+      velocity *= Math.pow(0.92, deltaTime / 16);
+
+      if (movedDistance < 0.2 || Math.abs(velocity) < 0.02) {
+        goalStripMomentumFrameRef.current = null;
+        updateGoalStripAffordance();
+        return;
+      }
+
+      goalStripMomentumFrameRef.current = window.requestAnimationFrame(tick);
+    };
+
+    goalStripMomentumFrameRef.current = window.requestAnimationFrame(tick);
+  };
+
+  useEffect(() => {
+    const viewport = goalStripViewportRef.current;
+    if (!viewport) {
+      updateGoalStripAffordance();
+      return;
+    }
+
+    updateGoalStripAffordance();
+    const handleScroll = () => updateGoalStripAffordance();
+    viewport.addEventListener('scroll', handleScroll, { passive: true });
+
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => updateGoalStripAffordance());
+      resizeObserver.observe(viewport);
+    }
+
+    return () => {
+      viewport.removeEventListener('scroll', handleScroll);
+      resizeObserver?.disconnect();
+      stopGoalStripMomentum();
+    };
+  }, [goalTabs.length]);
+
+  useEffect(() => {
+    if (!activeGoalTabId || !goalStripViewportRef.current) {
+      return;
+    }
+
+    const activeTab = goalStripViewportRef.current.querySelector<HTMLElement>(`[data-goal-tab-id="${activeGoalTabId}"]`);
+    activeTab?.scrollIntoView({
+      behavior: isGoalStripDragging ? 'auto' : 'smooth',
+      block: 'nearest',
+      inline: 'center'
+    });
+    updateGoalStripAffordance();
+  }, [activeGoalTabId, isGoalStripDragging]);
 
   const { sections: bulkSectionOptions, reviewGroups: bulkReviewGroupOptions } = useMemo(
     () => buildWorkbenchFilterOptions(workbenchQuery.data?.employees ?? []),
@@ -423,6 +564,119 @@ export function LeaderWorkbenchPage() {
   const isReadonlyEmployee = Boolean(displaySelectedEmployee && !displaySelectedEmployee.canScore);
   const selectedEmployeeCount = bulkPreview.employees.length;
 
+  const resetGoalStripPointer = () => {
+    goalStripPointerRef.current.startX = 0;
+    goalStripPointerRef.current.startScrollLeft = 0;
+    goalStripPointerRef.current.lastX = 0;
+    goalStripPointerRef.current.lastTimestamp = 0;
+    goalStripPointerRef.current.velocity = 0;
+    goalStripPointerRef.current.moved = false;
+    setIsGoalStripDragging(false);
+  };
+
+  const handleGoalStripMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (event.button !== 0) {
+      return;
+    }
+
+    const viewport = goalStripViewportRef.current;
+    if (!viewport) {
+      return;
+    }
+
+    stopGoalStripMomentum();
+    goalStripPointerRef.current.startX = event.clientX;
+    goalStripPointerRef.current.startScrollLeft = viewport.scrollLeft;
+    goalStripPointerRef.current.lastX = event.clientX;
+    goalStripPointerRef.current.lastTimestamp = Date.now();
+    goalStripPointerRef.current.velocity = 0;
+    goalStripPointerRef.current.moved = false;
+    goalStripSuppressClickUntilRef.current = 0;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const currentViewport = goalStripViewportRef.current;
+      if (!currentViewport) {
+        return;
+      }
+
+      const deltaX = moveEvent.clientX - goalStripPointerRef.current.startX;
+      if (Math.abs(deltaX) > 4) {
+        goalStripPointerRef.current.moved = true;
+        setIsGoalStripDragging(true);
+      }
+
+      if (!goalStripPointerRef.current.moved) {
+        return;
+      }
+
+      moveEvent.preventDefault();
+      currentViewport.scrollLeft = goalStripPointerRef.current.startScrollLeft - deltaX;
+      const now = Date.now();
+      const deltaTime = Math.max(1, now - goalStripPointerRef.current.lastTimestamp);
+      const stepDelta = moveEvent.clientX - goalStripPointerRef.current.lastX;
+      goalStripPointerRef.current.velocity = -stepDelta / deltaTime;
+      goalStripPointerRef.current.lastX = moveEvent.clientX;
+      goalStripPointerRef.current.lastTimestamp = now;
+    };
+
+    const handleMouseUp = () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+
+      if (goalStripPointerRef.current.moved) {
+        goalStripSuppressClickUntilRef.current = Date.now() + 180;
+        if (Math.abs(goalStripPointerRef.current.velocity) >= 0.02) {
+          startGoalStripMomentum(goalStripPointerRef.current.velocity);
+        }
+      }
+
+      resetGoalStripPointer();
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const handleGoalStripWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    const viewport = goalStripViewportRef.current;
+    if (!viewport) {
+      return;
+    }
+
+    const horizontalDelta = Math.abs(event.deltaX);
+    const verticalDelta = Math.abs(event.deltaY);
+    if (verticalDelta <= horizontalDelta) {
+      return;
+    }
+
+    viewport.scrollBy({
+      left: event.deltaY,
+      behavior: 'auto'
+    });
+    event.preventDefault();
+  };
+
+  const scrollGoalStripBy = (direction: -1 | 1) => {
+    const viewport = goalStripViewportRef.current;
+    if (!viewport) {
+      return;
+    }
+
+    stopGoalStripMomentum();
+    viewport.scrollBy({
+      left: direction * Math.max(viewport.clientWidth * 0.72, 240),
+      behavior: 'smooth'
+    });
+  };
+
+  const handleGoalTabClick = (nextGoalId: string) => {
+    if (Date.now() < goalStripSuppressClickUntilRef.current) {
+      return;
+    }
+
+    setGoalId(nextGoalId);
+  };
+
   if (workbenchQuery.isLoading) {
     return <Card className="leader-detail-card">{T.loading}</Card>;
   }
@@ -446,10 +700,10 @@ export function LeaderWorkbenchPage() {
         <div className="page-toolbar">
           <div>
             <Typography.Title level={1} style={{ marginBottom: 8 }}>
-              {T.title}
+              {workbenchMeta.title}
             </Typography.Title>
             <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-              {T.desc}
+              {workbenchMeta.description}
             </Typography.Paragraph>
           </div>
           <div className="page-toolbar__controls">
@@ -582,9 +836,11 @@ export function LeaderWorkbenchPage() {
                   </Typography.Paragraph>
                 </div>
                 <Space size={10} wrap className="leader-detail-card__hero-tags">
-                  <Button type="primary" onClick={openBulkModal} disabled={!workbenchQuery.data?.employees.length}>
-                    {BATCH_UI.title}
-                  </Button>
+                  {isObjectiveWorkbench ? (
+                    <Button type="primary" onClick={openBulkModal} disabled={!workbenchQuery.data?.employees.length}>
+                      {BATCH_UI.title}
+                    </Button>
+                  ) : null}
                   <Tag color="blue">{getLeaderEmployeeStatusLabel(displaySelectedEmployee?.status ?? 'pending')}</Tag>
                   <Tag icon={<TrophyOutlined />}>{`${T.quarterScore} ${formatNullableScore(displaySelectedEmployee?.quarterScore ?? null)}`}</Tag>
                 </Space>
@@ -612,12 +868,46 @@ export function LeaderWorkbenchPage() {
             </Card>
 
             <Card className="leader-detail-card" variant="borderless">
-              <Tabs
-                className="leader-goal-tabs"
-                activeKey={displaySelectedGoal?.id ?? undefined}
-                items={goalTabs}
-                onChange={(nextGoalId) => setGoalId(nextGoalId)}
-              />
+              <div
+                className={`leader-goal-strip${goalStripCanScrollLeft ? ' leader-goal-strip--has-left' : ''}${
+                  goalStripCanScrollRight ? ' leader-goal-strip--has-right' : ''
+                }`}
+              >
+                <Button
+                  type="text"
+                  shape="circle"
+                  icon={<LeftOutlined />}
+                  className="leader-goal-strip__arrow leader-goal-strip__arrow--left"
+                  disabled={!goalStripCanScrollLeft}
+                  onClick={() => scrollGoalStripBy(-1)}
+                />
+                <div
+                  ref={goalStripViewportRef}
+                  className={`leader-goal-strip__viewport${isGoalStripDragging ? ' leader-goal-strip__viewport--dragging' : ''}`}
+                  onMouseDown={handleGoalStripMouseDown}
+                  onWheel={handleGoalStripWheel}
+                >
+                  {goalTabs.map((goal) => (
+                    <button
+                      key={goal.id}
+                      type="button"
+                      data-goal-tab-id={goal.id}
+                      className={`leader-goal-strip__tab${goal.id === activeGoalTabId ? ' leader-goal-strip__tab--active' : ''}`}
+                      onClick={() => handleGoalTabClick(goal.id)}
+                    >
+                      {goal.label}
+                    </button>
+                  ))}
+                </div>
+                <Button
+                  type="text"
+                  shape="circle"
+                  icon={<RightOutlined />}
+                  className="leader-goal-strip__arrow leader-goal-strip__arrow--right"
+                  disabled={!goalStripCanScrollRight}
+                  onClick={() => scrollGoalStripBy(1)}
+                />
+              </div>
 
               {displaySelectedGoal ? (
                 <Space direction="vertical" size={14} style={{ width: '100%' }}>
@@ -682,7 +972,7 @@ export function LeaderWorkbenchPage() {
                                       {getCompletionStateLabel(keyResult.completionState)}
                                     </Tag>
                                   ) : null}
-                                  {SHOW_WORKBENCH_HINT_TAGS ? (
+                                  {SHOW_WORKBENCH_HINT_TAGS && (!displaySelectedGoal.isTemplateGoal || keyResult.hasProofs) ? (
                                     <Tag color={keyResult.isProofMissing ? 'gold' : 'blue'}>
                                       {keyResult.isProofMissing ? T.proofMissing : T.proofReady}
                                     </Tag>
@@ -782,20 +1072,21 @@ export function LeaderWorkbenchPage() {
         </Col>
       </Row>
 
-      <Modal
-        open={isBulkOpen}
-        title={BATCH_UI.title}
-        okText={T.batchSave}
-        cancelText={T.cancel}
-        onOk={submitBulkScore}
-        okButtonProps={{ loading: bulkMutation.isPending, disabled: isBulkSubmitDisabled }}
-        onCancel={() => {
-          setIsBulkOpen(false);
-          resetBulk();
-        }}
-        destroyOnHidden
-        width={860}
-      >
+      {isObjectiveWorkbench ? (
+        <Modal
+          open={isBulkOpen}
+          title={BATCH_UI.title}
+          okText={T.batchSave}
+          cancelText={T.cancel}
+          onOk={submitBulkScore}
+          okButtonProps={{ loading: bulkMutation.isPending, disabled: isBulkSubmitDisabled }}
+          onCancel={() => {
+            setIsBulkOpen(false);
+            resetBulk();
+          }}
+          destroyOnHidden
+          width={860}
+        >
         <Space direction="vertical" size={18} style={{ width: '100%' }}>
           <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
             {BATCH_UI.desc}
@@ -990,9 +1281,11 @@ export function LeaderWorkbenchPage() {
                         {entry.isTemplateGoal ? <Tag color="gold">{T.templateGoal}</Tag> : null}
                         <Tag>{`${entry.points} 分`}</Tag>
                         <Tag color="blue">{getScoreTypeLabel(entry.scoreType)}</Tag>
-                        <Tag color={entry.isProofMissing ? 'gold' : 'blue'}>
-                          {entry.isProofMissing ? T.proofMissing : T.proofReady}
-                        </Tag>
+                        {!entry.isTemplateGoal || entry.hasProofs ? (
+                          <Tag color={entry.isProofMissing ? 'gold' : 'blue'}>
+                            {entry.isProofMissing ? T.proofMissing : T.proofReady}
+                          </Tag>
+                        ) : null}
                         <Tag icon={<FileTextOutlined />}>{`${entry.proofCount} ${T.goalProofTag}`}</Tag>
                         <Tag>{`${T.currentScore} ${formatNullableScore(entry.reviewScore)}`}</Tag>
                       </Space>
@@ -1039,7 +1332,8 @@ export function LeaderWorkbenchPage() {
             </Checkbox>
           ) : null}
         </Space>
-      </Modal>
+        </Modal>
+      ) : null}
     </Space>
   );
 
@@ -1152,7 +1446,7 @@ export function LeaderWorkbenchPage() {
   }
 
   function resolveProofPreviewUrl(proof: LeaderKeyResult['proofs'][number]) {
-    return resolveApiUrl(proof.previewUrl ?? proof.fileUrl);
+    return resolveAppAwareUrl(proof.previewUrl ?? proof.fileUrl);
   }
 
   function resolveProofDownloadUrl(proof: LeaderKeyResult['proofs'][number]) {

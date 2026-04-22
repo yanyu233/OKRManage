@@ -15,7 +15,8 @@
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:reset": "prisma migrate reset",
     "prisma:seed": "tsx prisma/seed.ts",
-    "fixture:export:current-demo": "tsx scripts/export-current-admin-bootstrap-fixture.ts"
+    "fixture:export:current-demo": "tsx scripts/export-current-admin-bootstrap-fixture.ts",
+    "personnel:rebuild": "tsx scripts/rebuild-personnel-from-workbook.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",

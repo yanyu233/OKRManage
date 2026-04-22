@@ -37,6 +37,8 @@ const TEXT = {
   loading: '正在加载全部OKR...',
   loadFailedTitle: '加载失败',
   loadFailedDescription: '全部OKR页面加载失败，请稍后重试。',
+  scoresLocked:
+    '当前季度主观项与客观项评分尚未全部完成，季度分数与评分明细暂不展示；系统管理员仍可查看。',
   refresh: '刷新',
   searchPlaceholder: '搜索员工、目标或关键结果',
   sectionFilter: '全部科室',
@@ -117,7 +119,9 @@ export function AllOkrPage() {
     setExpandedEmployeeIds([]);
   }, [year, quarter]);
 
-  const employees = okrQuery.data?.employees ?? [];
+  const payload = okrQuery.data;
+  const scoresVisible = payload?.scoresVisible ?? true;
+  const employees = payload?.employees ?? [];
 
   const sectionOptions = useMemo(
     () => [
@@ -375,6 +379,8 @@ export function AllOkrPage() {
         </Space>
       </Card>
 
+      {!scoresVisible ? <Alert type="info" showIcon message={TEXT.scoresLocked} /> : null}
+
       <div className="all-okr-summary-grid">
         <Card className="all-okr-summary-card" variant="borderless">
           <Statistic title={TEXT.employeeCount} value={summary.employeeCount} />
@@ -428,7 +434,7 @@ export function AllOkrPage() {
                     <div className="all-okr-employee-card__meta">
                       <Space wrap size={[6, 6]} className="all-okr-chip-row">
                         <Tag color={getEmployeeStatusColor(employee.status)}>{getEmployeeStatusLabel(employee.status)}</Tag>
-                        <Tag>{`${TEXT.quarterScore} ${formatNullableScore(employee.quarterScore)}`}</Tag>
+                        {scoresVisible ? <Tag>{`${TEXT.quarterScore} ${formatNullableScore(employee.quarterScore)}`}</Tag> : null}
                         <Tag>{`${employee.goalCount} ${TEXT.goalCountTag}`}</Tag>
                         <Tag>{`${employee.keyResultCount} ${TEXT.keyResultCountTag}`}</Tag>
                         <Tag>{`${TEXT.completedCountTag} ${employee.completedKeyResultCount}`}</Tag>
@@ -472,7 +478,7 @@ export function AllOkrPage() {
                                 {goal.missingProofKeyResultCount > 0 ? (
                                   <Tag color="gold">{`待补材料 ${goal.missingProofKeyResultCount}`}</Tag>
                                 ) : null}
-                                <Tag>{`${TEXT.currentScore} ${formatNullableScore(goal.currentScore)}`}</Tag>
+                                {scoresVisible ? <Tag>{`${TEXT.currentScore} ${formatNullableScore(goal.currentScore)}`}</Tag> : null}
                               </Space>
                             </div>
 
@@ -485,10 +491,10 @@ export function AllOkrPage() {
                                     </Typography.Text>
                                     {keyResult.description ? (
                                       <Typography.Text type="secondary" className="all-okr-kr-row__description">
-                                        {keyResult.description}
-                                      </Typography.Text>
-                                    ) : null}
-                                    {keyResult.reviewComment ? (
+                                    {keyResult.description}
+                                  </Typography.Text>
+                                ) : null}
+                                    {scoresVisible && keyResult.reviewComment ? (
                                       <Typography.Text type="secondary" className="all-okr-kr-row__description">
                                         {`评分备注：${keyResult.reviewComment}`}
                                       </Typography.Text>
@@ -503,11 +509,15 @@ export function AllOkrPage() {
                                     <Tag color={getCompletionStateColor(keyResult.completionState)}>
                                       {getCompletionStateLabel(keyResult.completionState)}
                                     </Tag>
-                                    <Tag color={keyResult.isProofMissing ? 'gold' : 'blue'}>
-                                      {keyResult.isProofMissing ? TEXT.proofMissing : TEXT.proofReady}
-                                    </Tag>
+                                    {!goal.isTemplateGoal || keyResult.hasProofs ? (
+                                      <Tag color={keyResult.isProofMissing ? 'gold' : 'blue'}>
+                                        {keyResult.isProofMissing ? TEXT.proofMissing : TEXT.proofReady}
+                                      </Tag>
+                                    ) : null}
                                     <Tag>{`${keyResult.proofCount} ${TEXT.proofCountTag}`}</Tag>
-                                    <Tag>{`${TEXT.reviewScore} ${formatNullableScore(keyResult.reviewScore)}`}</Tag>
+                                    {scoresVisible ? (
+                                      <Tag>{`${TEXT.reviewScore} ${formatNullableScore(keyResult.reviewScore)}`}</Tag>
+                                    ) : null}
                                     {keyResult.latestProofUploadedAt ? (
                                       <Tag>{`${TEXT.latestProof} ${formatDateTime(keyResult.latestProofUploadedAt)}`}</Tag>
                                     ) : null}

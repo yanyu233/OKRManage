@@ -65,20 +65,27 @@ export function isQuarterPointLimitError(error: unknown) {
   return error instanceof ApiError && error.message === 'quarter total points cannot exceed 100';
 }
 
-export function isEmployeeKeyResultActionRequired(keyResult: Pick<EmployeeKeyResult, 'completionState' | 'isProofMissing'>) {
-  return keyResult.isProofMissing || keyResult.completionState !== 'completed';
+export function isEmployeeKeyResultActionRequired(
+  keyResult: Pick<EmployeeKeyResult, 'completionState' | 'isProofMissing'>,
+  options?: { suppressProofMissing?: boolean }
+) {
+  return (!options?.suppressProofMissing && keyResult.isProofMissing) || keyResult.completionState !== 'completed';
 }
 
 export function isEmployeeGoalActionRequired(
-  goal: Pick<EmployeeOkrResponse['goals'][number], 'completedKeyResultCount' | 'keyResultCount' | 'missingProofKeyResultCount'>
+  goal: Pick<EmployeeOkrResponse['goals'][number], 'completedKeyResultCount' | 'keyResultCount' | 'missingProofKeyResultCount' | 'isTemplateGoal'>
 ) {
-  return goal.missingProofKeyResultCount > 0 || goal.completedKeyResultCount < goal.keyResultCount;
+  return (!goal.isTemplateGoal && goal.missingProofKeyResultCount > 0) || goal.completedKeyResultCount < goal.keyResultCount;
 }
 
-export function filterEmployeeGoalKeyResults(keyResults: EmployeeGoalDetail['keyResults'], onlyActionRequired: boolean) {
+export function filterEmployeeGoalKeyResults(
+  keyResults: EmployeeGoalDetail['keyResults'],
+  onlyActionRequired: boolean,
+  options?: { suppressProofMissing?: boolean }
+) {
   if (!onlyActionRequired) {
     return keyResults;
   }
 
-  return keyResults.filter((keyResult) => isEmployeeKeyResultActionRequired(keyResult));
+  return keyResults.filter((keyResult) => isEmployeeKeyResultActionRequired(keyResult, options));
 }

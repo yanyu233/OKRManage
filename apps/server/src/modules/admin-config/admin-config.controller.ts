@@ -25,8 +25,13 @@ import { AuthUser } from '../../shared/types/auth-user';
 import { DomainValidationError } from '../../shared/errors/domain-validation.error';
 import { AdminConfigService } from './admin-config.service';
 import { AdminConfigExcelService } from './admin-config-excel.service';
+import { AdminHistoricalPerformanceExcelService } from './admin-historical-performance-excel.service';
 import { CreateReviewGroupDto } from './dto/create-review-group.dto';
-import { GoalStatusTransitionDto } from './dto/goal-status-control.dto';
+import {
+  GoalStatusTransitionDto,
+  SaveQuarterParticipationExclusionsDto
+} from './dto/goal-status-control.dto';
+import { HistoricalPerformanceQueryDto, SaveHistoricalPerformanceDto } from './dto/historical-performance.dto';
 import { SaveOrgBootstrapDto } from './dto/save-org-bootstrap.dto';
 import { UpdateReviewGroupDto } from './dto/update-review-group.dto';
 import { UpdateReviewGroupQuotasDto } from './dto/update-review-group-quotas.dto';
@@ -36,6 +41,7 @@ export class AdminConfigController {
   constructor(
     private readonly adminConfigService: AdminConfigService,
     private readonly adminConfigExcelService: AdminConfigExcelService,
+    private readonly adminHistoricalPerformanceExcelService: AdminHistoricalPerformanceExcelService,
     private readonly sessionService: SessionService
   ) {}
 
@@ -43,6 +49,72 @@ export class AdminConfigController {
   async getBootstrap(@Req() request: Request) {
     await this.requireSystemAdmin(request);
     return this.adminConfigService.getBootstrap();
+  }
+
+  @Get('historical-performance')
+  async getHistoricalPerformance(@Req() request: Request, @Query() query: HistoricalPerformanceQueryDto) {
+    await this.requireSystemAdmin(request);
+    return this.adminConfigService.getHistoricalPerformance(query.year);
+  }
+
+  @Get('historical-performance/excel')
+  async exportHistoricalPerformanceExcel(
+    @Req() request: Request,
+    @Query() query: HistoricalPerformanceQueryDto,
+    @Res({ passthrough: true }) response: Response
+  ) {
+    await this.requireSystemAdmin(request);
+    const buffer = await this.adminHistoricalPerformanceExcelService.exportWorkbook(query.year);
+
+    response.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    response.setHeader(
+      'Content-Disposition',
+      `attachment; filename="historical-performance-${query.year}.xlsx"; filename*=UTF-8''${encodeURIComponent(
+        `历史绩效补录-${query.year}.xlsx`
+      )}`
+    );
+
+    return new StreamableFile(buffer);
+  }
+
+  @Post('historical-performance/excel')
+  @HttpCode(200)
+  @UseInterceptors(FileInterceptor('file'))
+  async importHistoricalPerformanceExcel(
+    @Req() request: Request,
+    @Query() query: HistoricalPerformanceQueryDto,
+    @UploadedFile() file: { buffer?: Buffer } | undefined
+  ) {
+    const actor = await this.requireSystemAdmin(request);
+
+    if (!file?.buffer?.length) {
+      throw new BadRequestException('excel file is required');
+    }
+
+    try {
+      return await this.adminHistoricalPerformanceExcelService.importWorkbook(file.buffer, query.year, actor);
+    } catch (error) {
+      this.rethrowDomainError(error);
+    }
+  }
+
+  @Put('historical-performance')
+  async saveHistoricalPerformance(@Req() request: Request, @Body() payload: SaveHistoricalPerformanceDto) {
+    const actor = await this.requireSystemAdmin(request);
+
+    try {
+      return await this.adminConfigService.saveHistoricalPerformance(
+        payload.year,
+        payload.items.map((item) => ({
+          userId: item.userId,
+          quarter: item.quarter,
+          score: item.score ?? null
+        })),
+        actor
+      );
+    } catch (error) {
+      this.rethrowDomainError(error);
+    }
   }
 
   @Get('org/bootstrap/excel')
@@ -102,6 +174,30 @@ export class AdminConfigController {
   ) {
     await this.requireSystemAdmin(request);
     return this.adminConfigService.getGoalStatusControls(year, quarter, userId);
+  }
+
+  @Get('quarter-participation-exclusions')
+  async getQuarterParticipationExclusions(
+    @Req() request: Request,
+    @Query('year', ParseIntPipe) year: number,
+    @Query('quarter', ParseIntPipe) quarter: number
+  ) {
+    await this.requireSystemAdmin(request);
+    return this.adminConfigService.getQuarterParticipationExclusions(year, quarter);
+  }
+
+  @Put('quarter-participation-exclusions')
+  async saveQuarterParticipationExclusions(
+    @Req() request: Request,
+    @Body() payload: SaveQuarterParticipationExclusionsDto
+  ) {
+    const actor = await this.requireSystemAdmin(request);
+
+    try {
+      return await this.adminConfigService.saveQuarterParticipationExclusions(payload, actor);
+    } catch (error) {
+      this.rethrowDomainError(error);
+    }
   }
 
   @Post('goal-status-control/transition')
