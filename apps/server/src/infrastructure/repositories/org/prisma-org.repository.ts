@@ -476,6 +476,14 @@ export class PrismaOrgRepository implements OrgRepository {
         }
       }
 
+      await this.syncImportedTemplateGoals(
+        tx,
+        input.goalTemplates.map((template, index) => ({
+          ...template,
+          id: persistedTemplateIds[index]
+        }))
+      );
+
       if (persistedTemplateIds.length > 0) {
         await tx.goalTemplate.updateMany({
           where: {
@@ -664,13 +672,10 @@ export class PrismaOrgRepository implements OrgRepository {
         }
 
         const enabledAssignments = enabledRoleAssignmentsByUserId.get(user.id) ?? [];
-        const hasEmployeeRole = enabledAssignments.some((assignment) => assignment.roleCode === 'employee');
-        const isDebugSystemAdmin =
-          user.employeeNo?.trim().toUpperCase().startsWith('DEBUG-') &&
-          enabledAssignments.length > 0 &&
-          enabledAssignments.every((assignment) => assignment.roleCode === 'system-admin');
-
-        if (hasEmployeeRole || isDebugSystemAdmin) {
+        // Keep the legacy "new active user defaults to employee" behavior only when
+        // the user has no enabled roles at all. A pure leader account should be able
+        // to exist without the employee role and must not be auto-restored here.
+        if (enabledAssignments.length > 0) {
           continue;
         }
 
@@ -754,6 +759,73 @@ export class PrismaOrgRepository implements OrgRepository {
         });
       }
     });
+  }
+
+  private async syncImportedTemplateGoals(
+    tx: Prisma.TransactionClient,
+    templates: Array<
+      AdminOrgBootstrapInput['goalTemplates'][number] & {
+        id: string;
+      }
+    >
+  ): Promise<void> {
+    if (templates.length === 0) {
+      return;
+    }
+
+    for (const template of templates) {
+      const importedGoals = await tx.goal.findMany({
+        where: {
+          importedTemplates: {
+            some: {
+              goalTemplateId: template.id
+            }
+          }
+        },
+        include: {
+          keyResults: true
+        }
+      });
+
+      if (importedGoals.length === 0) {
+        continue;
+      }
+
+      const templateKeyResultsByCode = new Map(template.keyResults.map((keyResult) => [keyResult.code, keyResult]));
+
+      for (const goal of importedGoals) {
+        const nextTotalPoints = goal.keyResults.reduce((sum, keyResult) => {
+          const syncedTemplateKeyResult = templateKeyResultsByCode.get(keyResult.code);
+          return sum + (syncedTemplateKeyResult?.points ?? keyResult.points);
+        }, 0);
+
+        await tx.goal.update({
+          where: { id: goal.id },
+          data: {
+            name: template.name,
+            description: template.description,
+            totalPoints: nextTotalPoints
+          }
+        });
+
+        for (const keyResult of goal.keyResults) {
+          const syncedTemplateKeyResult = templateKeyResultsByCode.get(keyResult.code);
+          if (!syncedTemplateKeyResult) {
+            continue;
+          }
+
+          await tx.keyResult.update({
+            where: { id: keyResult.id },
+            data: {
+              name: syncedTemplateKeyResult.name,
+              description: syncedTemplateKeyResult.description,
+              points: syncedTemplateKeyResult.points,
+              scoreType: syncedTemplateKeyResult.scoreType ?? 'subjective'
+            }
+          });
+        }
+      }
+    }
   }
 
   private async resolvePasswordHash(account: AdminLocalAccountInput, existingPasswordHash?: string): Promise<string> {

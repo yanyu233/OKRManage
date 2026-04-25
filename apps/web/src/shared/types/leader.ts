@@ -186,6 +186,11 @@ export type BulkLeaderKrScoreInput = {
   employeeIds?: string[];
   goalIds?: string[];
   keyResultIds?: string[];
+  entries?: Array<{
+    keyResultId: string;
+    score: number;
+    comment?: string;
+  }>;
   score?: number;
   comment?: string;
   overwriteExisting?: boolean;

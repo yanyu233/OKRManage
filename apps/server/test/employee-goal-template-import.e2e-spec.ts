@@ -82,6 +82,94 @@ describe('Employee goal template import', () => {
     );
   });
 
+  it('syncs imported template key result score types after admin updates the template', async () => {
+    const admin = await loginAsSysadmin(app);
+    const bootstrap = await admin.get('/api/admin/org/bootstrap').expect(200);
+    const departmentId = bootstrap.body.departments[0].id as string;
+
+    await admin
+      .put('/api/admin/org/bootstrap')
+      .send({
+        ...bootstrap.body,
+        goalTemplates: [
+          ...bootstrap.body.goalTemplates,
+          {
+            id: 'template-sync-score-type',
+            departmentId,
+            name: '模板评分类型同步校验',
+            description: '验证模板更新后已导入目标也会同步评分类型',
+            isActive: true,
+            keyResults: [
+              {
+                id: 'template-sync-score-type-kr-1',
+                code: 'KR1',
+                name: '创新能力',
+                description: null,
+                points: 20,
+                scoreType: 'subjective'
+              }
+            ]
+          }
+        ]
+      })
+      .expect(200);
+
+    const employee = await loginAsEmployee(app);
+    const imported = await employee
+      .post('/api/employee/goal-templates/import')
+      .send({
+        year: 2028,
+        quarter: 4,
+        templateIds: ['template-sync-score-type']
+      })
+      .expect(201);
+
+    const importedGoal = imported.body.importedGoals[0];
+    const beforeSync = await employee.get(`/api/employee/goals/${importedGoal.id}`).expect(200);
+    expect(beforeSync.body.keyResults).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'KR1',
+          scoreType: 'subjective'
+        })
+      ])
+    );
+
+    const refreshedBootstrap = await admin.get('/api/admin/org/bootstrap').expect(200);
+
+    await admin
+      .put('/api/admin/org/bootstrap')
+      .send({
+        ...refreshedBootstrap.body,
+        goalTemplates: refreshedBootstrap.body.goalTemplates.map((template: { id: string; keyResults: Array<{ id: string }> }) =>
+          template.id === 'template-sync-score-type'
+            ? {
+                ...template,
+                keyResults: template.keyResults.map((keyResult: { id: string }) =>
+                  keyResult.id === 'template-sync-score-type-kr-1'
+                    ? {
+                        ...keyResult,
+                        scoreType: 'objective'
+                      }
+                    : keyResult
+                )
+              }
+            : template
+        )
+      })
+      .expect(200);
+
+    const afterSync = await employee.get(`/api/employee/goals/${importedGoal.id}`).expect(200);
+    expect(afterSync.body.keyResults).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'KR1',
+          scoreType: 'objective'
+        })
+      ])
+    );
+  });
+
   it('rejects template import when quarter total points would exceed 100', async () => {
     const admin = await loginAsSysadmin(app);
     const bootstrap = await admin.get('/api/admin/org/bootstrap').expect(200);

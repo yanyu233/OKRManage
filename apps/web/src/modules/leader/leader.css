@@ -441,6 +441,53 @@
   gap: 16px;
 }
 
+.leader-bulk-filter-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+}
+
+.leader-bulk-filter-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 32px;
+}
+
+.leader-bulk-filter-panel__title.ant-typography {
+  margin-bottom: 0;
+  line-height: 1.4;
+}
+
+.leader-bulk-filter-panel__toggle {
+  flex: 0 0 auto;
+  min-height: 24px;
+  margin-inline-end: 0;
+}
+
+.leader-bulk-filter-panel__toggle .ant-checkbox + span {
+  padding-inline-start: 8px;
+  color: rgba(71, 85, 105, 0.96);
+  font-size: 13px;
+}
+
+.leader-bulk-filter-panel__control {
+  width: 100%;
+}
+
+.leader-bulk-filter-panel__helper.ant-typography {
+  min-height: 44px;
+  margin-bottom: 0;
+  color: rgba(100, 116, 139, 0.92);
+  line-height: 1.6;
+}
+
+.leader-bulk-filter-panel__helper--placeholder {
+  min-height: 44px;
+}
+
 .leader-bulk-kr-preview {
   display: grid;
   gap: 12px;
@@ -499,6 +546,116 @@
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.82);
   border: 1px solid rgba(245, 158, 11, 0.16);
+}
+
+.leader-subjective-batch {
+  display: grid;
+  gap: 14px;
+}
+
+.leader-subjective-batch__table-wrap {
+  overflow: auto;
+  border: 1px solid rgba(226, 232, 240, 0.92);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.92), rgba(255, 255, 255, 0.98));
+}
+
+.leader-subjective-batch__table {
+  width: 100%;
+  min-width: 880px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.leader-subjective-batch__table th,
+.leader-subjective-batch__table td {
+  padding: 12px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.82);
+  border-right: 1px solid rgba(226, 232, 240, 0.72);
+  vertical-align: top;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.leader-subjective-batch__table th:last-child,
+.leader-subjective-batch__table td:last-child {
+  border-right: none;
+}
+
+.leader-subjective-batch__table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: rgba(239, 246, 255, 0.98);
+}
+
+.leader-subjective-batch__sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  min-width: 172px;
+  background: rgba(248, 250, 252, 0.98) !important;
+  box-shadow: 8px 0 18px -18px rgba(15, 23, 42, 0.48);
+}
+
+.leader-subjective-batch__column-head {
+  display: grid;
+  gap: 4px;
+  min-width: 188px;
+  align-items: start;
+}
+
+.leader-subjective-batch__column-head .ant-typography,
+.leader-subjective-batch__employee .ant-typography,
+.leader-subjective-batch__score-cell .ant-typography {
+  margin-bottom: 0;
+}
+
+.leader-subjective-batch__column-average {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 8px;
+  margin-top: 2px;
+  border: 1px solid rgba(147, 197, 253, 0.54);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.leader-subjective-batch__column-average .ant-typography {
+  margin-bottom: 0;
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.leader-subjective-batch__column-average .ant-typography:first-child {
+  color: #1d4ed8;
+}
+
+.leader-subjective-batch__column-average--danger {
+  border-color: rgba(248, 113, 113, 0.56);
+  background: rgba(254, 242, 242, 0.98);
+}
+
+.leader-subjective-batch__column-average--danger .ant-typography:first-child {
+  color: #b91c1c;
+}
+
+.leader-subjective-batch__employee {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.leader-subjective-batch__score-cell {
+  display: grid;
+  gap: 6px;
+}
+
+.leader-subjective-batch__cell-meta.ant-typography {
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .leader-knowledge-list {
@@ -720,6 +877,16 @@
     grid-template-columns: 1fr;
   }
 
+  .leader-bulk-filter-panel__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .leader-bulk-filter-panel__helper.ant-typography,
+  .leader-bulk-filter-panel__helper--placeholder {
+    min-height: 0;
+  }
+
   .leader-bulk-kr-row__tags {
     justify-content: flex-start;
   }
@@ -730,6 +897,15 @@
 
   .leader-side-card__filters {
     grid-template-columns: 1fr;
+  }
+
+  .leader-subjective-batch__table {
+    min-width: 720px;
+  }
+
+  .leader-subjective-batch__table th,
+  .leader-subjective-batch__table td {
+    padding: 10px;
   }
 
   .leader-toolbar-card .ant-card-body,

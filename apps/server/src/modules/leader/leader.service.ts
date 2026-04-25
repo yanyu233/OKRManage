@@ -65,6 +65,13 @@ export class LeaderService {
 
   async batchScore(actor: AuthUser, input: LeaderBulkScoreInput) {
     this.validateQuarter(input.year, input.quarter);
+    if (input.entries?.length) {
+      for (const entry of input.entries) {
+        if (!Number.isFinite(entry.score) || entry.score < 0) {
+          throw new DomainValidationError('invalid bulk score');
+        }
+      }
+    }
     if (input.score !== null && input.score !== undefined) {
       if (!Number.isFinite(input.score) || input.score < 0) {
         throw new DomainValidationError('invalid bulk score');

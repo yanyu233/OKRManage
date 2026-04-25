@@ -103,6 +103,12 @@ export class LeaderController {
         employeeIds: payload.employeeIds ?? [],
         goalIds: payload.goalIds ?? [],
         keyResultIds: payload.keyResultIds ?? [],
+        entries:
+          payload.entries?.map((entry) => ({
+            keyResultId: entry.keyResultId,
+            score: entry.score,
+            comment: entry.comment ?? null
+          })) ?? [],
         score: payload.score ?? null,
         comment: payload.comment ?? null,
         overwriteExisting: payload.overwriteExisting ?? false,

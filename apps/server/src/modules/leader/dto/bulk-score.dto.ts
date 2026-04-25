@@ -1,4 +1,28 @@
-import { IsArray, IsBoolean, IsInt, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsArray,
+  IsBoolean,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+  ValidateNested
+} from 'class-validator';
+
+class BulkScoreEntryDto {
+  @IsString()
+  keyResultId!: string;
+
+  @IsNumber()
+  @Min(0)
+  score!: number;
+
+  @IsOptional()
+  @IsString()
+  comment?: string;
+}
 
 export class BulkScoreDto {
   @IsInt()
@@ -33,6 +57,12 @@ export class BulkScoreDto {
   @IsArray()
   @IsString({ each: true })
   keyResultIds?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => BulkScoreEntryDto)
+  entries?: BulkScoreEntryDto[];
 
   @IsOptional()
   @IsNumber()

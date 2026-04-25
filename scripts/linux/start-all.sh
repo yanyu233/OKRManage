@@ -85,8 +85,34 @@ ensure_server_env() {
   warn "Server env file not found: $SERVER_ENV_FILE"
 }
 
+load_server_env() {
+  if [[ ! -f "$SERVER_ENV_FILE" ]]; then
+    return
+  fi
+
+  set -a
+  # shellcheck disable=SC1090
+  source "$SERVER_ENV_FILE"
+  set +a
+}
+
+resolve_web_build_api_base_url() {
+  if [[ -n "${VITE_API_BASE_URL:-}" ]]; then
+    printf '%s\n' "${VITE_API_BASE_URL%/}"
+    return
+  fi
+
+  if [[ -n "${APP_BASE_URL:-}" ]]; then
+    printf '%s/api\n' "${APP_BASE_URL%/}"
+    return
+  fi
+
+  printf '%s/api\n' "${SERVER_URL%/}"
+}
+
 prepare_runtime() {
   ensure_server_env
+  load_server_env
   start_mysql_service_best_effort
 
   if [[ "${OKR_PRISMA_GENERATE_BEFORE_START:-1}" == '1' ]]; then
@@ -106,16 +132,26 @@ prepare_runtime() {
   fi
 
   if [[ "${OKR_BUILD_BEFORE_START:-1}" == '1' ]]; then
+    local web_build_api_base_url=''
+    web_build_api_base_url="$(resolve_web_build_api_base_url)"
+
     log 'Building server'
     (
       cd "$SERVER_DIR"
       npm run build
     )
 
-    log 'Building web'
+    case "$web_build_api_base_url" in
+      http://127.0.0.1/*|http://127.0.0.1:*|http://localhost/*|http://localhost:*|https://127.0.0.1/*|https://127.0.0.1:*|https://localhost/*|https://localhost:*)
+        warn "Web build API base URL points to localhost: $web_build_api_base_url"
+        warn 'This only works when the browser is on the same host. Set APP_BASE_URL or VITE_API_BASE_URL to a server-reachable address for remote users.'
+        ;;
+    esac
+
+    log "Building web with VITE_API_BASE_URL=${web_build_api_base_url}"
     (
       cd "$WEB_DIR"
-      VITE_API_BASE_URL="${VITE_API_BASE_URL:-${SERVER_URL}/api}" npm run build
+      VITE_API_BASE_URL="$web_build_api_base_url" npm run build
     )
   fi
 }

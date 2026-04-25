@@ -432,6 +432,7 @@ DEBUG_SYSADMIN_LOGIN=sysadmin.local
 DEBUG_SYSADMIN_PASSWORD=请替换为复杂密码
 DEBUG_SYSADMIN_NAME=系统管理员
 LIBREOFFICE_EXECUTABLE_PATH=/usr/bin/soffice
+PROOF_PDF_PREVIEW_TIMEOUT_MS=120000
 ```
 
 如果企业微信认证已经准备好，再补齐：
@@ -446,7 +447,10 @@ WECOM_REDIRECT_URI=http://你的域名/api/auth/wecom/callback
 说明：
 
 - `AUTH_MODE=wecom-preferred` 表示优先企业微信认证，但本地账号兜底登录仍可保留
+- `APP_BASE_URL` 最好填写成“浏览器可直接访问到后端”的地址；`start-all.sh` 现在会默认按 `${APP_BASE_URL}/api` 构建前端接口地址
+- 如果你是先用 `4173` 做临时验收，且接口想指到别的域名或端口，可在启动前额外导出 `VITE_API_BASE_URL`
 - `LIBREOFFICE_EXECUTABLE_PATH` 在 Linux 上建议明确写成 `/usr/bin/soffice`
+- `PROOF_PDF_PREVIEW_TIMEOUT_MS` 可按大文档预览耗时酌情调大，默认 `120000`
 - `KKFILEVIEW_PUBLIC_BASE_URL` 建议走 Nginx 的 `/preview`
 - `KKFILEVIEW_SOURCE_BASE_URL` 通常保持后端本地地址 `http://127.0.0.1:3000`
 
@@ -599,7 +603,7 @@ sudo systemctl reload nginx
 ### 9.1 后端健康检查
 
 ```bash
-curl http://127.0.0.1:3000/health
+curl http://127.0.0.1:3000/api/health
 ```
 
 预期至少返回：
@@ -610,7 +614,7 @@ curl http://127.0.0.1:3000/health
 ### 9.2 预览能力检查
 
 ```bash
-curl http://127.0.0.1:3000/health/preview
+curl http://127.0.0.1:3000/api/health/preview
 ```
 
 重点看以下字段：
@@ -813,7 +817,7 @@ tail -n 100 /srv/okr/vendor/kkfileview/current/log/kkFileView.log
 ```bash
 which soffice
 soffice --version
-curl http://127.0.0.1:3000/health/preview
+curl http://127.0.0.1:3000/api/health/preview
 ```
 
 如果 `which soffice` 找不到，说明 `LibreOffice` 没装好。  
@@ -836,7 +840,7 @@ LIBREOFFICE_EXECUTABLE_PATH=/usr/bin/soffice
 
 按顺序检查：
 
-1. `curl http://127.0.0.1:3000/health/preview`
+1. `curl http://127.0.0.1:3000/api/health/preview`
 2. `kkFileView` 日志
 3. `KKFILEVIEW_PUBLIC_BASE_URL` 是否与实际访问域名一致
 4. `KKFILEVIEW_SOURCE_BASE_URL` 是否仍指向后端可访问地址
@@ -851,7 +855,7 @@ LIBREOFFICE_EXECUTABLE_PATH=/usr/bin/soffice
   - 也负责当前项目里一部分 Office 文件的在线预览链路
 - `LibreOffice`
   - 在 Linux 下主要承担 Office 文档转 PDF 的回退能力
-  - 当前后端健康检查 `GET /health/preview` 也会检查 `soffice` 是否可用
+- 当前后端健康检查 `GET /api/health/preview` 也会检查 `soffice` 是否可用
   - 非 Excel Office 文件需要走 PDF 回退时，会依赖它
 
 所以在 Linux 部署里，`LibreOffice` 不是可有可无的附加项，而是当前预览链路的重要组成部分。

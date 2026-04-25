@@ -1,16 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import {
   ALL_FILTER_VALUE,
+  buildBulkGoalFilterKey,
+  buildBulkTemplateKeyResultFilterKey,
   buildBulkScorePreview,
+  buildSubjectiveBulkAveragePreview,
+  buildSubjectiveBulkScoreMatrix,
   buildWorkbenchFilterOptions,
   createScoreDrafts,
+  createSubjectiveBulkScoreDrafts,
   filterBulkScoreEmployees,
   filterWorkbenchEmployees,
   filterWorkbenchGoals,
   filterWorkbenchKeyResults,
   resolveObjectiveBulkEmployeeIds,
+  resolveWorkbenchQueueFilters,
+  resolveWorkbenchQueueSelection,
   resolveWorkbenchSelection,
-  selectAllBulkEmployeeIds
+  selectAllBulkEmployeeIds,
+  selectAllBulkKeyResultIds
 } from '../src/modules/leader/leader-workbench.helpers';
 import type { LeaderGoalDetail, LeaderWorkbenchResponse } from '../src/shared/types/leader';
 
@@ -59,6 +67,108 @@ describe('leader workbench helpers', () => {
     expect(result).toEqual({
       employeeId: 'u-1',
       goalId: 'g-1'
+    });
+  });
+
+  it('does not reuse a stale goal from a different selected employee', () => {
+    const result = resolveWorkbenchSelection(
+      {
+        year: 2026,
+        quarter: 1,
+        employees: [
+          {
+            id: 'u-1',
+            name: '张晨',
+            sectionId: 'sec-1',
+            sectionName: '平台产品科',
+            reviewGroupId: 'rg-1',
+            reviewGroupName: '信息化组',
+            canScore: true,
+            goalCount: 2,
+            keyResultCount: 6,
+            scoredKeyResultCount: 3,
+            missingProofKeyResultCount: 0,
+            proofCount: 2,
+            quarterScore: 63.6,
+            status: 'in-progress'
+          },
+          {
+            id: 'u-2',
+            name: '李雷',
+            sectionId: 'sec-2',
+            sectionName: '解决方案科',
+            reviewGroupId: 'rg-2',
+            reviewGroupName: '运营组',
+            canScore: false,
+            goalCount: 1,
+            keyResultCount: 2,
+            scoredKeyResultCount: 0,
+            missingProofKeyResultCount: 2,
+            proofCount: 0,
+            quarterScore: null,
+            status: 'pending'
+          }
+        ],
+        selectedEmployee: {
+          id: 'u-1',
+          name: '张晨',
+          sectionId: 'sec-1',
+          sectionName: '平台产品科',
+          reviewGroupId: 'rg-1',
+          reviewGroupName: '信息化组',
+          canScore: true,
+          goalCount: 2,
+          keyResultCount: 6,
+          scoredKeyResultCount: 3,
+          missingProofKeyResultCount: 0,
+          proofCount: 2,
+          quarterScore: 63.6,
+          status: 'in-progress'
+        },
+        goals: [
+          {
+            id: 'g-1',
+            code: 'O1',
+            name: '张晨 2026 年一季度 OKR',
+            description: null,
+            status: 'confirmed',
+            totalPoints: 80,
+            canScore: true,
+            isTemplateGoal: false,
+            keyResultCount: 3,
+            scoredKeyResultCount: 3,
+            missingProofKeyResultCount: 0,
+            proofCount: 2,
+            currentScore: 63.6
+          }
+        ],
+        selectedGoal: {
+          id: 'g-1',
+          code: 'O1',
+          name: '张晨 2026 年一季度 OKR',
+          description: null,
+          status: 'confirmed',
+          totalPoints: 80,
+          canScore: true,
+          isTemplateGoal: false,
+          keyResultCount: 3,
+          scoredKeyResultCount: 3,
+          missingProofKeyResultCount: 0,
+          proofCount: 2,
+          currentScore: 63.6,
+          keyResults: []
+        },
+        bulkCatalog: []
+      },
+      {
+        employeeId: 'u-2',
+        goalId: null
+      }
+    );
+
+    expect(result).toEqual({
+      employeeId: 'u-2',
+      goalId: null
     });
   });
 
@@ -273,6 +383,169 @@ describe('leader workbench helpers', () => {
     expect(selectAllBulkEmployeeIds(employees, { sectionId: 'sec-1' })).toEqual(['u-1', 'u-3']);
   });
 
+  it('clears an invalid review group when the section filter changes', () => {
+    const employees: LeaderWorkbenchResponse['employees'] = [
+      {
+        id: 'u-1',
+        name: '张晨',
+        sectionId: 'sec-1',
+        sectionName: '平台产品科',
+        reviewGroupId: 'rg-1',
+        reviewGroupName: '信息化组',
+        canScore: true,
+        goalCount: 2,
+        keyResultCount: 6,
+        scoredKeyResultCount: 3,
+        missingProofKeyResultCount: 0,
+        proofCount: 2,
+        quarterScore: 63.6,
+        status: 'in-progress'
+      },
+      {
+        id: 'u-2',
+        name: '李雷',
+        sectionId: 'sec-2',
+        sectionName: '解决方案科',
+        reviewGroupId: 'rg-2',
+        reviewGroupName: '运营组',
+        canScore: false,
+        goalCount: 1,
+        keyResultCount: 2,
+        scoredKeyResultCount: 0,
+        missingProofKeyResultCount: 2,
+        proofCount: 0,
+        quarterScore: null,
+        status: 'pending'
+      }
+    ];
+
+    expect(
+      resolveWorkbenchQueueFilters(employees, {
+        sectionId: 'sec-2',
+        reviewGroupId: 'rg-1'
+      })
+    ).toEqual({
+      sectionId: 'sec-2',
+      reviewGroupId: null
+    });
+  });
+
+  it('applies queue filters consistently across repeated section and review-group changes', () => {
+    const employees: LeaderWorkbenchResponse['employees'] = [
+      {
+        id: 'u-1',
+        name: '张晨',
+        sectionId: 'sec-1',
+        sectionName: '平台产品科',
+        reviewGroupId: 'rg-1',
+        reviewGroupName: '信息化组',
+        canScore: true,
+        goalCount: 2,
+        keyResultCount: 6,
+        scoredKeyResultCount: 3,
+        missingProofKeyResultCount: 0,
+        proofCount: 2,
+        quarterScore: 63.6,
+        status: 'in-progress'
+      },
+      {
+        id: 'u-2',
+        name: '李雷',
+        sectionId: 'sec-2',
+        sectionName: '解决方案科',
+        reviewGroupId: 'rg-2',
+        reviewGroupName: '运营组',
+        canScore: false,
+        goalCount: 1,
+        keyResultCount: 2,
+        scoredKeyResultCount: 0,
+        missingProofKeyResultCount: 2,
+        proofCount: 0,
+        quarterScore: null,
+        status: 'pending'
+      }
+    ];
+
+    const section1Filters = resolveWorkbenchQueueFilters(employees, {
+      sectionId: 'sec-1',
+      reviewGroupId: null
+    });
+    expect(filterBulkScoreEmployees(employees, section1Filters).map((employee) => employee.id)).toEqual(['u-1']);
+
+    const section2Filters = resolveWorkbenchQueueFilters(employees, {
+      sectionId: 'sec-2',
+      reviewGroupId: 'rg-1'
+    });
+    expect(section2Filters).toEqual({
+      sectionId: 'sec-2',
+      reviewGroupId: null
+    });
+    expect(filterBulkScoreEmployees(employees, section2Filters).map((employee) => employee.id)).toEqual(['u-2']);
+
+    const group1Filters = resolveWorkbenchQueueFilters(employees, {
+      sectionId: null,
+      reviewGroupId: 'rg-1'
+    });
+    expect(filterBulkScoreEmployees(employees, group1Filters).map((employee) => employee.id)).toEqual(['u-1']);
+
+    const group2Filters = resolveWorkbenchQueueFilters(employees, {
+      sectionId: null,
+      reviewGroupId: 'rg-2'
+    });
+    expect(filterBulkScoreEmployees(employees, group2Filters).map((employee) => employee.id)).toEqual(['u-2']);
+  });
+
+  it('switches to the first employee in the next review group immediately', () => {
+    const employees: LeaderWorkbenchResponse['employees'] = [
+      {
+        id: 'u-1',
+        name: '张晨',
+        sectionId: 'sec-1',
+        sectionName: '平台产品科',
+        reviewGroupId: 'rg-1',
+        reviewGroupName: '信息化组',
+        canScore: true,
+        goalCount: 2,
+        keyResultCount: 6,
+        scoredKeyResultCount: 3,
+        missingProofKeyResultCount: 0,
+        proofCount: 2,
+        quarterScore: 63.6,
+        status: 'in-progress'
+      },
+      {
+        id: 'u-2',
+        name: '王敏',
+        sectionId: 'sec-1',
+        sectionName: '平台产品科',
+        reviewGroupId: 'rg-2',
+        reviewGroupName: '运营组',
+        canScore: true,
+        goalCount: 1,
+        keyResultCount: 3,
+        scoredKeyResultCount: 0,
+        missingProofKeyResultCount: 1,
+        proofCount: 1,
+        quarterScore: 88.5,
+        status: 'pending'
+      }
+    ];
+
+    expect(
+      resolveWorkbenchQueueSelection(employees, {
+        sectionId: null,
+        reviewGroupId: 'rg-2',
+        keyword: '',
+        onlyWithProofs: false,
+        selectedEmployeeId: 'u-1'
+      })
+    ).toEqual({
+      sectionId: null,
+      reviewGroupId: 'rg-2',
+      employeeId: 'u-2'
+    });
+  });
+
   it('excludes readonly employees from bulk preview rows and goals', () => {
     const preview = buildBulkScorePreview(
       [
@@ -336,7 +609,7 @@ describe('leader workbench helpers', () => {
         reviewGroupId: null,
         employeeIds: ['u-1', 'u-2'],
         goalIds: [],
-        keyResultIds: [],
+        keyResultIds: null,
         excludeTemplateGoals: false
       }
     );
@@ -347,9 +620,571 @@ describe('leader workbench helpers', () => {
     expect(preview.readonlyRows).toBe(0);
   });
 
+  it('supports excluding a specific template key result from bulk preview and select-all', () => {
+    const catalog: LeaderWorkbenchResponse['bulkCatalog'] = [
+      {
+        id: 'u-1',
+        name: '张晨',
+        sectionId: 'sec-1',
+        sectionName: '平台产品科',
+        reviewGroupId: 'rg-1',
+        reviewGroupName: '信息化组',
+        canScore: true,
+        goals: [
+          {
+            id: 'g-1',
+            code: 'O1',
+            name: '平台模板目标',
+            isTemplateGoal: true,
+            keyResults: [
+              {
+                id: 'kr-template',
+                code: 'KR1',
+                name: '模板客观项',
+                points: 20,
+                scoreType: 'objective',
+                reviewScore: null,
+                proofCount: 0,
+                hasProofs: false,
+                isProofMissing: true
+              }
+            ]
+          },
+          {
+            id: 'g-2',
+            code: 'O2',
+            name: '张晨 2026 年一季度 OKR',
+            isTemplateGoal: false,
+            keyResults: [
+              {
+                id: 'kr-custom',
+                code: 'KR1',
+                name: '完成 6 个版本交付',
+                points: 35,
+                scoreType: 'objective',
+                reviewScore: 30.1,
+                proofCount: 2,
+                hasProofs: true,
+                isProofMissing: false
+              }
+            ]
+          }
+        ]
+      }
+    ];
+
+    const excludedTemplateKeyResultKeys = [
+      buildBulkTemplateKeyResultFilterKey(
+        { code: 'O1', name: '平台模板目标' },
+        { code: 'KR1', name: '模板客观项' }
+      )
+    ];
+
+    expect(
+      selectAllBulkKeyResultIds(catalog, {
+        sectionId: null,
+        reviewGroupId: null,
+        employeeIds: ['u-1'],
+        goalIds: [],
+        excludeTemplateGoals: false,
+        excludedTemplateKeyResultKeys
+      })
+    ).toEqual(['kr-custom']);
+
+    const preview = buildBulkScorePreview(catalog, {
+      sectionId: null,
+      reviewGroupId: null,
+      employeeIds: ['u-1'],
+      goalIds: [],
+      keyResultIds: ['kr-template', 'kr-custom'],
+      excludeTemplateGoals: false,
+      excludedTemplateKeyResultKeys
+    });
+
+    expect(preview.rows.map((row) => row.keyResultId)).toEqual(['kr-custom']);
+    expect(preview.goals.map((goal) => goal.goalId)).toEqual(['g-2']);
+  });
+
+  it('supports selecting a single template goal and its key results only', () => {
+    const catalog: LeaderWorkbenchResponse['bulkCatalog'] = [
+      {
+        id: 'u-1',
+        name: '张晨',
+        sectionId: 'sec-1',
+        sectionName: '平台产品科',
+        reviewGroupId: 'rg-1',
+        reviewGroupName: '信息化组',
+        canScore: true,
+        goals: [
+          {
+            id: 'g-template-1',
+            code: 'TO1',
+            name: '模板目标一',
+            isTemplateGoal: true,
+            keyResults: [
+              {
+                id: 'kr-template-1',
+                code: 'KR1',
+                name: '模板关键结果一',
+                points: 10,
+                scoreType: 'objective',
+                reviewScore: null,
+                proofCount: 0,
+                hasProofs: false,
+                isProofMissing: true
+              },
+              {
+                id: 'kr-template-2',
+                code: 'KR2',
+                name: '模板关键结果二',
+                points: 10,
+                scoreType: 'objective',
+                reviewScore: null,
+                proofCount: 0,
+                hasProofs: false,
+                isProofMissing: true
+              }
+            ]
+          },
+          {
+            id: 'g-template-2',
+            code: 'TO2',
+            name: '模板目标二',
+            isTemplateGoal: true,
+            keyResults: [
+              {
+                id: 'kr-template-3',
+                code: 'KR1',
+                name: '另一个模板关键结果',
+                points: 8,
+                scoreType: 'objective',
+                reviewScore: null,
+                proofCount: 0,
+                hasProofs: false,
+                isProofMissing: true
+              }
+            ]
+          },
+          {
+            id: 'g-custom',
+            code: 'O1',
+            name: '张晨自建目标',
+            isTemplateGoal: false,
+            keyResults: [
+              {
+                id: 'kr-custom',
+                code: 'KR1',
+                name: '自建关键结果',
+                points: 20,
+                scoreType: 'objective',
+                reviewScore: null,
+                proofCount: 1,
+                hasProofs: true,
+                isProofMissing: false
+              }
+            ]
+          }
+        ]
+      }
+    ];
+
+    const includedTemplateGoalKeys = [buildBulkGoalFilterKey({
+      code: 'TO1',
+      name: '模板目标一',
+      isTemplateGoal: true
+    })];
+    const includedTemplateKeyResultKeys = [
+      buildBulkTemplateKeyResultFilterKey(
+        { code: 'TO1', name: '模板目标一' },
+        { code: 'KR2', name: '模板关键结果二' }
+      )
+    ];
+
+    expect(
+      selectAllBulkKeyResultIds(catalog, {
+        sectionId: null,
+        reviewGroupId: null,
+        employeeIds: ['u-1'],
+        goalIds: [],
+        excludeTemplateGoals: false,
+        excludedTemplateGoalKeys: [],
+        excludedTemplateKeyResultKeys: [],
+        includedTemplateGoalKeys,
+        includedTemplateKeyResultKeys
+      })
+    ).toEqual(['kr-template-2']);
+
+    const preview = buildBulkScorePreview(catalog, {
+      sectionId: null,
+      reviewGroupId: null,
+      employeeIds: ['u-1'],
+      goalIds: [],
+      keyResultIds: ['kr-template-1', 'kr-template-2', 'kr-template-3', 'kr-custom'],
+      excludeTemplateGoals: false,
+      excludedTemplateGoalKeys: [],
+      excludedTemplateKeyResultKeys: [],
+      includedTemplateGoalKeys,
+      includedTemplateKeyResultKeys
+    });
+
+    expect(preview.rows.map((row) => row.keyResultId)).toEqual(['kr-template-2']);
+    expect(preview.goals.map((goal) => goal.goalId)).toEqual(['g-template-1']);
+  });
+
+  it('supports selecting multiple template goals and multiple template key results', () => {
+    const catalog: LeaderWorkbenchResponse['bulkCatalog'] = [
+      {
+        id: 'u-1',
+        name: '张晨',
+        sectionId: 'sec-1',
+        sectionName: '平台产品科',
+        reviewGroupId: 'rg-1',
+        reviewGroupName: '信息化组',
+        canScore: true,
+        goals: [
+          {
+            id: 'g-template-1',
+            code: 'TO1',
+            name: '模板目标一',
+            isTemplateGoal: true,
+            keyResults: [
+              {
+                id: 'kr-template-1',
+                code: 'KR1',
+                name: '模板关键结果一',
+                points: 10,
+                scoreType: 'objective',
+                reviewScore: null,
+                proofCount: 0,
+                hasProofs: false,
+                isProofMissing: true
+              },
+              {
+                id: 'kr-template-2',
+                code: 'KR2',
+                name: '模板关键结果二',
+                points: 15,
+                scoreType: 'objective',
+                reviewScore: null,
+                proofCount: 1,
+                hasProofs: true,
+                isProofMissing: false
+              }
+            ]
+          },
+          {
+            id: 'g-template-2',
+            code: 'TO2',
+            name: '模板目标二',
+            isTemplateGoal: true,
+            keyResults: [
+              {
+                id: 'kr-template-3',
+                code: 'KR1',
+                name: '另一个模板关键结果',
+                points: 8,
+                scoreType: 'objective',
+                reviewScore: null,
+                proofCount: 1,
+                hasProofs: true,
+                isProofMissing: false
+              }
+            ]
+          },
+          {
+            id: 'g-custom',
+            code: 'O1',
+            name: '张晨自建目标',
+            isTemplateGoal: false,
+            keyResults: [
+              {
+                id: 'kr-custom',
+                code: 'KR1',
+                name: '自建关键结果',
+                points: 20,
+                scoreType: 'objective',
+                reviewScore: null,
+                proofCount: 1,
+                hasProofs: true,
+                isProofMissing: false
+              }
+            ]
+          }
+        ]
+      }
+    ];
+
+    const includedTemplateGoalKeys = [
+      buildBulkGoalFilterKey({
+        code: 'TO1',
+        name: '模板目标一',
+        isTemplateGoal: true
+      }),
+      buildBulkGoalFilterKey({
+        code: 'TO2',
+        name: '模板目标二',
+        isTemplateGoal: true
+      })
+    ];
+    const includedTemplateKeyResultKeys = [
+      buildBulkTemplateKeyResultFilterKey(
+        { code: 'TO1', name: '模板目标一' },
+        { code: 'KR1', name: '模板关键结果一' }
+      ),
+      buildBulkTemplateKeyResultFilterKey(
+        { code: 'TO1', name: '模板目标一' },
+        { code: 'KR2', name: '模板关键结果二' }
+      ),
+      buildBulkTemplateKeyResultFilterKey(
+        { code: 'TO2', name: '模板目标二' },
+        { code: 'KR1', name: '另一个模板关键结果' }
+      )
+    ];
+
+    expect(
+      selectAllBulkKeyResultIds(catalog, {
+        sectionId: null,
+        reviewGroupId: null,
+        employeeIds: ['u-1'],
+        goalIds: [],
+        excludeTemplateGoals: false,
+        excludedTemplateGoalKeys: [],
+        excludedTemplateKeyResultKeys: [],
+        includedTemplateGoalKeys,
+        includedTemplateKeyResultKeys
+      })
+    ).toEqual(['kr-template-1', 'kr-template-2', 'kr-template-3']);
+
+    const preview = buildBulkScorePreview(catalog, {
+      sectionId: null,
+      reviewGroupId: null,
+      employeeIds: ['u-1'],
+      goalIds: [],
+      keyResultIds: ['kr-template-1', 'kr-template-2', 'kr-template-3', 'kr-custom'],
+      excludeTemplateGoals: false,
+      excludedTemplateGoalKeys: [],
+      excludedTemplateKeyResultKeys: [],
+      includedTemplateGoalKeys,
+      includedTemplateKeyResultKeys
+    });
+
+    expect(preview.rows.map((row) => row.keyResultId)).toEqual(['kr-template-1', 'kr-template-2', 'kr-template-3']);
+    expect(preview.goals.map((goal) => goal.goalId)).toEqual(['g-template-1', 'g-template-2']);
+  });
+
+  it('supports excluding a specific template goal from bulk preview and select-all', () => {
+    const catalog: LeaderWorkbenchResponse['bulkCatalog'] = [
+      {
+        id: 'u-1',
+        name: '张晨',
+        sectionId: 'sec-1',
+        sectionName: '平台产品科',
+        reviewGroupId: 'rg-1',
+        reviewGroupName: '信息化组',
+        canScore: true,
+        goals: [
+          {
+            id: 'g-template-1',
+            code: 'TO1',
+            name: '模板目标一',
+            isTemplateGoal: true,
+            keyResults: [
+              {
+                id: 'kr-template-1',
+                code: 'KR1',
+                name: '模板关键结果一',
+                points: 10,
+                scoreType: 'objective',
+                reviewScore: null,
+                proofCount: 0,
+                hasProofs: false,
+                isProofMissing: true
+              }
+            ]
+          },
+          {
+            id: 'g-template-2',
+            code: 'TO2',
+            name: '模板目标二',
+            isTemplateGoal: true,
+            keyResults: [
+              {
+                id: 'kr-template-2',
+                code: 'KR1',
+                name: '模板关键结果二',
+                points: 8,
+                scoreType: 'objective',
+                reviewScore: null,
+                proofCount: 0,
+                hasProofs: false,
+                isProofMissing: true
+              }
+            ]
+          },
+          {
+            id: 'g-custom',
+            code: 'O1',
+            name: '张晨自建目标',
+            isTemplateGoal: false,
+            keyResults: [
+              {
+                id: 'kr-custom',
+                code: 'KR1',
+                name: '自建关键结果',
+                points: 20,
+                scoreType: 'objective',
+                reviewScore: null,
+                proofCount: 1,
+                hasProofs: true,
+                isProofMissing: false
+              }
+            ]
+          }
+        ]
+      }
+    ];
+
+    const excludedTemplateGoalKeys = [
+      buildBulkGoalFilterKey({
+        code: 'TO1',
+        name: '模板目标一',
+        isTemplateGoal: true
+      })
+    ];
+
+    expect(
+      selectAllBulkKeyResultIds(catalog, {
+        sectionId: null,
+        reviewGroupId: null,
+        employeeIds: ['u-1'],
+        goalIds: [],
+        excludeTemplateGoals: false,
+        excludedTemplateGoalKeys,
+        excludedTemplateKeyResultKeys: [],
+        includedTemplateGoalKeys: [],
+        includedTemplateKeyResultKeys: []
+      })
+    ).toEqual(['kr-template-2', 'kr-custom']);
+
+    const preview = buildBulkScorePreview(catalog, {
+      sectionId: null,
+      reviewGroupId: null,
+      employeeIds: ['u-1'],
+      goalIds: [],
+      keyResultIds: ['kr-template-1', 'kr-template-2', 'kr-custom'],
+      excludeTemplateGoals: false,
+      excludedTemplateGoalKeys,
+      excludedTemplateKeyResultKeys: [],
+      includedTemplateGoalKeys: [],
+      includedTemplateKeyResultKeys: []
+    });
+
+    expect(preview.rows.map((row) => row.keyResultId)).toEqual(['kr-template-2', 'kr-custom']);
+    expect(preview.goals.map((goal) => goal.goalId)).toEqual(['g-template-2', 'g-custom']);
+  });
+
   it('expands objective bulk scoring to all scorable employees in scope', () => {
     expect(resolveObjectiveBulkEmployeeIds(['u-1'], ['u-1', 'u-2'])).toEqual(['u-1', 'u-2']);
     expect(resolveObjectiveBulkEmployeeIds([], ['u-1', 'u-2'])).toEqual(['u-1', 'u-2']);
     expect(resolveObjectiveBulkEmployeeIds(['u-3'], ['u-1', 'u-2'])).toEqual(['u-1', 'u-2']);
+  });
+
+  it('builds a subjective bulk matrix and average preview by section', () => {
+    const catalog: LeaderWorkbenchResponse['bulkCatalog'] = [
+      {
+        id: 'u-1',
+        name: '张晨',
+        sectionId: 'sec-1',
+        sectionName: '平台产品科',
+        reviewGroupId: 'rg-1',
+        reviewGroupName: '信息化组',
+        canScore: true,
+        goals: [
+          {
+            id: 'g-1',
+            code: 'O1',
+            name: '季度综合评价',
+            isTemplateGoal: false,
+            keyResults: [
+              {
+                id: 'kr-1',
+                code: 'KR1',
+                name: '目标任务综合评价',
+                points: 10,
+                scoreType: 'subjective',
+                reviewScore: 8,
+                proofCount: 0,
+                hasProofs: false,
+                isProofMissing: false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'u-2',
+        name: '王敏',
+        sectionId: 'sec-1',
+        sectionName: '平台产品科',
+        reviewGroupId: 'rg-1',
+        reviewGroupName: '信息化组',
+        canScore: true,
+        goals: [
+          {
+            id: 'g-2',
+            code: 'O1',
+            name: '季度综合评价',
+            isTemplateGoal: false,
+            keyResults: [
+              {
+                id: 'kr-2',
+                code: 'KR1',
+                name: '目标任务综合评价',
+                points: 10,
+                scoreType: 'subjective',
+                reviewScore: null,
+                proofCount: 0,
+                hasProofs: false,
+                isProofMissing: false
+              }
+            ]
+          }
+        ]
+      }
+    ];
+
+    const matrix = buildSubjectiveBulkScoreMatrix(catalog, {
+      sectionId: 'sec-1'
+    });
+    const drafts = createSubjectiveBulkScoreDrafts(matrix.rows);
+    const previewBeforeInput = buildSubjectiveBulkAveragePreview(matrix.columns, matrix.rows, drafts);
+    drafts['kr-2'] = {
+      score: 10,
+      comment: ''
+    };
+    const preview = buildSubjectiveBulkAveragePreview(matrix.columns, matrix.rows, drafts);
+
+    expect(matrix.columns).toHaveLength(1);
+    expect(matrix.rows).toHaveLength(2);
+    expect(matrix.rows[0]?.cells[matrix.columns[0]?.key ?? '']?.keyResultId).toBe('kr-1');
+    expect(matrix.rows[0]?.cells[matrix.columns[0]?.key ?? '']).toMatchObject({
+      keyResultCode: 'KR1',
+      keyResultName: matrix.columns[0]?.name
+    });
+    expect(previewBeforeInput[0]).toMatchObject({
+      averageScore: 4,
+      participantCount: 2,
+      maxAverageScore: 9,
+      exceeded: false
+    });
+    expect(preview).toEqual([
+      expect.objectContaining({
+        name: '目标任务综合评价',
+        averageScore: 9,
+        participantCount: 2,
+        maxAverageScore: 9,
+        exceeded: false
+      })
+    ]);
   });
 });

@@ -1,0 +1,1181 @@
+{
+  "executedAt": "2026-04-24T15:26:25.143Z",
+  "configuration": {
+    "year": 2026,
+    "quarter": 1,
+    "participantCount": 12,
+    "participantEmployeeNos": [
+      "20203176",
+      "1800054",
+      "20250003",
+      "20250317",
+      "20250286",
+      "20245105",
+      "1800189",
+      "20250801",
+      "20250802",
+      "1800470",
+      "1801448",
+      "20203491"
+    ],
+    "sectionLeaderEmployeeNos": [
+      "0103098",
+      "0105721",
+      "1700066",
+      "0102652",
+      "1201469",
+      "1300444",
+      "1100299"
+    ]
+  },
+  "exclusionSummary": {
+    "participantCount": 12,
+    "excludedCount": 66,
+    "participantEmployeeNos": [
+      "20203176",
+      "1800054",
+      "20250003",
+      "20250317",
+      "20250286",
+      "20245105",
+      "1800189",
+      "20250801",
+      "20250802",
+      "1800470",
+      "1801448",
+      "20203491"
+    ]
+  },
+  "preparation": [
+    {
+      "participant": {
+        "employeeNo": "20203176",
+        "loginName": "20203176",
+        "name": "张艺耀",
+        "sectionName": "智慧园区中心",
+        "reviewGroupName": "信息化组",
+        "roles": [
+          "employee"
+        ]
+      },
+      "customGoalId": "cmod2c7un002lijp8xetal15d",
+      "goalCount": 3,
+      "goals": [
+        {
+          "id": "cmod2c7tv0025ijp8dzte28zz",
+          "code": "O1",
+          "name": "工作态度与能力",
+          "status": "draft",
+          "totalPoints": 30,
+          "proofCount": 5,
+          "keyResultCount": 5
+        },
+        {
+          "id": "cmod2c7tz002eijp8exzijegz",
+          "code": "O2",
+          "name": "目标任务综合评价",
+          "status": "draft",
+          "totalPoints": 10,
+          "proofCount": 1,
+          "keyResultCount": 1
+        },
+        {
+          "id": "cmod2c7un002lijp8xetal15d",
+          "code": "O3",
+          "name": "张艺耀2026年一季度重点工作推进",
+          "status": "draft",
+          "totalPoints": 60,
+          "proofCount": 3,
+          "keyResultCount": 3
+        }
+      ]
+    },
+    {
+      "participant": {
+        "employeeNo": "1800054",
+        "loginName": "1800054",
+        "name": "方墨",
+        "sectionName": "工业互联网中心",
+        "reviewGroupName": "信息化组",
+        "roles": [
+          "employee"
+        ]
+      },
+      "customGoalId": "cmod2c86g004cijp8jxfg47le",
+      "goalCount": 3,
+      "goals": [
+        {
+          "id": "cmod2c85q003wijp843f5e4qr",
+          "code": "O1",
+          "name": "工作态度与能力",
+          "status": "draft",
+          "totalPoints": 30,
+          "proofCount": 5,
+          "keyResultCount": 5
+        },
+        {
+          "id": "cmod2c85s0045ijp8ez3kqlo3",
+          "code": "O2",
+          "name": "目标任务综合评价",
+          "status": "draft",
+          "totalPoints": 10,
+          "proofCount": 1,
+          "keyResultCount": 1
+        },
+        {
+          "id": "cmod2c86g004cijp8jxfg47le",
+          "code": "O3",
+          "name": "方墨2026年一季度重点工作推进",
+          "status": "draft",
+          "totalPoints": 60,
+          "proofCount": 3,
+          "keyResultCount": 3
+        }
+      ]
+    },
+    {
+      "participant": {
+        "employeeNo": "20250003",
+        "loginName": "20250003",
+        "name": "李健",
+        "sectionName": "数字生产力中心",
+        "reviewGroupName": "信息化组",
+        "roles": [
+          "employee"
+        ]
+      },
+      "customGoalId": "cmod2c8h80063ijp8d1dmbpck",
+      "goalCount": 3,
+      "goals": [
+        {
+          "id": "cmod2c8gk005nijp845i0ys2c",
+          "code": "O1",
+          "name": "工作态度与能力",
+          "status": "draft",
+          "totalPoints": 30,
+          "proofCount": 5,
+          "keyResultCount": 5
+        },
+        {
+          "id": "cmod2c8gm005wijp810y0ynql",
+          "code": "O2",
+          "name": "目标任务综合评价",
+          "status": "draft",
+          "totalPoints": 10,
+          "proofCount": 1,
+          "keyResultCount": 1
+        },
+        {
+          "id": "cmod2c8h80063ijp8d1dmbpck",
+          "code": "O3",
+          "name": "李健2026年一季度重点工作推进",
+          "status": "draft",
+          "totalPoints": 60,
+          "proofCount": 3,
+          "keyResultCount": 3
+        }
+      ]
+    },
+    {
+      "participant": {
+        "employeeNo": "20250317",
+        "loginName": "20250317",
+        "name": "田绍礼",
+        "sectionName": "数字基建中心",
+        "reviewGroupName": "新员工组",
+        "roles": [
+          "employee"
+        ]
+      },
+      "customGoalId": "cmod2c8rn007uijp8s2pcyumz",
+      "goalCount": 3,
+      "goals": [
+        {
+          "id": "cmod2c8qu007eijp87dm1i1qj",
+          "code": "O1",
+          "name": "工作态度与能力",
+          "status": "draft",
+          "totalPoints": 30,
+          "proofCount": 5,
+          "keyResultCount": 5
+        },
+        {
+          "id": "cmod2c8qw007nijp81cn9fneu",
+          "code": "O2",
+          "name": "目标任务综合评价",
+          "status": "draft",
+          "totalPoints": 10,
+          "proofCount": 1,
+          "keyResultCount": 1
+        },
+        {
+          "id": "cmod2c8rn007uijp8s2pcyumz",
+          "code": "O3",
+          "name": "田绍礼2026年一季度重点工作推进",
+          "status": "draft",
+          "totalPoints": 60,
+          "proofCount": 3,
+          "keyResultCount": 3
+        }
+      ]
+    },
+    {
+      "participant": {
+        "employeeNo": "20250286",
+        "loginName": "20250286",
+        "name": "赵坚",
+        "sectionName": "数字业务中心",
+        "reviewGroupName": "新员工组",
+        "roles": [
+          "employee"
+        ]
+      },
+      "customGoalId": "cmod2c92c009lijp86j9fxq83",
+      "goalCount": 3,
+      "goals": [
+        {
+          "id": "cmod2c91o0095ijp8i37lwnfr",
+          "code": "O1",
+          "name": "工作态度与能力",
+          "status": "draft",
+          "totalPoints": 30,
+          "proofCount": 5,
+          "keyResultCount": 5
+        },
+        {
+          "id": "cmod2c91q009eijp8dqok8f5q",
+          "code": "O2",
+          "name": "目标任务综合评价",
+          "status": "draft",
+          "totalPoints": 10,
+          "proofCount": 1,
+          "keyResultCount": 1
+        },
+        {
+          "id": "cmod2c92c009lijp86j9fxq83",
+          "code": "O3",
+          "name": "赵坚2026年一季度重点工作推进",
+          "status": "draft",
+          "totalPoints": 60,
+          "proofCount": 3,
+          "keyResultCount": 3
+        }
+      ]
+    },
+    {
+      "participant": {
+        "employeeNo": "20245105",
+        "loginName": "20245105",
+        "name": "姚磬馨",
+        "sectionName": "运营中心",
+        "reviewGroupName": "新员工组",
+        "roles": [
+          "employee"
+        ]
+      },
+      "customGoalId": "cmod2c9d000bcijp8u7kl8zo6",
+      "goalCount": 3,
+      "goals": [
+        {
+          "id": "cmod2c9cc00awijp8h0aa63bx",
+          "code": "O1",
+          "name": "工作态度与能力",
+          "status": "draft",
+          "totalPoints": 30,
+          "proofCount": 5,
+          "keyResultCount": 5
+        },
+        {
+          "id": "cmod2c9cf00b5ijp8ktn9y49b",
+          "code": "O2",
+          "name": "目标任务综合评价",
+          "status": "draft",
+          "totalPoints": 10,
+          "proofCount": 1,
+          "keyResultCount": 1
+        },
+        {
+          "id": "cmod2c9d000bcijp8u7kl8zo6",
+          "code": "O3",
+          "name": "姚磬馨2026年一季度重点工作推进",
+          "status": "draft",
+          "totalPoints": 60,
+          "proofCount": 3,
+          "keyResultCount": 3
+        }
+      ]
+    },
+    {
+      "participant": {
+        "employeeNo": "1800189",
+        "loginName": "1800189",
+        "name": "曹辉罡",
+        "sectionName": "运营中心",
+        "reviewGroupName": "运营组",
+        "roles": [
+          "employee"
+        ]
+      },
+      "customGoalId": "cmod2c9mz00d3ijp8u684uosm",
+      "goalCount": 3,
+      "goals": [
+        {
+          "id": "cmod2c9md00cnijp85gxrkh5n",
+          "code": "O1",
+          "name": "工作态度与能力",
+          "status": "draft",
+          "totalPoints": 30,
+          "proofCount": 5,
+          "keyResultCount": 5
+        },
+        {
+          "id": "cmod2c9mf00cwijp83j9twc9l",
+          "code": "O2",
+          "name": "目标任务综合评价",
+          "status": "draft",
+          "totalPoints": 10,
+          "proofCount": 1,
+          "keyResultCount": 1
+        },
+        {
+          "id": "cmod2c9mz00d3ijp8u684uosm",
+          "code": "O3",
+          "name": "曹辉罡2026年一季度重点工作推进",
+          "status": "draft",
+          "totalPoints": 60,
+          "proofCount": 3,
+          "keyResultCount": 3
+        }
+      ]
+    },
+    {
+      "participant": {
+        "employeeNo": "20250801",
+        "loginName": "20250801",
+        "name": "周洪池",
+        "sectionName": "运营中心",
+        "reviewGroupName": "运营组",
+        "roles": [
+          "employee"
+        ]
+      },
+      "customGoalId": "cmod2c9x000euijp8gcp35p16",
+      "goalCount": 3,
+      "goals": [
+        {
+          "id": "cmod2c9we00eeijp8i09kxwa2",
+          "code": "O1",
+          "name": "工作态度与能力",
+          "status": "draft",
+          "totalPoints": 30,
+          "proofCount": 5,
+          "keyResultCount": 5
+        },
+        {
+          "id": "cmod2c9wh00enijp8fs45e9xu",
+          "code": "O2",
+          "name": "目标任务综合评价",
+          "status": "draft",
+          "totalPoints": 10,
+          "proofCount": 1,
+          "keyResultCount": 1
+        },
+        {
+          "id": "cmod2c9x000euijp8gcp35p16",
+          "code": "O3",
+          "name": "周洪池2026年一季度重点工作推进",
+          "status": "draft",
+          "totalPoints": 60,
+          "proofCount": 3,
+          "keyResultCount": 3
+        }
+      ]
+    },
+    {
+      "participant": {
+        "employeeNo": "20250802",
+        "loginName": "20250802",
+        "name": "李昌慧颖",
+        "sectionName": "运营中心",
+        "reviewGroupName": "运营组",
+        "roles": [
+          "employee"
+        ]
+      },
+      "customGoalId": "cmod2ca7m00glijp8fjno0jxc",
+      "goalCount": 3,
+      "goals": [
+        {
+          "id": "cmod2ca7000g5ijp8oorj29pr",
+          "code": "O1",
+          "name": "工作态度与能力",
+          "status": "draft",
+          "totalPoints": 30,
+          "proofCount": 5,
+          "keyResultCount": 5
+        },
+        {
+          "id": "cmod2ca7300geijp8ux4l4j6q",
+          "code": "O2",
+          "name": "目标任务综合评价",
+          "status": "draft",
+          "totalPoints": 10,
+          "proofCount": 1,
+          "keyResultCount": 1
+        },
+        {
+          "id": "cmod2ca7m00glijp8fjno0jxc",
+          "code": "O3",
+          "name": "李昌慧颖2026年一季度重点工作推进",
+          "status": "draft",
+          "totalPoints": 60,
+          "proofCount": 3,
+          "keyResultCount": 3
+        }
+      ]
+    },
+    {
+      "participant": {
+        "employeeNo": "1800470",
+        "loginName": "1800470",
+        "name": "孙攀",
+        "sectionName": "综合管理部",
+        "reviewGroupName": "综合组",
+        "roles": [
+          "employee"
+        ]
+      },
+      "customGoalId": "cmod2caim00icijp81uhd1dxg",
+      "goalCount": 3,
+      "goals": [
+        {
+          "id": "cmod2cahy00hwijp891tcku7i",
+          "code": "O1",
+          "name": "工作态度与能力",
+          "status": "draft",
+          "totalPoints": 30,
+          "proofCount": 5,
+          "keyResultCount": 5
+        },
+        {
+          "id": "cmod2cai100i5ijp8t1n33v1k",
+          "code": "O2",
+          "name": "目标任务综合评价",
+          "status": "draft",
+          "totalPoints": 10,
+          "proofCount": 1,
+          "keyResultCount": 1
+        },
+        {
+          "id": "cmod2caim00icijp81uhd1dxg",
+          "code": "O3",
+          "name": "孙攀2026年一季度重点工作推进",
+          "status": "draft",
+          "totalPoints": 60,
+          "proofCount": 3,
+          "keyResultCount": 3
+        }
+      ]
+    },
+    {
+      "participant": {
+        "employeeNo": "1801448",
+        "loginName": "1801448",
+        "name": "仇爱",
+        "sectionName": "综合管理部",
+        "reviewGroupName": "综合组",
+        "roles": [
+          "employee"
+        ]
+      },
+      "customGoalId": "cmod2casj00k3ijp8w4r8wexd",
+      "goalCount": 3,
+      "goals": [
+        {
+          "id": "cmod2caru00jnijp8f4mmmktm",
+          "code": "O1",
+          "name": "工作态度与能力",
+          "status": "draft",
+          "totalPoints": 30,
+          "proofCount": 5,
+          "keyResultCount": 5
+        },
+        {
+          "id": "cmod2carx00jwijp8pmve0qiw",
+          "code": "O2",
+          "name": "目标任务综合评价",
+          "status": "draft",
+          "totalPoints": 10,
+          "proofCount": 1,
+          "keyResultCount": 1
+        },
+        {
+          "id": "cmod2casj00k3ijp8w4r8wexd",
+          "code": "O3",
+          "name": "仇爱2026年一季度重点工作推进",
+          "status": "draft",
+          "totalPoints": 60,
+          "proofCount": 3,
+          "keyResultCount": 3
+        }
+      ]
+    },
+    {
+      "participant": {
+        "employeeNo": "20203491",
+        "loginName": "20203491",
+        "name": "钟小玉",
+        "sectionName": "综合管理部",
+        "reviewGroupName": "综合组",
+        "roles": [
+          "employee"
+        ]
+      },
+      "customGoalId": "cmod2cb2f00luijp8nknewndr",
+      "goalCount": 3,
+      "goals": [
+        {
+          "id": "cmod2cb1t00leijp8dz0s294c",
+          "code": "O1",
+          "name": "工作态度与能力",
+          "status": "draft",
+          "totalPoints": 30,
+          "proofCount": 5,
+          "keyResultCount": 5
+        },
+        {
+          "id": "cmod2cb1w00lnijp8bxjtqzzk",
+          "code": "O2",
+          "name": "目标任务综合评价",
+          "status": "draft",
+          "totalPoints": 10,
+          "proofCount": 1,
+          "keyResultCount": 1
+        },
+        {
+          "id": "cmod2cb2f00luijp8nknewndr",
+          "code": "O3",
+          "name": "钟小玉2026年一季度重点工作推进",
+          "status": "draft",
+          "totalPoints": 60,
+          "proofCount": 3,
+          "keyResultCount": 3
+        }
+      ]
+    }
+  ],
+  "transitionResults": [
+    {
+      "user": {
+        "employeeNo": "20203176",
+        "loginName": "20203176",
+        "name": "张艺耀",
+        "sectionName": "智慧园区中心",
+        "reviewGroupName": "信息化组",
+        "roles": [
+          "employee"
+        ]
+      },
+      "affectedGoalCount": 3,
+      "autoAdvancedGoalCount": 0
+    },
+    {
+      "user": {
+        "employeeNo": "1800054",
+        "loginName": "1800054",
+        "name": "方墨",
+        "sectionName": "工业互联网中心",
+        "reviewGroupName": "信息化组",
+        "roles": [
+          "employee"
+        ]
+      },
+      "affectedGoalCount": 3,
+      "autoAdvancedGoalCount": 0
+    },
+    {
+      "user": {
+        "employeeNo": "20250003",
+        "loginName": "20250003",
+        "name": "李健",
+        "sectionName": "数字生产力中心",
+        "reviewGroupName": "信息化组",
+        "roles": [
+          "employee"
+        ]
+      },
+      "affectedGoalCount": 3,
+      "autoAdvancedGoalCount": 0
+    },
+    {
+      "user": {
+        "employeeNo": "20250317",
+        "loginName": "20250317",
+        "name": "田绍礼",
+        "sectionName": "数字基建中心",
+        "reviewGroupName": "新员工组",
+        "roles": [
+          "employee"
+        ]
+      },
+      "affectedGoalCount": 3,
+      "autoAdvancedGoalCount": 0
+    },
+    {
+      "user": {
+        "employeeNo": "20250286",
+        "loginName": "20250286",
+        "name": "赵坚",
+        "sectionName": "数字业务中心",
+        "reviewGroupName": "新员工组",
+        "roles": [
+          "employee"
+        ]
+      },
+      "affectedGoalCount": 3,
+      "autoAdvancedGoalCount": 0
+    },
+    {
+      "user": {
+        "employeeNo": "20245105",
+        "loginName": "20245105",
+        "name": "姚磬馨",
+        "sectionName": "运营中心",
+        "reviewGroupName": "新员工组",
+        "roles": [
+          "employee"
+        ]
+      },
+      "affectedGoalCount": 3,
+      "autoAdvancedGoalCount": 0
+    },
+    {
+      "user": {
+        "employeeNo": "1800189",
+        "loginName": "1800189",
+        "name": "曹辉罡",
+        "sectionName": "运营中心",
+        "reviewGroupName": "运营组",
+        "roles": [
+          "employee"
+        ]
+      },
+      "affectedGoalCount": 3,
+      "autoAdvancedGoalCount": 0
+    },
+    {
+      "user": {
+        "employeeNo": "20250801",
+        "loginName": "20250801",
+        "name": "周洪池",
+        "sectionName": "运营中心",
+        "reviewGroupName": "运营组",
+        "roles": [
+          "employee"
+        ]
+      },
+      "affectedGoalCount": 3,
+      "autoAdvancedGoalCount": 0
+    },
+    {
+      "user": {
+        "employeeNo": "20250802",
+        "loginName": "20250802",
+        "name": "李昌慧颖",
+        "sectionName": "运营中心",
+        "reviewGroupName": "运营组",
+        "roles": [
+          "employee"
+        ]
+      },
+      "affectedGoalCount": 3,
+      "autoAdvancedGoalCount": 0
+    },
+    {
+      "user": {
+        "employeeNo": "1800470",
+        "loginName": "1800470",
+        "name": "孙攀",
+        "sectionName": "综合管理部",
+        "reviewGroupName": "综合组",
+        "roles": [
+          "employee"
+        ]
+      },
+      "affectedGoalCount": 3,
+      "autoAdvancedGoalCount": 0
+    },
+    {
+      "user": {
+        "employeeNo": "1801448",
+        "loginName": "1801448",
+        "name": "仇爱",
+        "sectionName": "综合管理部",
+        "reviewGroupName": "综合组",
+        "roles": [
+          "employee"
+        ]
+      },
+      "affectedGoalCount": 3,
+      "autoAdvancedGoalCount": 0
+    },
+    {
+      "user": {
+        "employeeNo": "20203491",
+        "loginName": "20203491",
+        "name": "钟小玉",
+        "sectionName": "综合管理部",
+        "reviewGroupName": "综合组",
+        "roles": [
+          "employee"
+        ]
+      },
+      "affectedGoalCount": 3,
+      "autoAdvancedGoalCount": 0
+    }
+  ],
+  "preScoreVisibility": {
+    "scoresVisible": false,
+    "employeeCount": 12,
+    "rankingPreview": [
+      {
+        "employeeName": "张艺耀",
+        "quarterScore": null,
+        "goalCount": 3
+      },
+      {
+        "employeeName": "田绍礼",
+        "quarterScore": null,
+        "goalCount": 3
+      },
+      {
+        "employeeName": "赵坚",
+        "quarterScore": null,
+        "goalCount": 3
+      },
+      {
+        "employeeName": "方墨",
+        "quarterScore": null,
+        "goalCount": 3
+      },
+      {
+        "employeeName": "李健",
+        "quarterScore": null,
+        "goalCount": 3
+      },
+      {
+        "employeeName": "曹辉罡",
+        "quarterScore": null,
+        "goalCount": 3
+      },
+      {
+        "employeeName": "周洪池",
+        "quarterScore": null,
+        "goalCount": 3
+      },
+      {
+        "employeeName": "李昌慧颖",
+        "quarterScore": null,
+        "goalCount": 3
+      },
+      {
+        "employeeName": "姚磬馨",
+        "quarterScore": null,
+        "goalCount": 3
+      },
+      {
+        "employeeName": "孙攀",
+        "quarterScore": null,
+        "goalCount": 3
+      },
+      {
+        "employeeName": "仇爱",
+        "quarterScore": null,
+        "goalCount": 3
+      },
+      {
+        "employeeName": "钟小玉",
+        "quarterScore": null,
+        "goalCount": 3
+      }
+    ]
+  },
+  "subjectiveIsolation": {
+    "sectionLeaderViews": {
+      "智慧园区中心": {
+        "leaderName": "胡川",
+        "employeeNames": [
+          "张艺耀"
+        ],
+        "employeeSections": [
+          "智慧园区中心"
+        ]
+      },
+      "数字基建中心": {
+        "leaderName": "赵友文",
+        "employeeNames": [
+          "田绍礼"
+        ],
+        "employeeSections": [
+          "数字基建中心"
+        ]
+      },
+      "数字业务中心": {
+        "leaderName": "陈美果",
+        "employeeNames": [
+          "赵坚"
+        ],
+        "employeeSections": [
+          "数字业务中心"
+        ]
+      },
+      "工业互联网中心": {
+        "leaderName": "朱武军",
+        "employeeNames": [
+          "方墨"
+        ],
+        "employeeSections": [
+          "工业互联网中心"
+        ]
+      },
+      "综合管理部": {
+        "leaderName": "杜文闻",
+        "employeeNames": [
+          "孙攀",
+          "仇爱",
+          "钟小玉"
+        ],
+        "employeeSections": [
+          "综合管理部"
+        ]
+      },
+      "数字生产力中心": {
+        "leaderName": "袁湘波",
+        "employeeNames": [
+          "李健"
+        ],
+        "employeeSections": [
+          "数字生产力中心"
+        ]
+      },
+      "运营中心": {
+        "leaderName": "邓河",
+        "employeeNames": [
+          "曹辉罡",
+          "周洪池",
+          "李昌慧颖",
+          "姚磬馨"
+        ],
+        "employeeSections": [
+          "运营中心"
+        ]
+      }
+    },
+    "groupLeaderSubjective": {
+      "leaderName": "严翔",
+      "employeeCount": 0
+    }
+  },
+  "partialScoring": {
+    "employeeNo": "20250286",
+    "employeeName": "赵坚",
+    "leaderName": "陈美果",
+    "operationCount": 9
+  },
+  "visibilityAfterPartial": {
+    "scoresVisible": false,
+    "employeeCount": 12,
+    "rankingPreview": [
+      {
+        "employeeName": "张艺耀",
+        "quarterScore": null,
+        "goalCount": 3
+      },
+      {
+        "employeeName": "田绍礼",
+        "quarterScore": null,
+        "goalCount": 3
+      },
+      {
+        "employeeName": "赵坚",
+        "quarterScore": null,
+        "goalCount": 3
+      },
+      {
+        "employeeName": "方墨",
+        "quarterScore": null,
+        "goalCount": 3
+      },
+      {
+        "employeeName": "李健",
+        "quarterScore": null,
+        "goalCount": 3
+      },
+      {
+        "employeeName": "曹辉罡",
+        "quarterScore": null,
+        "goalCount": 3
+      },
+      {
+        "employeeName": "周洪池",
+        "quarterScore": null,
+        "goalCount": 3
+      },
+      {
+        "employeeName": "李昌慧颖",
+        "quarterScore": null,
+        "goalCount": 3
+      },
+      {
+        "employeeName": "姚磬馨",
+        "quarterScore": null,
+        "goalCount": 3
+      },
+      {
+        "employeeName": "孙攀",
+        "quarterScore": null,
+        "goalCount": 3
+      },
+      {
+        "employeeName": "仇爱",
+        "quarterScore": null,
+        "goalCount": 3
+      },
+      {
+        "employeeName": "钟小玉",
+        "quarterScore": null,
+        "goalCount": 3
+      }
+    ]
+  },
+  "finalVisibility": {
+    "scoresVisible": true,
+    "employeeCount": 12,
+    "rankingPreview": [
+      {
+        "employeeName": "张艺耀",
+        "quarterScore": 91,
+        "goalCount": 3,
+        "status": "completed"
+      },
+      {
+        "employeeName": "田绍礼",
+        "quarterScore": 86,
+        "goalCount": 3,
+        "status": "completed"
+      },
+      {
+        "employeeName": "赵坚",
+        "quarterScore": 88,
+        "goalCount": 3,
+        "status": "completed"
+      },
+      {
+        "employeeName": "方墨",
+        "quarterScore": 91,
+        "goalCount": 3,
+        "status": "completed"
+      },
+      {
+        "employeeName": "李健",
+        "quarterScore": 83,
+        "goalCount": 3,
+        "status": "completed"
+      },
+      {
+        "employeeName": "曹辉罡",
+        "quarterScore": 89,
+        "goalCount": 3,
+        "status": "completed"
+      },
+      {
+        "employeeName": "周洪池",
+        "quarterScore": 87,
+        "goalCount": 3,
+        "status": "completed"
+      },
+      {
+        "employeeName": "李昌慧颖",
+        "quarterScore": 84,
+        "goalCount": 3,
+        "status": "completed"
+      },
+      {
+        "employeeName": "姚磬馨",
+        "quarterScore": 85,
+        "goalCount": 3,
+        "status": "completed"
+      },
+      {
+        "employeeName": "孙攀",
+        "quarterScore": 88,
+        "goalCount": 3,
+        "status": "completed"
+      },
+      {
+        "employeeName": "仇爱",
+        "quarterScore": 84,
+        "goalCount": 3,
+        "status": "completed"
+      },
+      {
+        "employeeName": "钟小玉",
+        "quarterScore": 82,
+        "goalCount": 3,
+        "status": "completed"
+      }
+    ]
+  },
+  "rankingBeforeResolve": {
+    "scoresVisible": true,
+    "reviewGroupId": "review-group-l1wxk9",
+    "ranking": [
+      {
+        "employeeName": "方墨",
+        "quarterScore": 91,
+        "currentGrade": null,
+        "tieBreakStatus": "pending"
+      },
+      {
+        "employeeName": "张艺耀",
+        "quarterScore": 91,
+        "currentGrade": null,
+        "tieBreakStatus": "pending"
+      },
+      {
+        "employeeName": "李健",
+        "quarterScore": 83,
+        "currentGrade": "A",
+        "tieBreakStatus": "none"
+      }
+    ],
+    "pendingTieGroups": [
+      {
+        "groupKey": "24cf0ca79dedbade764033ef91ef0a577963e524",
+        "rankStart": 1,
+        "rankEnd": 2,
+        "affectedGradeCodes": [
+          "A+",
+          "A"
+        ],
+        "employees": [
+          {
+            "employeeId": "user-7221ca18-b886-4fa9-afe5-6938d155ba0e",
+            "employeeName": "方墨",
+            "quarterScore": 91,
+            "currentGrade": null,
+            "tieBreakMetrics": {
+              "customGoalScore": 55,
+              "objectiveTaskScore": 9,
+              "workAttitudeScore": 8,
+              "workCapabilityScore": 4,
+              "innovationScore": 5,
+              "learningShareScore": 5
+            }
+          },
+          {
+            "employeeId": "user-a44acd1f-d979-49f3-9eec-b5f1e46348e4",
+            "employeeName": "张艺耀",
+            "quarterScore": 91,
+            "currentGrade": null,
+            "tieBreakMetrics": {
+              "customGoalScore": 55,
+              "objectiveTaskScore": 9,
+              "workAttitudeScore": 8,
+              "workCapabilityScore": 4,
+              "innovationScore": 5,
+              "learningShareScore": 5
+            }
+          }
+        ]
+      }
+    ],
+    "expectedTieEmployees": [
+      "方墨",
+      "张艺耀"
+    ]
+  },
+  "tieBreakResolution": {
+    "groupKey": "24cf0ca79dedbade764033ef91ef0a577963e524",
+    "orderedEmployeeIds": [
+      "user-7221ca18-b886-4fa9-afe5-6938d155ba0e",
+      "user-a44acd1f-d979-49f3-9eec-b5f1e46348e4"
+    ]
+  },
+  "rankingAfterResolve": {
+    "scoresVisible": true,
+    "pendingTieGroups": 0,
+    "ranking": [
+      {
+        "employeeName": "方墨",
+        "quarterScore": 91,
+        "currentGrade": "A+",
+        "tieBreakStatus": "resolved"
+      },
+      {
+        "employeeName": "张艺耀",
+        "quarterScore": 91,
+        "currentGrade": "A",
+        "tieBreakStatus": "resolved"
+      },
+      {
+        "employeeName": "李健",
+        "quarterScore": 83,
+        "currentGrade": "A",
+        "tieBreakStatus": "none"
+      }
+    ]
+  },
+  "previewChecks": [
+    {
+      "proofId": "cmod2c7w3002sijp8bvprmvk8",
+      "fileName": "股份五金维修材料2026.3.16.xls",
+      "extension": ".xls",
+      "mode": "kkfileview",
+      "targetUrl": "http://127.0.0.1:8012/onlinePreview?url=aHR0cDovLzEyNy4wLjAuMTozMDAwL2FwaS9pbnRlcm5hbC9wcm9vZnMvY21vZDJjN3czMDAyc2lqcDhidnBybXZrOC9zb3VyY2U%2FYWNjZXNzVG9rZW49bG9jYWwtcHJldmlldy10b2tlbiZmdWxsZmlsZW5hbWU9cHJldmlldy04NzgzMWE4MzlkMGIueGxz",
+      "fallbackUrl": null,
+      "downloadUrl": "/employee/proofs/cmod2c7w3002sijp8bvprmvk8/download",
+      "targetStatus": 200
+    },
+    {
+      "proofId": "cmod2c7wl002wijp8myzhdhjr",
+      "fileName": "人员情况表.xlsx",
+      "extension": ".xlsx",
+      "mode": "kkfileview",
+      "targetUrl": "http://127.0.0.1:8012/onlinePreview?url=aHR0cDovLzEyNy4wLjAuMTozMDAwL2FwaS9pbnRlcm5hbC9wcm9vZnMvY21vZDJjN3dsMDAyd2lqcDhteXpoZGhqci9zb3VyY2U%2FYWNjZXNzVG9rZW49bG9jYWwtcHJldmlldy10b2tlbiZmdWxsZmlsZW5hbWU9cHJldmlldy0wYTFkNmZjZjM1ZmQueGxzeA%3D%3D",
+      "fallbackUrl": null,
+      "downloadUrl": "/employee/proofs/cmod2c7wl002wijp8myzhdhjr/download",
+      "targetStatus": 200
+    },
+    {
+      "proofId": "cmod2c7xx0030ijp8reiwq346",
+      "fileName": "茅台大模型技术架构V1.5.pptx",
+      "extension": ".pptx",
+      "mode": "kkfileview",
+      "targetUrl": "http://127.0.0.1:8012/onlinePreview?url=aHR0cDovLzEyNy4wLjAuMTozMDAwL2FwaS9pbnRlcm5hbC9wcm9vZnMvY21vZDJjN3h4MDAzMGlqcDhyZWl3cTM0Ni9zb3VyY2U%2FYWNjZXNzVG9rZW49bG9jYWwtcHJldmlldy10b2tlbiZmdWxsZmlsZW5hbWU9cHJldmlldy1hYjVjMzMxMGJjODcucHB0eA%3D%3D&officePreviewType=pdf",
+      "fallbackUrl": "http://127.0.0.1:8012/onlinePreview?url=aHR0cDovLzEyNy4wLjAuMTozMDAwL2FwaS9pbnRlcm5hbC9wcm9vZnMvY21vZDJjN3h4MDAzMGlqcDhyZWl3cTM0Ni9zb3VyY2U%2FYWNjZXNzVG9rZW49bG9jYWwtcHJldmlldy10b2tlbiZmdWxsZmlsZW5hbWU9cHJldmlldy1hYjVjMzMxMGJjODcucHB0eA%3D%3D",
+      "downloadUrl": "/employee/proofs/cmod2c7xx0030ijp8reiwq346/download",
+      "targetStatus": 200
+    },
+    {
+      "proofId": "cmod2c7yx0034ijp8ukynh02d",
+      "fileName": "茅台AI规划方案V1.5.docx",
+      "extension": ".docx",
+      "mode": "kkfileview",
+      "targetUrl": "http://127.0.0.1:8012/onlinePreview?url=aHR0cDovLzEyNy4wLjAuMTozMDAwL2FwaS9pbnRlcm5hbC9wcm9vZnMvY21vZDJjN3l4MDAzNGlqcDh1a3luaDAyZC9zb3VyY2U%2FYWNjZXNzVG9rZW49bG9jYWwtcHJldmlldy10b2tlbiZmdWxsZmlsZW5hbWU9cHJldmlldy0wY2ZjM2I4ZDIyY2EuZG9jeA%3D%3D&officePreviewType=pdf",
+      "fallbackUrl": "http://127.0.0.1:8012/onlinePreview?url=aHR0cDovLzEyNy4wLjAuMTozMDAwL2FwaS9pbnRlcm5hbC9wcm9vZnMvY21vZDJjN3l4MDAzNGlqcDh1a3luaDAyZC9zb3VyY2U%2FYWNjZXNzVG9rZW49bG9jYWwtcHJldmlldy10b2tlbiZmdWxsZmlsZW5hbWU9cHJldmlldy0wY2ZjM2I4ZDIyY2EuZG9jeA%3D%3D",
+      "downloadUrl": "/employee/proofs/cmod2c7yx0034ijp8ukynh02d/download",
+      "targetStatus": 200
+    },
+    {
+      "proofId": "cmod2c826003gijp898iixdf7",
+      "fileName": "数字科技管理事业部一般员工2025年年度绩效考核结果公示表.pdf",
+      "extension": ".pdf",
+      "mode": "native",
+      "targetUrl": "http://127.0.0.1:3000/api/internal/proofs/cmod2c826003gijp898iixdf7/source?accessToken=local-preview-token&fullfilename=preview-6761024078e1.pdf",
+      "fallbackUrl": null,
+      "downloadUrl": "/employee/proofs/cmod2c826003gijp898iixdf7/download",
+      "targetStatus": 200
+    }
+  ]
+}

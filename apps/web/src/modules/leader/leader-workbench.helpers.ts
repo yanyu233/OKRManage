@@ -8,6 +8,32 @@ export type ScoreDraft = {
   comment: string;
 };
 
+export function buildBulkGoalFilterKey(
+  goal: Pick<LeaderWorkbenchResponse['bulkCatalog'][number]['goals'][number], 'code' | 'name' | 'isTemplateGoal'>
+) {
+  return `${goal.isTemplateGoal ? 'template' : 'custom'}::${goal.code}::${goal.name}`;
+}
+
+export function buildBulkKeyResultFilterKey(
+  goal: Pick<LeaderWorkbenchResponse['bulkCatalog'][number]['goals'][number], 'code' | 'name' | 'isTemplateGoal'>,
+  keyResult: Pick<LeaderWorkbenchResponse['bulkCatalog'][number]['goals'][number]['keyResults'][number], 'code' | 'name'>
+) {
+  return `${buildBulkGoalFilterKey(goal)}::${keyResult.code}::${keyResult.name}`;
+}
+
+export function buildBulkTemplateKeyResultFilterKey(
+  goal: Pick<LeaderWorkbenchResponse['bulkCatalog'][number]['goals'][number], 'code' | 'name'>,
+  keyResult: Pick<LeaderWorkbenchResponse['bulkCatalog'][number]['goals'][number]['keyResults'][number], 'code' | 'name'>
+) {
+  return buildBulkKeyResultFilterKey(
+    {
+      ...goal,
+      isTemplateGoal: true
+    },
+    keyResult
+  );
+}
+
 export function resolveWorkbenchSelection(
   payload: LeaderWorkbenchResponse,
   current?: { employeeId?: string | null; goalId?: string | null }
@@ -17,6 +43,8 @@ export function resolveWorkbenchSelection(
   const currentEmployeeId =
     current?.employeeId && employeeIds.has(current.employeeId) ? current.employeeId : null;
   const currentGoalId = current?.goalId && goalIds.has(current.goalId) ? current.goalId : null;
+  const selectedEmployeeId = payload.selectedEmployee?.id ?? null;
+  const canAdoptPayloadGoal = currentEmployeeId === null || currentEmployeeId === selectedEmployeeId;
 
   return {
     employeeId:
@@ -25,7 +53,7 @@ export function resolveWorkbenchSelection(
       payload.employees.find((employee) => employee.goalCount > 0)?.id ??
       payload.employees[0]?.id ??
       null,
-    goalId: currentGoalId ?? payload.selectedGoal?.id ?? payload.goals[0]?.id ?? null
+    goalId: currentGoalId ?? (canAdoptPayloadGoal ? payload.selectedGoal?.id ?? payload.goals[0]?.id ?? null : null)
   };
 }
 
@@ -150,6 +178,59 @@ export function buildWorkbenchFilterOptions(employees: LeaderWorkbenchResponse['
   };
 }
 
+export function resolveWorkbenchQueueFilters(
+  employees: LeaderWorkbenchResponse['employees'],
+  filters: { sectionId?: string | null; reviewGroupId?: string | null }
+) {
+  const sectionId = filters.sectionId ?? null;
+  const reviewGroupOptions = buildWorkbenchFilterOptions(
+    filterBulkScoreEmployees(employees, {
+      sectionId
+    })
+  ).reviewGroups;
+  const reviewGroupId =
+    filters.reviewGroupId && reviewGroupOptions.some((option) => option.value === filters.reviewGroupId)
+      ? filters.reviewGroupId
+      : null;
+
+  return {
+    sectionId,
+    reviewGroupId
+  };
+}
+
+export function resolveWorkbenchQueueSelection(
+  employees: LeaderWorkbenchResponse['employees'],
+  input: {
+    sectionId?: string | null;
+    reviewGroupId?: string | null;
+    keyword: string;
+    onlyWithProofs: boolean;
+    selectedEmployeeId?: string | null;
+  }
+) {
+  const filters = resolveWorkbenchQueueFilters(employees, input);
+  const filteredEmployees = filterWorkbenchEmployees(
+    filterWorkbenchEmployeesByProofStatus(
+      filterBulkScoreEmployees(employees, {
+        sectionId: filters.sectionId,
+        reviewGroupId: filters.reviewGroupId
+      }),
+      input.onlyWithProofs
+    ),
+    input.keyword
+  );
+  const employeeId =
+    input.selectedEmployeeId && filteredEmployees.some((employee) => employee.id === input.selectedEmployeeId)
+      ? input.selectedEmployeeId
+      : filteredEmployees[0]?.id ?? null;
+
+  return {
+    ...filters,
+    employeeId
+  };
+}
+
 export function filterBulkScoreEmployees(
   employees: LeaderWorkbenchResponse['employees'],
   filters: { sectionId?: string | null; reviewGroupId?: string | null }
@@ -204,6 +285,44 @@ export type BulkPreviewRow = {
   isProofMissing: boolean;
 };
 
+export type SubjectiveBulkMatrixColumn = {
+  key: string;
+  name: string;
+  points: number;
+  maxAverageScore: number;
+};
+
+export type SubjectiveBulkMatrixCell = {
+  keyResultId: string;
+  goalId: string;
+  goalCode: string;
+  goalName: string;
+  keyResultCode: string;
+  keyResultName: string;
+  reviewScore: number | null;
+  canScore: boolean;
+  points: number;
+};
+
+export type SubjectiveBulkMatrixRow = {
+  employeeId: string;
+  employeeName: string;
+  sectionName: string | null;
+  reviewGroupName: string | null;
+  canScore: boolean;
+  cells: Record<string, SubjectiveBulkMatrixCell | null>;
+};
+
+export type SubjectiveBulkAveragePreview = SubjectiveBulkMatrixColumn & {
+  averageScore: number;
+  participantCount: number;
+  exceeded: boolean;
+};
+
+export function buildSubjectiveBulkMatrixKey(name: string, points: number) {
+  return `${name.trim()}::${points}`;
+}
+
 export function buildBulkScorePreview(
   catalog: LeaderWorkbenchResponse['bulkCatalog'],
   selection: {
@@ -213,11 +332,19 @@ export function buildBulkScorePreview(
     goalIds: string[];
     keyResultIds: string[] | null;
     excludeTemplateGoals: boolean;
+    excludedTemplateGoalKeys?: string[];
+    excludedTemplateKeyResultKeys?: string[];
+    includedTemplateGoalKeys?: string[];
+    includedTemplateKeyResultKeys?: string[];
   }
 ) {
   const selectedEmployeeIds = new Set(selection.employeeIds);
   const selectedGoalIds = new Set(selection.goalIds);
   const selectedKeyResultIds = new Set(selection.keyResultIds ?? []);
+  const excludedTemplateGoalKeys = new Set(selection.excludedTemplateGoalKeys ?? []);
+  const excludedTemplateKeyResultKeys = new Set(selection.excludedTemplateKeyResultKeys ?? []);
+  const includedTemplateGoalKeys = new Set(selection.includedTemplateGoalKeys ?? []);
+  const includedTemplateKeyResultKeys = new Set(selection.includedTemplateKeyResultKeys ?? []);
 
   const selectedEmployees = filterBulkCatalogEmployees(catalog, {
     sectionId: selection.sectionId,
@@ -231,6 +358,20 @@ export function buildBulkScorePreview(
           return false;
         }
 
+        if (goal.isTemplateGoal && excludedTemplateGoalKeys.has(buildBulkGoalFilterKey(goal))) {
+          return false;
+        }
+
+        if (includedTemplateGoalKeys.size > 0) {
+          if (!goal.isTemplateGoal) {
+            return false;
+          }
+
+          if (!includedTemplateGoalKeys.has(buildBulkGoalFilterKey(goal))) {
+            return false;
+          }
+        }
+
         if (selectedGoalIds.size > 0 && !selectedGoalIds.has(goal.id)) {
           return false;
         }
@@ -239,7 +380,24 @@ export function buildBulkScorePreview(
       })
       .flatMap((goal) =>
         goal.keyResults
-          .filter((keyResult) => selection.keyResultIds === null || selectedKeyResultIds.has(keyResult.id))
+          .filter((keyResult) => {
+            if (selection.keyResultIds !== null && !selectedKeyResultIds.has(keyResult.id)) {
+              return false;
+            }
+
+            if (
+              goal.isTemplateGoal &&
+              excludedTemplateKeyResultKeys.has(buildBulkTemplateKeyResultFilterKey(goal, keyResult))
+            ) {
+              return false;
+            }
+
+            if (includedTemplateGoalKeys.size > 0 && includedTemplateKeyResultKeys.size > 0) {
+              return includedTemplateKeyResultKeys.has(buildBulkKeyResultFilterKey(goal, keyResult));
+            }
+
+            return true;
+          })
           .map((keyResult) => ({
             employeeId: employee.id,
             employeeName: employee.name,
@@ -295,10 +453,18 @@ export function selectAllBulkKeyResultIds(
     employeeIds: string[];
     goalIds: string[];
     excludeTemplateGoals: boolean;
+    excludedTemplateGoalKeys?: string[];
+    excludedTemplateKeyResultKeys?: string[];
+    includedTemplateGoalKeys?: string[];
+    includedTemplateKeyResultKeys?: string[];
   }
 ) {
   const selectedEmployeeIds = new Set(selection.employeeIds);
   const selectedGoalIds = new Set(selection.goalIds);
+  const excludedTemplateGoalKeys = new Set(selection.excludedTemplateGoalKeys ?? []);
+  const excludedTemplateKeyResultKeys = new Set(selection.excludedTemplateKeyResultKeys ?? []);
+  const includedTemplateGoalKeys = new Set(selection.includedTemplateGoalKeys ?? []);
+  const includedTemplateKeyResultKeys = new Set(selection.includedTemplateKeyResultKeys ?? []);
 
   return uniqueBy(
     filterBulkCatalogEmployees(catalog, {
@@ -309,10 +475,25 @@ export function selectAllBulkKeyResultIds(
       .flatMap((employee) =>
         employee.goals
           .filter((goal) => !(selection.excludeTemplateGoals && goal.isTemplateGoal))
+          .filter((goal) => !goal.isTemplateGoal || !excludedTemplateGoalKeys.has(buildBulkGoalFilterKey(goal)))
+          .filter(
+            (goal) => includedTemplateGoalKeys.size === 0 || (goal.isTemplateGoal && includedTemplateGoalKeys.has(buildBulkGoalFilterKey(goal)))
+          )
           .filter((goal) => selectedGoalIds.size === 0 || selectedGoalIds.has(goal.id))
           .flatMap((goal) =>
             goal.keyResults
               .filter((keyResult) => keyResult.scoreType === 'objective')
+              .filter(
+                (keyResult) =>
+                  !goal.isTemplateGoal ||
+                  !excludedTemplateKeyResultKeys.has(buildBulkTemplateKeyResultFilterKey(goal, keyResult))
+              )
+              .filter(
+                (keyResult) =>
+                  includedTemplateGoalKeys.size === 0 ||
+                  includedTemplateKeyResultKeys.size === 0 ||
+                  includedTemplateKeyResultKeys.has(buildBulkKeyResultFilterKey(goal, keyResult))
+              )
               .map((keyResult) => keyResult.id)
           )
       ),
@@ -355,10 +536,18 @@ export function selectAllUnscoredBulkKeyResultIds(
     employeeIds: string[];
     goalIds: string[];
     excludeTemplateGoals: boolean;
+    excludedTemplateGoalKeys?: string[];
+    excludedTemplateKeyResultKeys?: string[];
+    includedTemplateGoalKeys?: string[];
+    includedTemplateKeyResultKeys?: string[];
   }
 ) {
   const selectedEmployeeIds = new Set(selection.employeeIds);
   const selectedGoalIds = new Set(selection.goalIds);
+  const excludedTemplateGoalKeys = new Set(selection.excludedTemplateGoalKeys ?? []);
+  const excludedTemplateKeyResultKeys = new Set(selection.excludedTemplateKeyResultKeys ?? []);
+  const includedTemplateGoalKeys = new Set(selection.includedTemplateGoalKeys ?? []);
+  const includedTemplateKeyResultKeys = new Set(selection.includedTemplateKeyResultKeys ?? []);
 
   return uniqueBy(
     filterBulkCatalogEmployees(catalog, {
@@ -369,15 +558,146 @@ export function selectAllUnscoredBulkKeyResultIds(
       .flatMap((employee) =>
         employee.goals
           .filter((goal) => !(selection.excludeTemplateGoals && goal.isTemplateGoal))
+          .filter((goal) => !goal.isTemplateGoal || !excludedTemplateGoalKeys.has(buildBulkGoalFilterKey(goal)))
+          .filter(
+            (goal) => includedTemplateGoalKeys.size === 0 || (goal.isTemplateGoal && includedTemplateGoalKeys.has(buildBulkGoalFilterKey(goal)))
+          )
           .filter((goal) => selectedGoalIds.size === 0 || selectedGoalIds.has(goal.id))
           .flatMap((goal) =>
             goal.keyResults
               .filter((keyResult) => keyResult.reviewScore === null)
+              .filter(
+                (keyResult) =>
+                  !goal.isTemplateGoal ||
+                  !excludedTemplateKeyResultKeys.has(buildBulkTemplateKeyResultFilterKey(goal, keyResult))
+              )
+              .filter(
+                (keyResult) =>
+                  includedTemplateGoalKeys.size === 0 ||
+                  includedTemplateKeyResultKeys.size === 0 ||
+                  includedTemplateKeyResultKeys.has(buildBulkKeyResultFilterKey(goal, keyResult))
+              )
               .map((keyResult) => keyResult.id)
           )
       ),
     (entry) => entry
   );
+}
+
+export function buildSubjectiveBulkScoreMatrix(
+  catalog: LeaderWorkbenchResponse['bulkCatalog'],
+  selection: {
+    sectionId?: string | null;
+  }
+) {
+  const columns = new Map<string, SubjectiveBulkMatrixColumn>();
+  const rows = filterBulkCatalogEmployees(catalog, {
+    sectionId: selection.sectionId,
+    reviewGroupId: null
+  })
+    .filter((employee) => employee.canScore)
+    .map<SubjectiveBulkMatrixRow>((employee) => {
+      const cells = new Map<string, SubjectiveBulkMatrixCell>();
+
+      for (const goal of employee.goals) {
+        for (const keyResult of goal.keyResults) {
+          if (keyResult.scoreType !== 'subjective') {
+            continue;
+          }
+
+          const key = buildSubjectiveBulkMatrixKey(keyResult.name, keyResult.points);
+          if (!columns.has(key)) {
+            columns.set(key, {
+              key,
+              name: keyResult.name,
+              points: keyResult.points,
+              maxAverageScore: keyResult.points * 0.9
+            });
+          }
+
+          if (!cells.has(key)) {
+            cells.set(key, {
+              keyResultId: keyResult.id,
+              goalId: goal.id,
+              goalCode: goal.code,
+              goalName: goal.name,
+              keyResultCode: keyResult.code,
+              keyResultName: keyResult.name,
+              reviewScore: keyResult.reviewScore,
+              canScore: employee.canScore,
+              points: keyResult.points
+            });
+          }
+        }
+      }
+
+      return {
+        employeeId: employee.id,
+        employeeName: employee.name,
+        sectionName: employee.sectionName,
+        reviewGroupName: employee.reviewGroupName,
+        canScore: employee.canScore,
+        cells: Object.fromEntries(cells)
+      };
+    })
+    .filter((row) => Object.keys(row.cells).length > 0);
+
+  const orderedColumns = Array.from(columns.values()).sort((left, right) => {
+    if (left.points !== right.points) {
+      return right.points - left.points;
+    }
+
+    return left.name.localeCompare(right.name, 'zh-Hans-CN');
+  });
+
+  return {
+    columns: orderedColumns,
+    rows: rows.map((row) => ({
+      ...row,
+      cells: Object.fromEntries(orderedColumns.map((column) => [column.key, row.cells[column.key] ?? null]))
+    }))
+  };
+}
+
+export function createSubjectiveBulkScoreDrafts(rows: SubjectiveBulkMatrixRow[]): Record<string, ScoreDraft> {
+  return Object.fromEntries(
+    rows.flatMap((row) =>
+      Object.values(row.cells)
+        .filter((cell): cell is SubjectiveBulkMatrixCell => Boolean(cell))
+        .map((cell) => [
+          cell.keyResultId,
+          {
+            score: cell.reviewScore,
+            comment: ''
+          }
+        ])
+    )
+  );
+}
+
+export function buildSubjectiveBulkAveragePreview(
+  columns: SubjectiveBulkMatrixColumn[],
+  rows: SubjectiveBulkMatrixRow[],
+  drafts: Record<string, ScoreDraft>
+): SubjectiveBulkAveragePreview[] {
+  return columns.map((column) => {
+    const cells = rows
+      .map((row) => row.cells[column.key])
+      .filter((cell): cell is SubjectiveBulkMatrixCell => Boolean(cell));
+    const participantCount = cells.length;
+    const totalScore = cells.reduce(
+      (sum, cell) => sum + (drafts[cell.keyResultId]?.score ?? cell.reviewScore ?? 0),
+      0
+    );
+    const averageScore = participantCount > 0 ? totalScore / participantCount : 0;
+
+    return {
+      ...column,
+      averageScore,
+      participantCount,
+      exceeded: averageScore > column.maxAverageScore + 1e-6
+    };
+  });
 }
 
 function filterBulkCatalogEmployees(

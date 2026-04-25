@@ -7,7 +7,7 @@ import {
   SearchOutlined,
   TrophyOutlined
 } from '@ant-design/icons';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
   App,
@@ -44,9 +44,15 @@ import type { LeaderKeyResult } from '../../shared/types/leader';
 import { YearQuarterPickerPopover } from '../../shared/ui/PeriodPickerPopover';
 import {
   ALL_FILTER_VALUE,
+  buildBulkGoalFilterKey,
+  buildBulkKeyResultFilterKey,
+  buildBulkTemplateKeyResultFilterKey,
   buildBulkScorePreview,
+  buildSubjectiveBulkAveragePreview,
+  buildSubjectiveBulkScoreMatrix,
   buildWorkbenchFilterOptions,
   createScoreDrafts,
+  createSubjectiveBulkScoreDrafts,
   filterBulkScoreEmployees,
   filterWorkbenchEmployees,
   filterWorkbenchEmployeesByProofStatus,
@@ -55,6 +61,8 @@ import {
   filterWorkbenchKeyResults,
   filterWorkbenchKeyResultsByProofStatus,
   isSameScoreDraftMap,
+  resolveWorkbenchQueueFilters,
+  resolveWorkbenchQueueSelection,
   resolveObjectiveBulkEmployeeIds,
   resolveWorkbenchSelection,
   selectAllBulkEmployeeIds,
@@ -127,6 +135,24 @@ const T = {
   batchMissingProofTitle: (count: number) => `有 ${count} 条关键结果未提交材料，默认不会参与批量赋分`,
   batchMissingProofDesc: '以下关键结果还没有上传证明材料；若确需继续批量赋分，请勾选下方强制放行。',
   batchAllowMissingProofs: '允许对未提交材料的关键结果继续批量赋分',
+  bulkExcludeTemplateGoals: '排除模板目标',
+  bulkExcludeTemplateGoalsToggle: '全部排除',
+  bulkExcludeSpecificTemplateGoals: '排除指定模板目标',
+  bulkExcludeSpecificTemplateGoalsPlaceholder: '可多选要排除的模板目标',
+  bulkExcludeTemplateKeyResults: '排除模板关键结果',
+  bulkExcludeTemplateKeyResultsPlaceholder: '选择要排除的模板关键结果',
+  bulkTemplateFilterHint: '模板目标内容相同的公共项，可以在这里一次性排除。',
+  bulkExcludedTemplateTag: '已排除模板目标',
+  bulkExcludedTemplateGoalTag: (count: number) => `已排除模板目标 ${count} 个`,
+  bulkExcludedTemplateKeyResultTag: (count: number) => `已排除模板 KR ${count} 项`,
+  bulkOnlyTemplateGoal: '仅选择模板目标',
+  bulkOnlyTemplateGoalPlaceholder: '可多选模板目标',
+  bulkOnlyTemplateKeyResults: '仅选择模板目标的关键结果',
+  bulkOnlyTemplateKeyResultsPlaceholder: '不选则包含所选模板目标下全部客观项',
+  bulkOnlyTemplateHint: '选择后，只会批量所选模板目标；如再选择关键结果，会继续缩小到所选项。',
+  bulkOnlyTemplateTag: '仅模板目标',
+  bulkOnlyTemplateGoalTag: (count: number) => `已限定模板目标 ${count} 个`,
+  bulkOnlyTemplateKeyResultTag: (count: number) => `模板 KR 已限定 ${count} 项`,
   batchSkippedMissingProofs: (updatedCount: number, skippedCount: number) =>
     `批量评分已完成，已更新 ${updatedCount} 项，${skippedCount} 项因未提交材料被自动跳过`,
   noScopedEmployees: '当前筛选范围内没有匹配员工',
@@ -173,6 +199,25 @@ const BATCH_UI = {
   readonlyRows: '预览列表仅展示你有评分权限的关键结果，其他员工可在主界面中继续查看。'
 } as const;
 
+const SUBJECTIVE_BATCH_UI = {
+  title: '主观项批量评分',
+  desc: '按科室一次性录入本季度主观评分项，页面会实时校验每个主观项在该科室内的平均分上限。',
+  sectionLabel: '评分科室',
+  averageHint: '平均分按该科室本季度全部参评人计算。',
+  averageRow: '当前平均分',
+  averageLimit: '平均上限',
+  participantCount: '参评人数',
+  noSection: '当前没有可批量评分的科室',
+  noRows: '当前科室暂无可批量录入的主观评分项',
+  noCell: '—',
+  save: '批量保存主观项',
+  saveHint: '本次仅保存你在表格内修改过的分数。',
+  saveSuccess: (count: number) => `主观项批量评分已保存（${count} 项）`,
+  averageExceeded: '存在平均分超上限的主观项，请先调整后再保存。',
+  scoreHeader: (points: number) => `满分 ${points} 分`,
+  limitHeader: (score: number) => `平均上限 ${score.toFixed(1)} 分`
+} as const;
+
 const WORKBENCH_META = {
   objective: {
     title: '客观项评分工作台',
@@ -182,7 +227,7 @@ const WORKBENCH_META = {
   subjective: {
     title: '主观项评分工作台',
     description: '仅按科室负责人权限查看并评价主观评分项，严格按科室范围隔离。',
-    bulkEnabled: false
+    bulkEnabled: true
   }
 } as const;
 
@@ -198,7 +243,8 @@ function LeaderWorkbenchPageInner({ scoreType }: { scoreType: 'objective' | 'sub
   const { message } = App.useApp();
   const queryClient = useQueryClient();
   const workbenchMeta = WORKBENCH_META[scoreType];
-  const isObjectiveWorkbench = workbenchMeta.bulkEnabled;
+  const isObjectiveWorkbench = scoreType === 'objective';
+  const isSubjectiveWorkbench = scoreType === 'subjective';
   const isKnowledgeEditor = useSessionStore((state) =>
     (state.user?.roles ?? []).some((assignment) => assignment.role === 'section-leader' || assignment.role === 'group-leader')
   );
@@ -223,7 +269,13 @@ function LeaderWorkbenchPageInner({ scoreType }: { scoreType: 'objective' | 'sub
   const [bulkComment, setBulkComment] = useState('');
   const [bulkOverwrite, setBulkOverwrite] = useState(false);
   const [bulkExcludeTemplates, setBulkExcludeTemplates] = useState(false);
+  const [bulkExcludedTemplateGoalKeys, setBulkExcludedTemplateGoalKeys] = useState<string[]>([]);
+  const [bulkExcludedTemplateKeyResultKeys, setBulkExcludedTemplateKeyResultKeys] = useState<string[]>([]);
+  const [bulkIncludedTemplateGoalKeys, setBulkIncludedTemplateGoalKeys] = useState<string[]>([]);
+  const [bulkIncludedTemplateKeyResultKeys, setBulkIncludedTemplateKeyResultKeys] = useState<string[]>([]);
   const [bulkAllowMissingProofs, setBulkAllowMissingProofs] = useState(false);
+  const [subjectiveBulkSectionId, setSubjectiveBulkSectionId] = useState<string | null>(null);
+  const [subjectiveBulkDrafts, setSubjectiveBulkDrafts] = useState<Record<string, ScoreDraft>>({});
   const [onlyWithProofs, setOnlyWithProofs] = useState(false);
   const goalStripViewportRef = useRef<HTMLDivElement | null>(null);
   const goalStripMomentumFrameRef = useRef<number | null>(null);
@@ -242,7 +294,8 @@ function LeaderWorkbenchPageInner({ scoreType }: { scoreType: 'objective' | 'sub
 
   const workbenchQuery = useQuery({
     queryKey: ['leader-workbench', scoreType, year, quarter, employeeId, goalId],
-    queryFn: () => getLeaderWorkbench({ year, quarter, scoreType, employeeId, goalId })
+    queryFn: () => getLeaderWorkbench({ year, quarter, scoreType, employeeId, goalId }),
+    placeholderData: keepPreviousData
   });
 
   useEffect(() => {
@@ -262,13 +315,16 @@ function LeaderWorkbenchPageInner({ scoreType }: { scoreType: 'objective' | 'sub
   }, [employeeId, goalId, workbenchQuery.data]);
 
   const scoreMutation = useMutation({
-    mutationFn: ({ krId, draft }: { krId: string; draft: ScoreDraft }) =>
+    mutationFn: ({ krId, draft }: { krId: string; draft: ScoreDraft; keyResult: LeaderKeyResult }) =>
       updateLeaderKrScore(krId, { score: draft.score ?? 0, comment: draft.comment }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['leader-workbench'] });
       await queryClient.invalidateQueries({ queryKey: ['leader-ranking'] });
     },
-    onError: (error) => message.error(error instanceof ApiError ? error.message : '评分保存失败。')
+    onError: (error, variables) => {
+      resetDraftToPersisted(variables.keyResult);
+      message.error(error instanceof ApiError ? error.message : '评分保存失败。');
+    }
   });
 
   const bulkMutation = useMutation({
@@ -280,7 +336,7 @@ function LeaderWorkbenchPageInner({ scoreType }: { scoreType: 'objective' | 'sub
         reviewGroupId: bulkReviewGroupId,
         employeeIds: bulkEmployeeIds.length ? bulkEmployeeIds : undefined,
         goalIds: bulkGoalIds.length ? bulkGoalIds : undefined,
-        keyResultIds: bulkKrIds !== null ? bulkKrIds : undefined,
+        keyResultIds: bulkKrIds !== null ? Array.from(new Set(bulkPreview.rows.map((entry) => entry.keyResultId))) : undefined,
         score: bulkScoreMode === 'custom' ? bulkCustomScore ?? undefined : undefined,
         comment: bulkComment.trim() || undefined,
         overwriteExisting: bulkOverwrite,
@@ -304,6 +360,28 @@ function LeaderWorkbenchPageInner({ scoreType }: { scoreType: 'objective' | 'sub
     onError: (error) => message.error(error instanceof ApiError ? error.message : '批量评分保存失败。')
   });
 
+  const subjectiveBulkMutation = useMutation({
+    mutationFn: () =>
+      bulkLeaderKrScore({
+        year,
+        quarter,
+        sectionId: subjectiveBulkSectionId,
+        entries: subjectiveBulkChangedEntries.map((entry) => ({
+          keyResultId: entry.keyResultId,
+          score: entry.score
+        })),
+        overwriteExisting: true
+      }),
+    onSuccess: async (payload) => {
+      await queryClient.invalidateQueries({ queryKey: ['leader-workbench'] });
+      await queryClient.invalidateQueries({ queryKey: ['leader-ranking'] });
+      message.success(SUBJECTIVE_BATCH_UI.saveSuccess(payload.updatedCount));
+      setIsBulkOpen(false);
+      resetSubjectiveBulk();
+    },
+    onError: (error) => message.error(error instanceof ApiError ? error.message : '主观项批量评分保存失败。')
+  });
+
   const knowledgeMutation = useMutation({
     mutationFn: ({ proofId, isKnowledge }: { proofId: string; isKnowledge: boolean }) =>
       updateLeaderProofKnowledge(proofId, { isKnowledge }),
@@ -322,27 +400,35 @@ function LeaderWorkbenchPageInner({ scoreType }: { scoreType: 'objective' | 'sub
     () => buildWorkbenchFilterOptions(workbenchQuery.data?.employees ?? []).sections,
     [workbenchQuery.data?.employees]
   );
+  const queueFilters = useMemo(
+    () =>
+      resolveWorkbenchQueueFilters(workbenchQuery.data?.employees ?? [], {
+        sectionId: queueSectionId,
+        reviewGroupId: queueReviewGroupId
+      }),
+    [queueReviewGroupId, queueSectionId, workbenchQuery.data?.employees]
+  );
   const queueReviewGroupOptions = useMemo(
     () =>
       buildWorkbenchFilterOptions(
         filterBulkScoreEmployees(workbenchQuery.data?.employees ?? [], {
-          sectionId: queueSectionId
+          sectionId: queueFilters.sectionId
         })
       ).reviewGroups,
-    [queueSectionId, workbenchQuery.data?.employees]
+    [queueFilters.sectionId, workbenchQuery.data?.employees]
   );
 
   const filteredEmployees = useMemo(() => {
     const scopedEmployees = filterBulkScoreEmployees(workbenchQuery.data?.employees ?? [], {
-      sectionId: queueSectionId,
-      reviewGroupId: queueReviewGroupId
+      sectionId: queueFilters.sectionId,
+      reviewGroupId: queueFilters.reviewGroupId
     });
 
     return filterWorkbenchEmployees(
       filterWorkbenchEmployeesByProofStatus(scopedEmployees, onlyWithProofs),
       keyword
     );
-  }, [keyword, onlyWithProofs, queueReviewGroupId, queueSectionId, workbenchQuery.data?.employees]);
+  }, [keyword, onlyWithProofs, queueFilters.reviewGroupId, queueFilters.sectionId, workbenchQuery.data?.employees]);
 
   const selectedEmployeeVisible = filteredEmployees.some((employee) => employee.id === selectedEmployee?.id);
   const displaySelectedEmployee = selectedEmployeeVisible ? selectedEmployee : null;
@@ -357,13 +443,19 @@ function LeaderWorkbenchPageInner({ scoreType }: { scoreType: 'objective' | 'sub
   }, [displaySelectedEmployee, keyword, onlyWithProofs, workbenchQuery.data?.goals]);
 
   useEffect(() => {
-    if (queueReviewGroupId && !queueReviewGroupOptions.some((option) => option.value === queueReviewGroupId)) {
-      setQueueReviewGroupId(null);
+    if (queueReviewGroupId !== queueFilters.reviewGroupId) {
+      setQueueReviewGroupId(queueFilters.reviewGroupId);
     }
-  }, [queueReviewGroupId, queueReviewGroupOptions]);
+  }, [queueFilters.reviewGroupId, queueReviewGroupId]);
 
   useEffect(() => {
     if (!filteredEmployees.length) {
+      if (employeeId !== null) {
+        setEmployeeId(null);
+      }
+      if (goalId !== null) {
+        setGoalId(null);
+      }
       return;
     }
 
@@ -371,7 +463,7 @@ function LeaderWorkbenchPageInner({ scoreType }: { scoreType: 'objective' | 'sub
       setEmployeeId(filteredEmployees[0]?.id ?? null);
       setGoalId(null);
     }
-  }, [employeeId, filteredEmployees, selectedEmployeeVisible]);
+  }, [employeeId, filteredEmployees, goalId, selectedEmployeeVisible]);
 
   useEffect(() => {
     if (!displaySelectedEmployee) {
@@ -507,6 +599,10 @@ function LeaderWorkbenchPageInner({ scoreType }: { scoreType: 'objective' | 'sub
     () => buildWorkbenchFilterOptions(workbenchQuery.data?.employees ?? []),
     [workbenchQuery.data?.employees]
   );
+  const subjectiveBulkSectionOptions = useMemo(
+    () => buildWorkbenchFilterOptions((workbenchQuery.data?.employees ?? []).filter((employee) => employee.canScore)).sections,
+    [workbenchQuery.data?.employees]
+  );
   const bulkVisibleEmployees = useMemo(
     () =>
       filterBulkScoreEmployees(workbenchQuery.data?.employees ?? [], {
@@ -527,6 +623,106 @@ function LeaderWorkbenchPageInner({ scoreType }: { scoreType: 'objective' | 'sub
     () => bulkVisibleEmployees.filter((employee) => employee.canScore).map((employee) => employee.id),
     [bulkVisibleEmployees]
   );
+  const bulkTemplateScopeEmployeeIds = useMemo(
+    () => (bulkEmployeeIds.length ? bulkEmployeeIds : bulkScorableEmployeeIds),
+    [bulkEmployeeIds, bulkScorableEmployeeIds]
+  );
+  const bulkTemplateGoalOptions = useMemo(() => {
+    const scopedEmployeeIds = new Set(bulkTemplateScopeEmployeeIds);
+
+    return Array.from(
+      new Map(
+        (workbenchQuery.data?.bulkCatalog ?? [])
+          .filter((employee) => scopedEmployeeIds.has(employee.id))
+          .flatMap((employee) =>
+            employee.goals
+              .filter((goal) => goal.isTemplateGoal)
+              .map((goal) => {
+                const value = buildBulkGoalFilterKey(goal);
+                return [
+                  value,
+                  {
+                    value,
+                    label: `${goal.code} ${goal.name}`
+                  }
+                ] as const;
+              })
+          )
+      ).values()
+    );
+  }, [bulkTemplateScopeEmployeeIds, workbenchQuery.data?.bulkCatalog]);
+  const bulkExcludedTemplateKeyResultOptions = useMemo(() => {
+    if (bulkExcludeTemplates) {
+      return [];
+    }
+
+    const scopedEmployeeIds = new Set(bulkTemplateScopeEmployeeIds);
+
+    return Array.from(
+      new Map(
+        (workbenchQuery.data?.bulkCatalog ?? [])
+          .filter((employee) => scopedEmployeeIds.has(employee.id))
+          .flatMap((employee) =>
+            employee.goals
+              .filter((goal) => goal.isTemplateGoal)
+              .flatMap((goal) =>
+                goal.keyResults
+                  .filter((keyResult) => keyResult.scoreType === 'objective')
+                  .map((keyResult) => {
+                    const value = buildBulkTemplateKeyResultFilterKey(goal, keyResult);
+                    const goalValue = buildBulkGoalFilterKey(goal);
+                    return [
+                      value,
+                      {
+                        value,
+                        goalValue,
+                        label: `${goal.code} ${goal.name} / ${keyResult.code} ${keyResult.name}`
+                      }
+                    ] as const;
+                  })
+              )
+          )
+      ).values()
+    );
+  }, [bulkExcludeTemplates, bulkTemplateScopeEmployeeIds, workbenchQuery.data?.bulkCatalog]);
+  const bulkExcludedTemplateKeyResultGoalKeyMap = useMemo(
+    () => new Map(bulkExcludedTemplateKeyResultOptions.map((option) => [option.value, option.goalValue])),
+    [bulkExcludedTemplateKeyResultOptions]
+  );
+  const bulkIncludedTemplateKeyResultOptions = useMemo(() => {
+    if (!bulkIncludedTemplateGoalKeys.length) {
+      return [];
+    }
+
+    const scopedEmployeeIds = new Set(bulkTemplateScopeEmployeeIds);
+
+    return Array.from(
+      new Map(
+        (workbenchQuery.data?.bulkCatalog ?? [])
+          .filter((employee) => scopedEmployeeIds.has(employee.id))
+          .flatMap((employee) =>
+            employee.goals
+              .filter(
+                (goal) => goal.isTemplateGoal && bulkIncludedTemplateGoalKeys.includes(buildBulkGoalFilterKey(goal))
+              )
+              .flatMap((goal) =>
+                goal.keyResults
+                  .filter((keyResult) => keyResult.scoreType === 'objective')
+                  .map((keyResult) => {
+                    const value = buildBulkKeyResultFilterKey(goal, keyResult);
+                    return [
+                      value,
+                      {
+                        value,
+                        label: `${goal.code} ${goal.name} / ${keyResult.code} ${keyResult.name}`
+                      }
+                    ] as const;
+                  })
+              )
+          )
+      ).values()
+    );
+  }, [bulkIncludedTemplateGoalKeys, bulkTemplateScopeEmployeeIds, workbenchQuery.data?.bulkCatalog]);
   const bulkPreview = useMemo(
     () =>
       buildBulkScorePreview(workbenchQuery.data?.bulkCatalog ?? [], {
@@ -535,9 +731,25 @@ function LeaderWorkbenchPageInner({ scoreType }: { scoreType: 'objective' | 'sub
         employeeIds: bulkEmployeeIds,
         goalIds: bulkGoalIds,
         keyResultIds: bulkKrIds,
-        excludeTemplateGoals: bulkExcludeTemplates
+        excludeTemplateGoals: bulkExcludeTemplates,
+        excludedTemplateGoalKeys: bulkExcludedTemplateGoalKeys,
+        excludedTemplateKeyResultKeys: bulkExcludedTemplateKeyResultKeys,
+        includedTemplateGoalKeys: bulkIncludedTemplateGoalKeys,
+        includedTemplateKeyResultKeys: bulkIncludedTemplateKeyResultKeys
       }),
-    [bulkEmployeeIds, bulkExcludeTemplates, bulkGoalIds, bulkKrIds, bulkReviewGroupId, bulkSectionId, workbenchQuery.data?.bulkCatalog]
+    [
+      bulkEmployeeIds,
+      bulkExcludeTemplates,
+      bulkExcludedTemplateGoalKeys,
+      bulkExcludedTemplateKeyResultKeys,
+      bulkIncludedTemplateGoalKeys,
+      bulkIncludedTemplateKeyResultKeys,
+      bulkGoalIds,
+      bulkKrIds,
+      bulkReviewGroupId,
+      bulkSectionId,
+      workbenchQuery.data?.bulkCatalog
+    ]
   );
   const canScoreCount = useMemo(
     () => bulkPreview.employees.filter((employee) => employee.canScore).length,
@@ -561,8 +773,121 @@ function LeaderWorkbenchPageInner({ scoreType }: { scoreType: 'objective' | 'sub
     bulkCustomScore > bulkCustomScoreMax;
   const isBulkSubmitDisabled =
     !bulkPreview.rows.length || (bulkScoreMode === 'custom' && (bulkCustomScore === null || bulkCustomScoreExceeded));
+  const subjectiveBulkMatrix = useMemo(
+    () =>
+      buildSubjectiveBulkScoreMatrix(workbenchQuery.data?.bulkCatalog ?? [], {
+        sectionId: subjectiveBulkSectionId
+      }),
+    [subjectiveBulkSectionId, workbenchQuery.data?.bulkCatalog]
+  );
+  const subjectiveBulkAveragePreview = useMemo(
+    () => buildSubjectiveBulkAveragePreview(subjectiveBulkMatrix.columns, subjectiveBulkMatrix.rows, subjectiveBulkDrafts),
+    [subjectiveBulkDrafts, subjectiveBulkMatrix.columns, subjectiveBulkMatrix.rows]
+  );
+  const subjectiveBulkAveragePreviewMap = useMemo(
+    () => new Map(subjectiveBulkAveragePreview.map((column) => [column.key, column])),
+    [subjectiveBulkAveragePreview]
+  );
+  const subjectiveBulkChangedEntries = useMemo(
+    () =>
+      subjectiveBulkMatrix.rows.flatMap((row) =>
+        Object.values(row.cells)
+          .filter((cell): cell is NonNullable<(typeof row.cells)[string]> => Boolean(cell))
+          .flatMap((cell) => {
+            const draft = subjectiveBulkDrafts[cell.keyResultId];
+            const nextScore = draft?.score ?? cell.reviewScore;
+            if (nextScore === null || nextScore === cell.reviewScore) {
+              return [];
+            }
+
+            return [
+              {
+                keyResultId: cell.keyResultId,
+                score: nextScore
+              }
+            ];
+          })
+      ),
+    [subjectiveBulkDrafts, subjectiveBulkMatrix.rows]
+  );
+  const subjectiveBulkExceededColumns = useMemo(
+    () => subjectiveBulkAveragePreview.filter((column) => column.exceeded),
+    [subjectiveBulkAveragePreview]
+  );
   const isReadonlyEmployee = Boolean(displaySelectedEmployee && !displaySelectedEmployee.canScore);
   const selectedEmployeeCount = bulkPreview.employees.length;
+
+  useEffect(() => {
+    const validValues = new Set(bulkExcludedTemplateKeyResultOptions.map((option) => option.value));
+    const nextValues = bulkExcludedTemplateKeyResultKeys.filter((value) => validValues.has(value));
+    if (nextValues.length !== bulkExcludedTemplateKeyResultKeys.length) {
+      setBulkExcludedTemplateKeyResultKeys(nextValues);
+    }
+  }, [bulkExcludedTemplateKeyResultKeys, bulkExcludedTemplateKeyResultOptions]);
+
+  useEffect(() => {
+    const validValues = new Set(bulkTemplateGoalOptions.map((option) => option.value));
+    const nextValues = bulkExcludedTemplateGoalKeys.filter((value) => validValues.has(value));
+    if (nextValues.length !== bulkExcludedTemplateGoalKeys.length) {
+      setBulkExcludedTemplateGoalKeys(nextValues);
+    }
+  }, [bulkExcludedTemplateGoalKeys, bulkTemplateGoalOptions]);
+
+  useEffect(() => {
+    const validValues = new Set(bulkTemplateGoalOptions.map((option) => option.value));
+    const nextValues = bulkIncludedTemplateGoalKeys.filter((value) => validValues.has(value));
+    if (nextValues.length !== bulkIncludedTemplateGoalKeys.length) {
+      setBulkIncludedTemplateGoalKeys(nextValues);
+    }
+  }, [bulkIncludedTemplateGoalKeys, bulkTemplateGoalOptions]);
+
+  useEffect(() => {
+    const validValues = new Set(bulkIncludedTemplateKeyResultOptions.map((option) => option.value));
+    const nextValues = bulkIncludedTemplateKeyResultKeys.filter((value) => validValues.has(value));
+    if (nextValues.length !== bulkIncludedTemplateKeyResultKeys.length) {
+      setBulkIncludedTemplateKeyResultKeys(nextValues);
+    }
+  }, [bulkIncludedTemplateKeyResultKeys, bulkIncludedTemplateKeyResultOptions]);
+
+  useEffect(() => {
+    if (!isSubjectiveWorkbench || !isBulkOpen) {
+      return;
+    }
+
+    const availableSectionIds = subjectiveBulkSectionOptions
+      .map((option) => option.value)
+      .filter((value): value is string => value !== ALL_FILTER_VALUE);
+    const preferredSectionId =
+      displaySelectedEmployee?.sectionId && availableSectionIds.includes(displaySelectedEmployee.sectionId)
+        ? displaySelectedEmployee.sectionId
+        : availableSectionIds[0] ?? null;
+
+    if (!availableSectionIds.length) {
+      if (subjectiveBulkSectionId !== null) {
+        setSubjectiveBulkSectionId(null);
+      }
+      return;
+    }
+
+    if (!subjectiveBulkSectionId || !availableSectionIds.includes(subjectiveBulkSectionId)) {
+      setSubjectiveBulkSectionId(preferredSectionId);
+    }
+  }, [
+    displaySelectedEmployee?.sectionId,
+    isBulkOpen,
+    isSubjectiveWorkbench,
+    subjectiveBulkSectionId,
+    subjectiveBulkSectionOptions
+  ]);
+
+  useEffect(() => {
+    if (!isSubjectiveWorkbench || !isBulkOpen) {
+      return;
+    }
+
+    const nextDrafts = createSubjectiveBulkScoreDrafts(subjectiveBulkMatrix.rows);
+    setSubjectiveBulkDrafts((currentDrafts) => (isSameScoreDraftMap(currentDrafts, nextDrafts) ? currentDrafts : nextDrafts));
+  }, [isBulkOpen, isSubjectiveWorkbench, subjectiveBulkMatrix.rows]);
 
   const resetGoalStripPointer = () => {
     goalStripPointerRef.current.startX = 0;
@@ -677,6 +1002,25 @@ function LeaderWorkbenchPageInner({ scoreType }: { scoreType: 'objective' | 'sub
     setGoalId(nextGoalId);
   };
 
+  const applyQueueFilters = (nextSectionId: string | null, nextReviewGroupId: string | null) => {
+    const currentQueueEmployeeId = selectedEmployee?.id ?? employeeId;
+    const nextQueueState = resolveWorkbenchQueueSelection(workbenchQuery.data?.employees ?? [], {
+      sectionId: nextSectionId,
+      reviewGroupId: nextReviewGroupId,
+      keyword,
+      onlyWithProofs,
+      selectedEmployeeId: currentQueueEmployeeId
+    });
+    setQueueSectionId(nextQueueState.sectionId);
+    setQueueReviewGroupId(nextQueueState.reviewGroupId);
+    if (employeeId !== nextQueueState.employeeId) {
+      setEmployeeId(nextQueueState.employeeId);
+    }
+    if (currentQueueEmployeeId !== nextQueueState.employeeId) {
+      setGoalId(null);
+    }
+  };
+
   if (workbenchQuery.isLoading) {
     return <Card className="leader-detail-card">{T.loading}</Card>;
   }
@@ -753,20 +1097,20 @@ function LeaderWorkbenchPageInner({ scoreType }: { scoreType: 'objective' | 'sub
                     aria-label={T.sectionFilter}
                     size="small"
                     style={{ width: '100%' }}
-                    value={queueSectionId ?? ALL_FILTER_VALUE}
+                    value={queueFilters.sectionId ?? ALL_FILTER_VALUE}
                     options={queueSectionOptions}
                     onChange={(value) => {
-                      setQueueSectionId(value === ALL_FILTER_VALUE ? null : value);
+                      applyQueueFilters(value === ALL_FILTER_VALUE ? null : value, queueFilters.reviewGroupId);
                     }}
                   />
                   <Select
                     aria-label={T.groupFilter}
                     size="small"
                     style={{ width: '100%' }}
-                    value={queueReviewGroupId ?? ALL_FILTER_VALUE}
+                    value={queueFilters.reviewGroupId ?? ALL_FILTER_VALUE}
                     options={queueReviewGroupOptions}
                     onChange={(value) => {
-                      setQueueReviewGroupId(value === ALL_FILTER_VALUE ? null : value);
+                      applyQueueFilters(queueFilters.sectionId, value === ALL_FILTER_VALUE ? null : value);
                     }}
                   />
                 </div>
@@ -836,9 +1180,9 @@ function LeaderWorkbenchPageInner({ scoreType }: { scoreType: 'objective' | 'sub
                   </Typography.Paragraph>
                 </div>
                 <Space size={10} wrap className="leader-detail-card__hero-tags">
-                  {isObjectiveWorkbench ? (
+                  {workbenchMeta.bulkEnabled ? (
                     <Button type="primary" onClick={openBulkModal} disabled={!workbenchQuery.data?.employees.length}>
-                      {BATCH_UI.title}
+                      {isObjectiveWorkbench ? BATCH_UI.title : SUBJECTIVE_BATCH_UI.title}
                     </Button>
                   ) : null}
                   <Tag color="blue">{getLeaderEmployeeStatusLabel(displaySelectedEmployee?.status ?? 'pending')}</Tag>
@@ -1143,6 +1487,10 @@ function LeaderWorkbenchPageInner({ scoreType }: { scoreType: 'objective' | 'sub
                   setBulkGoalIds([]);
                   setBulkKrIds(null);
                   setBulkExcludeTemplates(false);
+                  setBulkExcludedTemplateGoalKeys([]);
+                  setBulkExcludedTemplateKeyResultKeys([]);
+                  setBulkIncludedTemplateGoalKeys([]);
+                  setBulkIncludedTemplateKeyResultKeys([]);
                 }}
               />
             </Col>
@@ -1158,6 +1506,10 @@ function LeaderWorkbenchPageInner({ scoreType }: { scoreType: 'objective' | 'sub
                   setBulkGoalIds([]);
                   setBulkKrIds(null);
                   setBulkExcludeTemplates(false);
+                  setBulkExcludedTemplateGoalKeys([]);
+                  setBulkExcludedTemplateKeyResultKeys([]);
+                  setBulkIncludedTemplateGoalKeys([]);
+                  setBulkIncludedTemplateKeyResultKeys([]);
                 }}
               />
             </Col>
@@ -1175,6 +1527,10 @@ function LeaderWorkbenchPageInner({ scoreType }: { scoreType: 'objective' | 'sub
                   setBulkGoalIds([]);
                   setBulkKrIds(null);
                   setBulkExcludeTemplates(false);
+                  setBulkExcludedTemplateGoalKeys([]);
+                  setBulkExcludedTemplateKeyResultKeys([]);
+                  setBulkIncludedTemplateGoalKeys([]);
+                  setBulkIncludedTemplateKeyResultKeys([]);
                 }}
                 options={bulkVisibleEmployees.map((employee) => ({
                   value: employee.id,
@@ -1185,6 +1541,125 @@ function LeaderWorkbenchPageInner({ scoreType }: { scoreType: 'objective' | 'sub
                 }))}
                 optionFilterProp="label"
               />
+            </Col>
+            <Col xs={24} md={12}>
+              <div className="leader-bulk-filter-panel">
+                <div className="leader-bulk-filter-panel__header">
+                  <Typography.Text strong className="leader-bulk-filter-panel__title">
+                    {T.bulkExcludeTemplateGoals}
+                  </Typography.Text>
+                  <Checkbox
+                    className="leader-bulk-filter-panel__toggle"
+                    aria-label={T.bulkExcludeTemplateGoals}
+                    checked={bulkExcludeTemplates}
+                    disabled={bulkIncludedTemplateGoalKeys.length > 0}
+                    onChange={(event) => setBulkExcludeTemplates(event.target.checked)}
+                  >
+                    {T.bulkExcludeTemplateGoalsToggle}
+                  </Checkbox>
+                </div>
+                <Select
+                  mode="multiple"
+                  allowClear
+                  className="leader-bulk-filter-panel__control"
+                aria-label={T.bulkExcludeSpecificTemplateGoals}
+                placeholder={T.bulkExcludeSpecificTemplateGoalsPlaceholder}
+                value={bulkExcludedTemplateGoalKeys}
+                disabled={bulkExcludeTemplates || !bulkTemplateGoalOptions.length}
+                onChange={(value) => {
+                  setBulkExcludedTemplateGoalKeys(value);
+                  const nextGoalKeys = new Set(value);
+                  setBulkExcludedTemplateKeyResultKeys((current) =>
+                    current.filter((item) => {
+                      const goalKey = bulkExcludedTemplateKeyResultGoalKeyMap.get(item);
+                      return !goalKey || !nextGoalKeys.has(goalKey);
+                    })
+                  );
+                }}
+                options={bulkTemplateGoalOptions}
+                optionFilterProp="label"
+              />
+                <div className="leader-bulk-filter-panel__helper leader-bulk-filter-panel__helper--placeholder" aria-hidden />
+              </div>
+            </Col>
+            <Col xs={24} md={12}>
+              <div className="leader-bulk-filter-panel">
+                <Typography.Text strong className="leader-bulk-filter-panel__title">
+                  {T.bulkExcludeTemplateKeyResults}
+                </Typography.Text>
+                <Select
+                  mode="multiple"
+                  allowClear
+                  className="leader-bulk-filter-panel__control"
+                  aria-label={T.bulkExcludeTemplateKeyResults}
+                  placeholder={T.bulkExcludeTemplateKeyResultsPlaceholder}
+                  value={bulkExcludedTemplateKeyResultKeys}
+                  disabled={bulkExcludeTemplates || !bulkExcludedTemplateKeyResultOptions.length}
+                  onChange={(value) => {
+                    setBulkExcludedTemplateKeyResultKeys(value);
+                    const conflictedGoalKeys = new Set(
+                      value
+                        .map((item) => bulkExcludedTemplateKeyResultGoalKeyMap.get(item))
+                        .filter((item): item is string => Boolean(item))
+                    );
+                    if (conflictedGoalKeys.size > 0) {
+                      setBulkExcludedTemplateGoalKeys((current) =>
+                        current.filter((item) => !conflictedGoalKeys.has(item))
+                      );
+                    }
+                  }}
+                  options={bulkExcludedTemplateKeyResultOptions}
+                  optionFilterProp="label"
+                />
+                <Typography.Paragraph type="secondary" className="leader-bulk-filter-panel__helper">
+                  {T.bulkTemplateFilterHint}
+                </Typography.Paragraph>
+              </div>
+            </Col>
+            <Col xs={24} md={12}>
+              <div className="leader-bulk-filter-panel">
+                <Typography.Text strong className="leader-bulk-filter-panel__title">
+                  {T.bulkOnlyTemplateGoal}
+                </Typography.Text>
+                <Select
+                  mode="multiple"
+                  allowClear
+                  className="leader-bulk-filter-panel__control"
+                  aria-label={T.bulkOnlyTemplateGoal}
+                  placeholder={T.bulkOnlyTemplateGoalPlaceholder}
+                  value={bulkIncludedTemplateGoalKeys}
+                  disabled={bulkExcludeTemplates || !bulkTemplateGoalOptions.length}
+                  onChange={(value) => {
+                    setBulkIncludedTemplateGoalKeys(value);
+                    setBulkIncludedTemplateKeyResultKeys([]);
+                  }}
+                  options={bulkTemplateGoalOptions}
+                  optionFilterProp="label"
+                />
+                <div className="leader-bulk-filter-panel__helper leader-bulk-filter-panel__helper--placeholder" aria-hidden />
+              </div>
+            </Col>
+            <Col xs={24} md={12}>
+              <div className="leader-bulk-filter-panel">
+                <Typography.Text strong className="leader-bulk-filter-panel__title">
+                  {T.bulkOnlyTemplateKeyResults}
+                </Typography.Text>
+                <Select
+                  mode="multiple"
+                  allowClear
+                  className="leader-bulk-filter-panel__control"
+                  aria-label={T.bulkOnlyTemplateKeyResults}
+                  placeholder={T.bulkOnlyTemplateKeyResultsPlaceholder}
+                  value={bulkIncludedTemplateKeyResultKeys}
+                  disabled={!bulkIncludedTemplateGoalKeys.length || !bulkIncludedTemplateKeyResultOptions.length}
+                  onChange={(value) => setBulkIncludedTemplateKeyResultKeys(value)}
+                  options={bulkIncludedTemplateKeyResultOptions}
+                  optionFilterProp="label"
+                />
+                <Typography.Paragraph type="secondary" className="leader-bulk-filter-panel__helper">
+                  {T.bulkOnlyTemplateHint}
+                </Typography.Paragraph>
+              </div>
             </Col>
           </Row>
 
@@ -1205,6 +1680,20 @@ function LeaderWorkbenchPageInner({ scoreType }: { scoreType: 'objective' | 'sub
             <Tag>{`已选目标 ${bulkPreview.goals.length} 个`}</Tag>
             <Tag>{`已选关键结果 ${bulkPreview.keyResults.length} 条`}</Tag>
             <Tag color={canScoreCount ? 'green' : 'default'}>{`${T.canScoreEmployees} ${canScoreCount} 人`}</Tag>
+            {bulkExcludeTemplates ? <Tag color="purple">{T.bulkExcludedTemplateTag}</Tag> : null}
+            {bulkExcludedTemplateGoalKeys.length ? (
+              <Tag color="purple">{T.bulkExcludedTemplateGoalTag(bulkExcludedTemplateGoalKeys.length)}</Tag>
+            ) : null}
+            {bulkExcludedTemplateKeyResultKeys.length ? (
+              <Tag color="purple">{T.bulkExcludedTemplateKeyResultTag(bulkExcludedTemplateKeyResultKeys.length)}</Tag>
+            ) : null}
+            {bulkIncludedTemplateGoalKeys.length ? <Tag color="cyan">{T.bulkOnlyTemplateTag}</Tag> : null}
+            {bulkIncludedTemplateGoalKeys.length ? (
+              <Tag color="cyan">{T.bulkOnlyTemplateGoalTag(bulkIncludedTemplateGoalKeys.length)}</Tag>
+            ) : null}
+            {bulkIncludedTemplateKeyResultKeys.length ? (
+              <Tag color="cyan">{T.bulkOnlyTemplateKeyResultTag(bulkIncludedTemplateKeyResultKeys.length)}</Tag>
+            ) : null}
             {bulkMissingProofRows.length ? <Tag color="gold">{T.missingProofTag(bulkMissingProofRows.length)}</Tag> : null}
           </Space>
 
@@ -1334,6 +1823,172 @@ function LeaderWorkbenchPageInner({ scoreType }: { scoreType: 'objective' | 'sub
         </Space>
         </Modal>
       ) : null}
+
+      {isSubjectiveWorkbench ? (
+        <Modal
+          open={isBulkOpen}
+          title={SUBJECTIVE_BATCH_UI.title}
+          okText={SUBJECTIVE_BATCH_UI.save}
+          cancelText={T.cancel}
+          onOk={submitSubjectiveBulkScore}
+          okButtonProps={{
+            loading: subjectiveBulkMutation.isPending,
+            disabled: !subjectiveBulkChangedEntries.length || subjectiveBulkExceededColumns.length > 0
+          }}
+          onCancel={() => {
+            setIsBulkOpen(false);
+            resetSubjectiveBulk();
+          }}
+          destroyOnHidden
+          width={1160}
+        >
+          <Space direction="vertical" size={18} style={{ width: '100%' }}>
+            <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
+              {SUBJECTIVE_BATCH_UI.desc}
+            </Typography.Paragraph>
+
+            <Row gutter={[16, 16]} align="middle">
+              <Col xs={24} md={10}>
+                <Typography.Text strong>{SUBJECTIVE_BATCH_UI.sectionLabel}</Typography.Text>
+                <Select
+                  style={{ width: '100%', marginTop: 8 }}
+                  value={subjectiveBulkSectionId ?? undefined}
+                  placeholder={SUBJECTIVE_BATCH_UI.sectionLabel}
+                  options={subjectiveBulkSectionOptions.filter((option) => option.value !== ALL_FILTER_VALUE)}
+                  onChange={(value) => setSubjectiveBulkSectionId(value)}
+                />
+              </Col>
+              <Col xs={24} md={14}>
+                <Space wrap size={[8, 8]} className="leader-card-tags">
+                  <Tag color="blue">{`${SUBJECTIVE_BATCH_UI.participantCount} ${subjectiveBulkMatrix.rows.length} 人`}</Tag>
+                  <Tag>{`主观项 ${subjectiveBulkMatrix.columns.length} 项`}</Tag>
+                  <Tag color={subjectiveBulkChangedEntries.length > 0 ? 'green' : 'default'}>
+                    {`待保存 ${subjectiveBulkChangedEntries.length} 项`}
+                  </Tag>
+                </Space>
+              </Col>
+            </Row>
+
+            <Alert type="info" showIcon message={SUBJECTIVE_BATCH_UI.averageHint} />
+            <Alert
+              type={subjectiveBulkExceededColumns.length > 0 ? 'error' : 'success'}
+              showIcon
+              message={
+                subjectiveBulkExceededColumns.length > 0
+                  ? SUBJECTIVE_BATCH_UI.averageExceeded
+                  : SUBJECTIVE_BATCH_UI.saveHint
+              }
+              description={
+                subjectiveBulkExceededColumns.length > 0
+                  ? subjectiveBulkExceededColumns
+                      .map(
+                        (column) =>
+                          `${column.name}：当前平均分 ${column.averageScore.toFixed(2)}，上限 ${column.maxAverageScore.toFixed(2)}`
+                      )
+                      .join('；')
+                  : undefined
+              }
+            />
+
+            {!subjectiveBulkSectionOptions.some((option) => option.value !== ALL_FILTER_VALUE) ? (
+              <Alert type="warning" showIcon message={SUBJECTIVE_BATCH_UI.noSection} />
+            ) : null}
+
+            {subjectiveBulkSectionId && subjectiveBulkMatrix.columns.length && subjectiveBulkMatrix.rows.length ? (
+              <div className="leader-subjective-batch">
+                <div className="leader-subjective-batch__table-wrap">
+                  <table className="leader-subjective-batch__table">
+                    <thead>
+                      <tr>
+                        <th className="leader-subjective-batch__sticky-col">员工</th>
+                        <th>小组</th>
+                        {subjectiveBulkMatrix.columns.map((column) => {
+                          const averagePreview = subjectiveBulkAveragePreviewMap.get(column.key);
+                          return (
+                            <th key={column.key}>
+                              <div className="leader-subjective-batch__column-head">
+                                <Typography.Text strong>{column.name}</Typography.Text>
+                                <Typography.Text type="secondary">
+                                  {SUBJECTIVE_BATCH_UI.scoreHeader(column.points)}
+                                </Typography.Text>
+                                <Typography.Text type="secondary">
+                                  {SUBJECTIVE_BATCH_UI.limitHeader(column.maxAverageScore)}
+                                </Typography.Text>
+                                {averagePreview ? (
+                                  <div
+                                    className={
+                                      averagePreview.exceeded
+                                        ? 'leader-subjective-batch__column-average leader-subjective-batch__column-average--danger'
+                                        : 'leader-subjective-batch__column-average'
+                                    }
+                                  >
+                                    <Typography.Text strong>{`当前均分 ${averagePreview.averageScore.toFixed(2)}`}</Typography.Text>
+                                    <Typography.Text type="secondary">
+                                      {`${SUBJECTIVE_BATCH_UI.participantCount} ${averagePreview.participantCount}`}
+                                    </Typography.Text>
+                                  </div>
+                                ) : null}
+                              </div>
+                            </th>
+                          );
+                        })}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {subjectiveBulkMatrix.rows.map((row) => (
+                        <tr key={row.employeeId}>
+                          <td className="leader-subjective-batch__sticky-col">
+                            <div className="leader-subjective-batch__employee">
+                              <Typography.Text strong>{row.employeeName}</Typography.Text>
+                              <Typography.Text type="secondary">{row.sectionName ?? T.sectionFallback}</Typography.Text>
+                            </div>
+                          </td>
+                          <td>
+                            <Typography.Text type="secondary">{row.reviewGroupName ?? T.groupFallback}</Typography.Text>
+                          </td>
+                          {subjectiveBulkMatrix.columns.map((column) => {
+                            const cell = row.cells[column.key];
+                            if (!cell) {
+                              return <td key={`${row.employeeId}:${column.key}`}>{SUBJECTIVE_BATCH_UI.noCell}</td>;
+                            }
+
+                            const draft = subjectiveBulkDrafts[cell.keyResultId];
+                            return (
+                              <td key={`${row.employeeId}:${column.key}`}>
+                                <div className="leader-subjective-batch__score-cell">
+                                  <InputNumber
+                                    min={0}
+                                    max={cell.points}
+                                    step={0.5}
+                                    size="small"
+                                    style={{ width: '100%' }}
+                                    value={draft?.score ?? undefined}
+                                    onChange={(value) =>
+                                      updateSubjectiveBulkDraft(cell.keyResultId, typeof value === 'number' ? value : null)
+                                    }
+                                  />
+                                  <Typography.Text type="secondary" className="leader-subjective-batch__cell-meta">
+                                    {`${cell.keyResultCode} ${cell.keyResultName}`}
+                                  </Typography.Text>
+                                </div>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              <Empty
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                description={subjectiveBulkSectionId ? SUBJECTIVE_BATCH_UI.noRows : SUBJECTIVE_BATCH_UI.noSection}
+              />
+            )}
+          </Space>
+        </Modal>
+      ) : null}
     </Space>
   );
 
@@ -1344,6 +1999,16 @@ function LeaderWorkbenchPageInner({ scoreType }: { scoreType: 'objective' | 'sub
         score: current[krId]?.score ?? null,
         comment: current[krId]?.comment ?? '',
         ...patch
+      }
+    }));
+  }
+
+  function resetDraftToPersisted(keyResult: LeaderKeyResult) {
+    setDrafts((current) => ({
+      ...current,
+      [keyResult.id]: {
+        score: keyResult.reviewScore,
+        comment: keyResult.reviewComment ?? ''
       }
     }));
   }
@@ -1362,22 +2027,18 @@ function LeaderWorkbenchPageInner({ scoreType }: { scoreType: 'objective' | 'sub
       return;
     }
 
-    scoreMutation.mutate({ krId: keyResult.id, draft });
+    scoreMutation.mutate({ krId: keyResult.id, draft, keyResult });
   }
 
   function openBulkModal() {
     setIsBulkOpen(true);
-    setBulkEmployeeIds([]);
-    setBulkGoalIds([]);
-    setBulkKrIds(null);
-    setBulkScoreMode('full');
-    setBulkCustomScore(null);
-    setBulkComment('');
-    setBulkOverwrite(false);
-    setBulkExcludeTemplates(false);
-    setBulkAllowMissingProofs(false);
-    setBulkSectionId(null);
-    setBulkReviewGroupId(null);
+    if (isObjectiveWorkbench) {
+      resetBulk();
+      return;
+    }
+
+    setSubjectiveBulkDrafts({});
+    setSubjectiveBulkSectionId(displaySelectedEmployee?.sectionId ?? null);
   }
 
   function resetBulk() {
@@ -1391,7 +2052,16 @@ function LeaderWorkbenchPageInner({ scoreType }: { scoreType: 'objective' | 'sub
     setBulkComment('');
     setBulkOverwrite(false);
     setBulkExcludeTemplates(false);
+    setBulkExcludedTemplateGoalKeys([]);
+    setBulkExcludedTemplateKeyResultKeys([]);
+    setBulkIncludedTemplateGoalKeys([]);
+    setBulkIncludedTemplateKeyResultKeys([]);
     setBulkAllowMissingProofs(false);
+  }
+
+  function resetSubjectiveBulk() {
+    setSubjectiveBulkSectionId(null);
+    setSubjectiveBulkDrafts({});
   }
 
   function handleSelectAllKeyResults() {
@@ -1410,7 +2080,11 @@ function LeaderWorkbenchPageInner({ scoreType }: { scoreType: 'objective' | 'sub
         reviewGroupId: bulkReviewGroupId,
         employeeIds: nextEmployeeIds,
         goalIds: bulkGoalIds,
-        excludeTemplateGoals: bulkExcludeTemplates
+        excludeTemplateGoals: bulkExcludeTemplates,
+        excludedTemplateGoalKeys: bulkExcludedTemplateGoalKeys,
+        excludedTemplateKeyResultKeys: bulkExcludedTemplateKeyResultKeys,
+        includedTemplateGoalKeys: bulkIncludedTemplateGoalKeys,
+        includedTemplateKeyResultKeys: bulkIncludedTemplateKeyResultKeys
       })
     );
   }
@@ -1431,7 +2105,11 @@ function LeaderWorkbenchPageInner({ scoreType }: { scoreType: 'objective' | 'sub
         reviewGroupId: bulkReviewGroupId,
         employeeIds: nextEmployeeIds,
         goalIds: bulkGoalIds,
-        excludeTemplateGoals: bulkExcludeTemplates
+        excludeTemplateGoals: bulkExcludeTemplates,
+        excludedTemplateGoalKeys: bulkExcludedTemplateGoalKeys,
+        excludedTemplateKeyResultKeys: bulkExcludedTemplateKeyResultKeys,
+        includedTemplateGoalKeys: bulkIncludedTemplateGoalKeys,
+        includedTemplateKeyResultKeys: bulkIncludedTemplateKeyResultKeys
       })
     );
   }
@@ -1443,6 +2121,16 @@ function LeaderWorkbenchPageInner({ scoreType }: { scoreType: 'objective' | 'sub
 
   function toggleProofKnowledge(proofId: string, isKnowledge: boolean) {
     knowledgeMutation.mutate({ proofId, isKnowledge });
+  }
+
+  function updateSubjectiveBulkDraft(keyResultId: string, score: number | null) {
+    setSubjectiveBulkDrafts((current) => ({
+      ...current,
+      [keyResultId]: {
+        score,
+        comment: current[keyResultId]?.comment ?? ''
+      }
+    }));
   }
 
   function resolveProofPreviewUrl(proof: LeaderKeyResult['proofs'][number]) {
@@ -1470,6 +2158,20 @@ function LeaderWorkbenchPageInner({ scoreType }: { scoreType: 'objective' | 'sub
     }
 
     bulkMutation.mutate();
+  }
+
+  function submitSubjectiveBulkScore() {
+    if (!subjectiveBulkChangedEntries.length) {
+      message.warning(SUBJECTIVE_BATCH_UI.saveHint);
+      return;
+    }
+
+    if (subjectiveBulkExceededColumns.length > 0) {
+      message.warning(SUBJECTIVE_BATCH_UI.averageExceeded);
+      return;
+    }
+
+    subjectiveBulkMutation.mutate();
   }
 }
 

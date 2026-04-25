@@ -8,7 +8,6 @@ import {
   Input,
   InputNumber,
   Space,
-  Statistic,
   Table,
   Tag,
   Typography
@@ -218,6 +217,32 @@ export function AdminHistoricalPerformancePage() {
     };
   }, [filteredRecords]);
 
+  const summaryItems = useMemo(
+    () => [
+      {
+        key: 'employeeCount',
+        label: TEXT.employeeCount,
+        value: String(summary.employeeCount)
+      },
+      {
+        key: 'editableQuarterCount',
+        label: TEXT.editableQuarterCount,
+        value: String(summary.editableQuarterCount)
+      },
+      {
+        key: 'supplementedQuarterCount',
+        label: TEXT.supplementedQuarterCount,
+        value: String(summary.supplementedQuarterCount)
+      },
+      {
+        key: 'annualPreview',
+        label: TEXT.annualPreview,
+        value: formatScore(summary.annualPreview)
+      }
+    ],
+    [summary]
+  );
+
   const columns = useMemo<ColumnsType<EditableHistoricalPerformanceRecord>>(
     () => [
       {
@@ -362,20 +387,14 @@ export function AdminHistoricalPerformancePage() {
 
       <Alert type="info" showIcon message={TEXT.tip} />
 
-      <Space size={16} wrap>
-        <Card className="metric-card" variant="borderless">
-          <Statistic title={TEXT.employeeCount} value={summary.employeeCount} />
-        </Card>
-        <Card className="metric-card" variant="borderless">
-          <Statistic title={TEXT.editableQuarterCount} value={summary.editableQuarterCount} />
-        </Card>
-        <Card className="metric-card" variant="borderless">
-          <Statistic title={TEXT.supplementedQuarterCount} value={summary.supplementedQuarterCount} />
-        </Card>
-        <Card className="metric-card" variant="borderless">
-          <Statistic title={TEXT.annualPreview} value={summary.annualPreview} precision={1} />
-        </Card>
-      </Space>
+      <div className="historical-performance-summary">
+        {summaryItems.map((item) => (
+          <div key={item.key} className="historical-performance-summary__item">
+            <Typography.Text className="historical-performance-summary__label">{item.label}</Typography.Text>
+            <Typography.Text className="historical-performance-summary__value">{item.value}</Typography.Text>
+          </div>
+        ))}
+      </div>
 
       <Card className="admin-page" variant="borderless">
         <Table

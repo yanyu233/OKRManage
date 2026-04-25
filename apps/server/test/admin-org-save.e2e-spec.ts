@@ -206,7 +206,7 @@ describe('Admin org bootstrap save', () => {
     expect(refreshedUser.positionName).toBe('架构工程师');
   });
 
-  it('restores employee role for active users during bootstrap save', async () => {
+  it('does not auto-restore the employee role when the user still has enabled leader roles', async () => {
     const agent = await loginAsSysadmin(app);
     const bootstrap = await agent.get('/api/admin/org/bootstrap').expect(200);
     const targetUser = bootstrap.body.users.find(
@@ -214,6 +214,12 @@ describe('Admin org bootstrap save', () => {
     );
 
     expect(targetUser).toBeDefined();
+    expect(
+      bootstrap.body.roleAssignments.some(
+        (entry: { userId: string; roleCode: string; isEnabled: boolean }) =>
+          entry.userId === targetUser.id && entry.roleCode !== 'employee' && entry.isEnabled
+      )
+    ).toBe(true);
 
     await agent
       .put('/api/admin/org/bootstrap')
@@ -231,6 +237,55 @@ describe('Admin org bootstrap save', () => {
       refreshed.body.roleAssignments.some(
         (entry: { userId: string; roleCode: string; isEnabled: boolean }) =>
           entry.userId === targetUser.id && entry.roleCode === 'employee' && entry.isEnabled
+      )
+    ).toBe(false);
+    expect(
+      refreshed.body.roleAssignments.some(
+        (entry: { userId: string; roleCode: string; isEnabled: boolean }) =>
+          entry.userId === targetUser.id && entry.roleCode !== 'employee' && entry.isEnabled
+      )
+    ).toBe(true);
+  });
+
+  it('still auto-adds the employee role for active users that have no enabled roles at all', async () => {
+    const agent = await loginAsSysadmin(app);
+    const bootstrap = await agent.get('/api/admin/org/bootstrap').expect(200);
+    const departmentId = bootstrap.body.departments[0].id as string;
+    const sectionId = bootstrap.body.sections.find((entry: { departmentId: string }) => entry.departmentId === departmentId)?.id as
+      | string
+      | undefined;
+    const newUserId = 'user-no-role-default-employee';
+
+    await agent
+      .put('/api/admin/org/bootstrap')
+      .send({
+        ...bootstrap.body,
+        users: [
+          ...bootstrap.body.users,
+          {
+            id: newUserId,
+            employeeNo: 'EMP-NO-ROLE-001',
+            name: 'No Role Default Employee',
+            positionName: 'Test Position',
+            departmentId,
+            sectionId: sectionId ?? null,
+            reviewGroupId: null,
+            isActive: true
+          }
+        ]
+      })
+      .expect(200);
+
+    const refreshed = await agent.get('/api/admin/org/bootstrap').expect(200);
+
+    expect(
+      refreshed.body.roleAssignments.some(
+        (entry: { userId: string; roleCode: string; scopeType: string; scopeId: string; isEnabled: boolean }) =>
+          entry.userId === newUserId
+          && entry.roleCode === 'employee'
+          && entry.scopeType === 'user'
+          && entry.scopeId === newUserId
+          && entry.isEnabled
       )
     ).toBe(true);
   });

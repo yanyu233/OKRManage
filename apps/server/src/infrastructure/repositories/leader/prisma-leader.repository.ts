@@ -6,6 +6,10 @@ import { REVIEW_GRADE_CODES } from '../../../shared/constants/review-grade-codes
 import { DomainValidationError } from '../../../shared/errors/domain-validation.error';
 import { AuthUser } from '../../../shared/types/auth-user';
 import { RuntimeConfigService } from '../../../modules/config/runtime-config.service';
+import {
+  buildSubjectiveAverageLimitGroupKey,
+  evaluateSubjectiveAverageLimit
+} from '../../../modules/leader/subjective-average-limit';
 import { buildProofDownloadUrl, buildProofPreviewUrl } from '../../../shared/proof/proof-links';
 import {
   AllOkrEmployeeRecord,
@@ -179,10 +183,9 @@ export class PrismaLeaderRepository implements LeaderRepository {
         selectedEmployee: null,
         goals: [],
         selectedGoal: null,
-        bulkCatalog:
-          scoreType === 'objective'
-            ? scopedEmployees.map((employee) => this.toBulkCatalogEmployee(employee, canScoreEmployee(employee, scoringScope)))
-            : []
+        bulkCatalog: scopedEmployees.map((employee) =>
+          this.toBulkCatalogEmployee(employee, canScoreEmployee(employee, scoringScope))
+        )
       };
     }
 
@@ -201,10 +204,9 @@ export class PrismaLeaderRepository implements LeaderRepository {
       selectedGoal: selectedGoal
         ? this.toGoalDetail(selectedGoal, selectedEmployeeCanScore, selectedEmployeeCanManageKnowledge)
         : null,
-      bulkCatalog:
-        scoreType === 'objective'
-          ? scopedEmployees.map((employee) => this.toBulkCatalogEmployee(employee, canScoreEmployee(employee, scoringScope)))
-          : []
+      bulkCatalog: scopedEmployees.map((employee) =>
+        this.toBulkCatalogEmployee(employee, canScoreEmployee(employee, scoringScope))
+      )
     };
   }
 
@@ -220,7 +222,11 @@ export class PrismaLeaderRepository implements LeaderRepository {
           },
           goal: {
             include: {
-              owner: true,
+              owner: {
+                include: {
+                  section: true
+                }
+              },
               keyResults: {
                 select: {
                   id: true,
@@ -247,6 +253,18 @@ export class PrismaLeaderRepository implements LeaderRepository {
 
       if (score < 0 || score > keyResult.points) {
         throw new DomainValidationError('score exceeds key result points');
+      }
+
+      if (keyResult.scoreType === 'subjective') {
+        await this.assertSubjectiveAverageLimit(transaction, {
+          year: keyResult.goal.year,
+          quarter: keyResult.goal.quarter,
+          sectionId: keyResult.goal.owner.sectionId ?? null,
+          sectionName: keyResult.goal.owner.section?.name ?? null,
+          itemName: keyResult.name,
+          points: keyResult.points,
+          proposedScores: new Map([[keyResult.id, score]])
+        });
       }
 
       const updated = await transaction.keyResult.update({
@@ -298,6 +316,7 @@ export class PrismaLeaderRepository implements LeaderRepository {
     const employeeIdFilter = new Set(input.employeeIds ?? []);
     const goalIdFilter = new Set(input.goalIds ?? []);
     const keyResultIdFilter = new Set(input.keyResultIds ?? []);
+    const entryInputMap = new Map((input.entries ?? []).map((entry) => [entry.keyResultId, entry]));
     const appliedScore = input.score ?? null;
 
     const filteredEmployees = employees.filter((employee) => {
@@ -331,7 +350,11 @@ export class PrismaLeaderRepository implements LeaderRepository {
         })
         .flatMap((goal) =>
           goal.keyResults
-            .filter((keyResult) => keyResultIdFilter.size === 0 || keyResultIdFilter.has(keyResult.id))
+            .filter((keyResult) =>
+              entryInputMap.size > 0
+                ? entryInputMap.has(keyResult.id)
+                : keyResultIdFilter.size === 0 || keyResultIdFilter.has(keyResult.id)
+            )
             .map((keyResult) => ({
               employee,
               goal,
@@ -344,6 +367,8 @@ export class PrismaLeaderRepository implements LeaderRepository {
     const skipped: LeaderBulkScoreResult['skipped'] = [];
     const updatable = uniqueCandidates.filter((entry) => {
       const scoringScope = entry.keyResult.scoreType === 'subjective' ? subjectiveScoringScope : objectiveScoringScope;
+      const requestedEntry = entryInputMap.get(entry.keyResult.id);
+      const targetScore = requestedEntry?.score ?? appliedScore ?? entry.keyResult.points;
 
       if (!canScoreEmployee(entry.employee, scoringScope)) {
         skipped.push({
@@ -369,7 +394,12 @@ export class PrismaLeaderRepository implements LeaderRepository {
         return false;
       }
 
-      if (!input.allowMissingProofs && !isTemplateGoal(entry.goal) && entry.keyResult.proofs.length === 0) {
+      if (
+        entry.keyResult.scoreType === 'objective' &&
+        !input.allowMissingProofs &&
+        !isTemplateGoal(entry.goal) &&
+        entry.keyResult.proofs.length === 0
+      ) {
         skipped.push({
           keyResultId: entry.keyResult.id,
           reason: 'proof-missing'
@@ -377,7 +407,7 @@ export class PrismaLeaderRepository implements LeaderRepository {
         return false;
       }
 
-      if (appliedScore !== null && appliedScore > entry.keyResult.points) {
+      if (targetScore > entry.keyResult.points) {
         skipped.push({
           keyResultId: entry.keyResult.id,
           reason: 'score-exceeds-points'
@@ -390,12 +420,18 @@ export class PrismaLeaderRepository implements LeaderRepository {
 
     if (updatable.length > 0) {
       await this.prisma.$transaction(async (transaction) => {
+        await this.assertSubjectiveAverageLimitForBatch(transaction, input, updatable);
+
         for (const entry of updatable) {
+          const requestedEntry = entryInputMap.get(entry.keyResult.id);
           await transaction.keyResult.update({
             where: { id: entry.keyResult.id },
             data: {
-              reviewScore: appliedScore ?? entry.keyResult.points,
-              reviewComment: input.comment,
+              reviewScore: requestedEntry?.score ?? appliedScore ?? entry.keyResult.points,
+              reviewComment:
+                requestedEntry && Object.prototype.hasOwnProperty.call(requestedEntry, 'comment')
+                  ? requestedEntry.comment ?? null
+                  : input.comment,
               reviewedAt: new Date(),
               reviewedByUserId: actor.id
             }
@@ -437,6 +473,132 @@ export class PrismaLeaderRepository implements LeaderRepository {
       skippedCount: skipped.length,
       skipped
     };
+  }
+
+  private async assertSubjectiveAverageLimitForBatch(
+    transaction: Prisma.TransactionClient,
+    input: LeaderBulkScoreInput,
+    entries: Array<{
+      employee: EmployeeWithQuarterData;
+      goal: GoalWithQuarterData;
+      keyResult: KeyResultWithProofs;
+    }>
+  ) {
+    const groupedProposedScores = new Map<
+      string,
+      {
+        sectionId: string | null;
+        sectionName: string | null;
+        itemName: string;
+        points: number;
+        proposedScores: Map<string, number>;
+      }
+    >();
+    const entryInputMap = new Map((input.entries ?? []).map((entry) => [entry.keyResultId, entry]));
+
+    for (const entry of entries) {
+      if (entry.keyResult.scoreType !== 'subjective') {
+        continue;
+      }
+
+      const targetScore = entryInputMap.get(entry.keyResult.id)?.score ?? input.score ?? entry.keyResult.points;
+      const groupKey = [
+        entry.employee.sectionId ?? '__none__',
+        buildSubjectiveAverageLimitGroupKey(entry.keyResult.name, entry.keyResult.points)
+      ].join('::');
+      const group =
+        groupedProposedScores.get(groupKey) ??
+        {
+          sectionId: entry.employee.sectionId ?? null,
+          sectionName: entry.employee.section?.name ?? null,
+          itemName: entry.keyResult.name,
+          points: entry.keyResult.points,
+          proposedScores: new Map<string, number>()
+        };
+
+      group.proposedScores.set(entry.keyResult.id, targetScore);
+      groupedProposedScores.set(groupKey, group);
+    }
+
+    for (const group of groupedProposedScores.values()) {
+      await this.assertSubjectiveAverageLimit(transaction, {
+        year: input.year,
+        quarter: input.quarter,
+        sectionId: group.sectionId,
+        sectionName: group.sectionName,
+        itemName: group.itemName,
+        points: group.points,
+        proposedScores: group.proposedScores
+      });
+    }
+  }
+
+  private async assertSubjectiveAverageLimit(
+    transaction: Prisma.TransactionClient,
+    input: {
+      year: number;
+      quarter: number;
+      sectionId: string | null;
+      sectionName: string | null;
+      itemName: string;
+      points: number;
+      proposedScores: Map<string, number>;
+    }
+  ) {
+    const currentScores = await transaction.keyResult.findMany({
+      where: {
+        scoreType: 'subjective',
+        name: input.itemName,
+        points: input.points,
+        goal: {
+          year: input.year,
+          quarter: input.quarter,
+          owner: {
+            isActive: true,
+            sectionId: input.sectionId,
+            roleAssignments: {
+              some: {
+                roleCode: 'employee',
+                isEnabled: true
+              }
+            },
+            quarterParticipationExclusions: {
+              none: {
+                year: input.year,
+                quarter: input.quarter
+              }
+            }
+          }
+        }
+      },
+      select: {
+        id: true,
+        reviewScore: true
+      }
+    });
+
+    if (!currentScores.length) {
+      return;
+    }
+
+    const evaluation = evaluateSubjectiveAverageLimit(
+      input.points,
+      currentScores.map((entry) => ({
+        id: entry.id,
+        score: entry.reviewScore
+      })),
+      input.proposedScores
+    );
+
+    if (!evaluation.exceeded) {
+      return;
+    }
+
+    throw new DomainValidationError(
+      `科室“${input.sectionName ?? '未分配科室'}”的主观项“${input.itemName}”平均分不能超过 ${evaluation.limitScore.toFixed(
+        2
+      )} 分，当前保存后将达到 ${evaluation.averageScore.toFixed(2)} 分`
+    );
   }
 
   async updateProofKnowledge(

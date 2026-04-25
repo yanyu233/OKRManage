@@ -156,6 +156,7 @@ DEBUG_SYSADMIN_LOGIN=sysadmin.local
 DEBUG_SYSADMIN_PASSWORD=请替换为复杂密码
 DEBUG_SYSADMIN_NAME=系统管理员
 LIBREOFFICE_EXECUTABLE_PATH=/usr/bin/soffice
+PROOF_PDF_PREVIEW_TIMEOUT_MS=120000
 ```
 
 如果企业微信认证已准备好，再补：
@@ -166,6 +167,11 @@ WECOM_AGENT_ID=xxx
 WECOM_SECRET=xxx
 WECOM_REDIRECT_URI=http://你的域名/api/auth/wecom/callback
 ```
+
+- `APP_BASE_URL` 最好填写成“浏览器可直接访问到后端”的地址；`start-all.sh` 现在会默认按 `${APP_BASE_URL}/api` 构建前端接口地址
+- 如果你是先用 `4173` 做临时验收，且接口想指到别的域名或端口，可在启动前额外导出 `VITE_API_BASE_URL`
+- `LIBREOFFICE_EXECUTABLE_PATH` 在 Linux / CentOS 上建议明确写成 `/usr/bin/soffice`
+- `PROOF_PDF_PREVIEW_TIMEOUT_MS` 可按大文档预览耗时酌情调大，默认 `120000`
 
 ## 7. 第三步：数据库初始化策略
 
@@ -363,13 +369,13 @@ sudo systemctl reload nginx
 后端健康检查：
 
 ```bash
-curl http://127.0.0.1:3000/health
+curl http://127.0.0.1:3000/api/health
 ```
 
 预览能力健康检查：
 
 ```bash
-curl http://127.0.0.1:3000/health/preview
+curl http://127.0.0.1:3000/api/health/preview
 ```
 
 在 CentOS 上，重点看：
@@ -519,7 +525,7 @@ LIBREOFFICE_EXECUTABLE_PATH=/usr/bin/soffice
 
 按这个顺序检查：
 
-1. `curl http://127.0.0.1:3000/health/preview`
+1. `curl http://127.0.0.1:3000/api/health/preview`
 2. `tail -n 100 vendor/kkfileview/current/log/kkFileView.log`
 3. `KKFILEVIEW_PUBLIC_BASE_URL`
 4. `KKFILEVIEW_SOURCE_BASE_URL`

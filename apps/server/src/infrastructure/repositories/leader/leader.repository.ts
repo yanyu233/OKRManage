@@ -352,6 +352,11 @@ export type LeaderBulkScoreInput = {
   employeeIds?: string[];
   goalIds?: string[];
   keyResultIds?: string[];
+  entries?: Array<{
+    keyResultId: string;
+    score: number;
+    comment?: string | null;
+  }>;
   score?: number | null;
   comment: string | null;
   overwriteExisting: boolean;

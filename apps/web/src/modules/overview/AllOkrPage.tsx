@@ -55,7 +55,6 @@ const TEXT = {
   collapseAll: '收起全部',
   goalCountTag: '个目标',
   keyResultCountTag: '条关键结果',
-  completedCountTag: '已完成',
   proofCountTag: '份材料',
   currentScore: '当前得分',
   quarterScore: '季度得分',
@@ -77,11 +76,6 @@ const GOAL_STATUS_OPTIONS = [
 const SCORE_TYPE_LABELS = {
   objective: '客观',
   subjective: '主观'
-} as const;
-
-const COMPLETION_LABELS = {
-  incomplete: '未完成',
-  completed: '完成'
 } as const;
 
 const EMPLOYEE_STATUS_LABELS = {
@@ -433,11 +427,12 @@ export function AllOkrPage() {
 
                     <div className="all-okr-employee-card__meta">
                       <Space wrap size={[6, 6]} className="all-okr-chip-row">
-                        <Tag color={getEmployeeStatusColor(employee.status)}>{getEmployeeStatusLabel(employee.status)}</Tag>
+                        {scoresVisible ? (
+                          <Tag color={getEmployeeStatusColor(employee.status)}>{getEmployeeStatusLabel(employee.status)}</Tag>
+                        ) : null}
                         {scoresVisible ? <Tag>{`${TEXT.quarterScore} ${formatNullableScore(employee.quarterScore)}`}</Tag> : null}
                         <Tag>{`${employee.goalCount} ${TEXT.goalCountTag}`}</Tag>
                         <Tag>{`${employee.keyResultCount} ${TEXT.keyResultCountTag}`}</Tag>
-                        <Tag>{`${TEXT.completedCountTag} ${employee.completedKeyResultCount}`}</Tag>
                         <Tag>{`${employee.proofCount} ${TEXT.proofCountTag}`}</Tag>
                         {employee.missingProofKeyResultCount > 0 ? (
                           <Tag color="gold">{`待补材料 ${employee.missingProofKeyResultCount}`}</Tag>
@@ -473,7 +468,6 @@ export function AllOkrPage() {
                                 {goal.isTemplateGoal ? <Tag color="gold">{TEXT.templateGoal}</Tag> : null}
                                 <Tag>{`${goal.totalPoints} 分`}</Tag>
                                 <Tag>{`${goal.keyResultCount} ${TEXT.keyResultCountTag}`}</Tag>
-                                <Tag>{`${TEXT.completedCountTag} ${goal.completedKeyResultCount}`}</Tag>
                                 <Tag>{`${goal.proofCount} ${TEXT.proofCountTag}`}</Tag>
                                 {goal.missingProofKeyResultCount > 0 ? (
                                   <Tag color="gold">{`待补材料 ${goal.missingProofKeyResultCount}`}</Tag>
@@ -505,9 +499,6 @@ export function AllOkrPage() {
                                     <Tag>{`${keyResult.points} 分`}</Tag>
                                     <Tag color={getScoreTypeColor(keyResult.scoreType)}>
                                       {SCORE_TYPE_LABELS[keyResult.scoreType] ?? keyResult.scoreType}
-                                    </Tag>
-                                    <Tag color={getCompletionStateColor(keyResult.completionState)}>
-                                      {getCompletionStateLabel(keyResult.completionState)}
                                     </Tag>
                                     {!goal.isTemplateGoal || keyResult.hasProofs ? (
                                       <Tag color={keyResult.isProofMissing ? 'gold' : 'blue'}>
@@ -600,14 +591,6 @@ function getGoalStatusLabel(status: string) {
 
 function getScoreTypeColor(scoreType: string) {
   return scoreType === 'objective' ? 'blue' : 'purple';
-}
-
-function getCompletionStateColor(state: string) {
-  return state === 'completed' ? 'green' : 'red';
-}
-
-function getCompletionStateLabel(state: string) {
-  return COMPLETION_LABELS[state as keyof typeof COMPLETION_LABELS] ?? state;
 }
 
 function getEmployeeStatusColor(status: string) {
